@@ -382,7 +382,7 @@ const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2200);}
 function ask(text){return new Promise(res=>{$('#dlg-t').textContent=text;$('#dlg').classList.remove('hidden');const done=v=>{$('#dlg').classList.add('hidden');$('#dlg-ok').onclick=$('#dlg-no').onclick=null;res(v);};$('#dlg-ok').onclick=()=>done(true);$('#dlg-no').onclick=()=>done(false);});}
-async function copy(text){try{await navigator.clipboard.writeText(text);toast('Copié');}catch(e){toast('Copie refusée par le navigateur');}}
+async function copy(text,okMsg){try{await navigator.clipboard.writeText(text);toast(okMsg||'Copié');return true;}catch(e){toast('Copie refusée par le navigateur');return false;}}
 
 /* ---------- Notes ---------- */
 const FR=['Do','Do♯','Ré','Ré♯','Mi','Fa','Fa♯','Sol','Sol♯','La','La♯','Si'];
@@ -394,7 +394,22 @@ const isBlack=m=>[1,3,6,8,10].includes(((m%12)+12)%12);
 /* ---------- Données ---------- */
 const S={seances:[],rep:{},stats:{lecture:{},oreille:{}},questions:{done:{},items:[]},meta:{}};
 const LS='vestale-studio-v1';
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){Object.assign(S,j);S.stats=S.stats||{};S.stats.lecture=S.stats.lecture||{};S.stats.oreille=S.stats.oreille||{};S.questions=S.questions||{done:{},items:[]};S.questions.done=S.questions.done||{};S.questions.items=S.questions.items||[];}}catch(e){}}
+/* Nettoyage des données (chargement et import) : seules des valeurs attendues entrent dans l'app. */
+const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);
+const intIn=(x,lo,hi)=>{const n=Math.round(+x);return Number.isFinite(n)&&n>=lo&&n<=hi?n:null;};
+const str=(x,max)=>typeof x==='string'?x.slice(0,max):'';
+function cleanSeance(s){if(!isObj(s))return null;const id=typeof s.id==='number'?String(s.id):str(s.id,40);const ts=+s.ts;
+  if(!id||!Number.isFinite(ts)||typeof s.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s.date))return null;
+  const min=intIn(s.min,-1e9,1e9);
+  return {id,ts,date:s.date,piece:str(s.piece,40)||'libre',min:min==null?1:Math.max(1,Math.min(240,min)),pass:str(s.pass,200),bpm:intIn(s.bpm,20,240),feel:Math.max(1,Math.min(5,intIn(s.feel,-1e9,1e9)||3)),note:str(s.note,600)};}
+function cleanCounts(o,keyOk){const r={};if(isObj(o))for(const k in o){const v=o[k];if(keyOk(k)&&isObj(v))r[k]={ok:intIn(v.ok,0,1e7)||0,ko:intIn(v.ko,0,1e7)||0};}return r;}
+function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},q=isObj(d.questions)?d.questions:{};
+  if(isObj(d.rep))for(const k in d.rep){const v=d.rep[k];if(PIECES.some(p=>p.id===k)&&isObj(v)){const r={stage:intIn(v.stage,0,5)||0};const b=intIn(v.bpm,20,240);if(b)r.bpm=b;rep[k]=r;}}
+  const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
+  const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
+  return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
+    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k))},questions:{done,items}};}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta=isObj(j.meta)&&Number.isFinite(+j.meta.lastBackup)?{lastBackup:+j.meta.lastBackup}:{};}}catch(e){}}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
 let DB=null;const writing={},pending={};
 function setSync(t,on){const el=$('#sync');el.textContent=t;el.classList.toggle('on',!!on);}
@@ -536,7 +551,7 @@ let lecClef='sol',lecLvl=1,lecCur=null,lecAns=false,lecOk=0,lecKo=0,sprint=null,
 const yOf=d=>130-(d-CLEF[lecClef].bottom)*8;
 function drawStaff(d,state){const svg=$('#staff');let h='';const ink='#2a221b';
   for(let i=0;i<5;i++){const y=130-i*16;h+=`<line x1="10" x2="310" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1.4"/>`;}
-  h+=lecClef==='sol'?`<text x="16" y="138" font-size="78" font-family="${esc("Noto Music, Bravura, Apple Symbols, serif")}" fill="${ink}">\u{1D11E}</text>`:`<text x="18" y="114" font-size="62" font-family="${esc("Noto Music, Bravura, Apple Symbols, serif")}" fill="${ink}">\u{1D122}</text>`;
+  h+=lecClef==='sol'?`<text x="16" y="138" font-size="78" font-family="${esc("Noto Music, Bravura, Apple Symbols, serif")}" fill="${ink}">\u{1D11E}</text>`:`<text x="18" y="122" font-size="62" font-family="${esc("Noto Music, Bravura, Apple Symbols, serif")}" fill="${ink}">\u{1D122}</text>`;
   if(d!=null){const b=CLEF[lecClef].bottom,top=b+8,x=190,y=yOf(d);
     for(let L=b-2;L>=d;L-=2)h+=`<line x1="${x-17}" x2="${x+17}" y1="${yOf(L)}" y2="${yOf(L)}" stroke="${ink}" stroke-width="1.4"/>`;
     for(let L=top+2;L<=d;L+=2)h+=`<line x1="${x-17}" x2="${x+17}" y1="${yOf(L)}" y2="${yOf(L)}" stroke="${ink}" stroke-width="1.4"/>`;
@@ -552,7 +567,7 @@ function lecPick(){const [lo,hi]=CLEF[lecClef].r[lecLvl];const st=S.stats.lectur
   let r=Math.random()*tot;for(const [d,w] of ws){r-=w;if(r<=0)return d;}return lo;}
 function lecNew(){const d=lecPick();lecCur={d,t0:performance.now()};lecAns=false;drawStaff(d);$('#lec-fb').textContent='';$('#lec-fb').className='fb';
   $$('#lec-ans button').forEach(b=>{b.className='btn';b.disabled=false;});if(MINI)MINI.clear();}
-function lecAnswer(btn){if(!lecCur||lecAns)return;lecAns=true;const d=lecCur.d,m=fromDiat(d),ok=+btn.dataset.l===((d%7)+7)%7;
+function lecAnswer(btn){if(!lecCur||lecAns)return;lecAns=true;lecCur.chosen=+btn.dataset.l;const d=lecCur.d,m=fromDiat(d),ok=+btn.dataset.l===((d%7)+7)%7;
   const s=S.stats.lecture[lecKey(d)]=S.stats.lecture[lecKey(d)]||{ok:0,ko:0};ok?s.ok++:s.ko++;saveStats();
   ok?lecOk++:lecKo++;$('#lec-ok').textContent=lecOk;$('#lec-ko').textContent=lecKo;
   $$('#lec-ans button').forEach(b=>{b.disabled=true;if(+b.dataset.l===((d%7)+7)%7)b.classList.add('ok');else if(b===btn)b.classList.add('ko');});
@@ -561,9 +576,10 @@ function lecAnswer(btn){if(!lecCur||lecAns)return;lecAns=true;const d=lecCur.d,m
   renderWeak();
   if(sprint){sprint.n++;if(ok)sprint.ok++;if(sprint.n>=20){const sec=(performance.now()-sprint.t0)/1000;const msg=`Sprint terminé : ${sprint.ok}/20 en ${Math.round(sec)} s (${(sec/20).toFixed(1)} s par note).`;sprint=null;$('#lec-sprint-tag').textContent='Libre';setTimeout(()=>{$('#lec-fb').className='fb ok';$('#lec-fb').textContent=msg;},900);return;}$('#lec-sprint-tag').textContent=`Sprint ${sprint.n}/20`;}
   if(ok)setTimeout(()=>{if(lecAns)lecNew();},sprint?500:1100);}
-function renderLecAns(){const names=useEN?['C','D','E','F','G','A','B']:['Do','Ré','Mi','Fa','Sol','La','Si'];$('#lec-ans').innerHTML=names.map((n,i)=>`<button class="btn" data-l="${i}">${n}</button>`).join('');}
+function renderLecAns(){const names=useEN?['C','D','E','F','G','A','B']:['Do','Ré','Mi','Fa','Sol','La','Si'];$('#lec-ans').innerHTML=names.map((n,i)=>`<button class="btn" data-l="${i}">${n}</button>`).join('');
+  if(lecCur&&lecAns){const right=((lecCur.d%7)+7)%7;$$('#lec-ans button').forEach(b=>{b.disabled=true;const l=+b.dataset.l;if(l===right)b.classList.add('ok');else if(l===lecCur.chosen)b.classList.add('ko');});}}
 function renderWeak(){const arr=Object.entries(S.stats.lecture).filter(([k,s])=>s.ko>0).map(([k,s])=>{const [c,d]=k.split(':');return {c,d:+d,score:s.ko/(s.ok+s.ko),s};}).sort((a,b)=>b.score-a.score).slice(0,6);
-  $('#lec-weak').innerHTML=arr.length?arr.map(x=>`<span class="chip">${esc(nm(fromDiat(x.d)))} <span class="small muted">clé de ${x.c} · ${x.s.ko} err.</span></span>`).join(''):'<span class="small muted">Aucune pour l’instant. Lance un sprint.</span>';}
+  $('#lec-weak').innerHTML=arr.length?arr.map(x=>`<span class="chip">${esc(nm(fromDiat(x.d)))} <span class="small muted">clé de ${esc(x.c)} · ${esc(x.s.ko)} err.</span></span>`).join(''):'<span class="small muted">Aucune pour l’instant. Lance un sprint.</span>';}
 
 /* ---------- Métronome ---------- */
 const PRESETS=[
@@ -571,6 +587,7 @@ const PRESETS=[
   {id:'fontaine',t:'À la claire fontaine',b:4,sub:false,start:60,note:'Pas de tempo imposé : la pulsation régulière d’abord.'},
   {id:'hymne',t:'Hymne à la joie',b:4,sub:false,start:60,note:'Mélodie fluide au-dessus des accords C et G7.'},
   {id:'cancan',t:'Cancan',b:4,sub:false,start:66,note:'Moderato imprimé. La vitesse n’est pas l’objectif immédiat.'},
+  {id:'orientale',t:'Orientale',b:4,sub:false,start:60,note:'Une phrase en deux couleurs : piano puis forte, même rythme.'},
   {id:'tambourin',t:'Tambourin',b:4,sub:true,start:72,min:108,max:120,note:'Cible imprimée noire = 108–120, objectif non immédiat.'},
   {id:'chantmodal',t:'Chant modal en sol',b:2,sub:false,start:60,note:'Mesure à 2/4 : deux temps identifiables par mesure.'},
   {id:'lapin',t:'Légende du lapin blanc',b:4,sub:true,start:56,min:66,max:80,note:'Cible imprimée noire = 66–80.'},
@@ -631,7 +648,7 @@ function weekMinutes(){const d=new Date();const dow=(d.getDay()+6)%7;let t=0;for
 
 /* ---------- Plan du jour (rotation de l’édition 1.3) ---------- */
 const PLAN={
-  1:{t:'À la claire fontaine',d:'Repère Sol4 au pouce droit, deux mesures, puis jouer librement.',piece:'fontaine',pass:'Mesures 1–2 main droite, puis accords main gauche',go:[['Mélodie pas à pas','#clavier','mel:fontaine'],['Lecture éclair','#lecture']]},
+  1:{t:'À la claire fontaine',d:'Repère Sol4 au pouce droit, deux mesures, puis jouer librement.',piece:'fontaine',pass:'Mesures 1–2 main droite, puis accords main gauche',go:[['Mélodie pas à pas','#clavier','pas:fontaine'],['Lecture éclair','#lecture']]},
   2:{t:'Accords C, F, G, Am',d:'Connaître trois notes par accord, écouter la grille de la feuille, puis ton morceau préféré.',piece:'hymne',pass:'Grille C G Em Am Dm F G C, lentement',go:[['Accords','#clavier'],['Oreille','#oreille']]},
   3:{t:'Cancan, tout détaché',d:'Dix minutes de détaché léger, le reste pour le plaisir.',piece:'cancan',pass:'Une mesure : même séparation entre chaque son',go:[['Métronome','#tempo','preset:cancan']]},
   4:{t:'Divertissement en croches',d:'Une phrase et deux accords, à tempo lent. Compte « 1 et 2 et ».',piece:'divertissement',pass:'Deux mesures main droite, trois fois à pulsation identique',go:[['Métronome croches','#tempo','preset:divertissement']]},
@@ -665,7 +682,7 @@ let FEEL=3;
 function openLog(min){$('#f-piece').innerHTML=PIECES.map(p=>`<option value="${p.id}">${esc(p.t)}</option>`).join('')+'<option value="accords">Accords et grille</option><option value="libre">Jeu libre</option>';
   $('#f-piece').value=today().piece;$('#f-min').value=min||30;$('#f-pass').value='';$('#f-bpm').value=MT.preset===today().piece?MT.bpm:'';$('#f-note').value='';
   $('#logform').classList.remove('hidden');$('#logform').scrollIntoView({behavior:'smooth',block:'start'});}
-async function saveLog(){const d=new Date();const e={id:String(d.getTime()),ts:d.getTime(),date:dkey(d),piece:$('#f-piece').value,min:Math.max(1,Math.min(240,+$('#f-min').value||0)),pass:$('#f-pass').value.trim().slice(0,200),bpm:+$('#f-bpm').value||null,feel:FEEL,note:$('#f-note').value.trim().slice(0,600)};
+async function saveLog(){const d=new Date();const e={id:String(d.getTime()),ts:d.getTime(),date:dkey(d),piece:$('#f-piece').value,min:Math.max(1,Math.min(240,+$('#f-min').value||0)),pass:$('#f-pass').value.trim().slice(0,200),bpm:intIn($('#f-bpm').value,20,240),feel:FEEL,note:$('#f-note').value.trim().slice(0,600)};
   S.seances.unshift(e);if(e.bpm&&PIECES.find(p=>p.id===e.piece)){S.rep[e.piece]=Object.assign({},S.rep[e.piece],{bpm:e.bpm});saveRep();}
   $('#logform').classList.add('hidden');runReset();renderAll();toast('Séance enregistrée');await put('seances/'+e.id,e);}
 
@@ -683,8 +700,8 @@ function renderChart(){const days=[];for(let i=6;i>=0;i--){const d=new Date();d.
   const tot=S.seances.reduce((a,s)=>a+(+s.min||0),0);const lec=Object.values(S.stats.lecture).reduce((a,s)=>[a[0]+s.ok,a[1]+s.ko],[0,0]);const ear=Object.values(S.stats.oreille).reduce((a,s)=>[a[0]+s.ok,a[1]+s.ko],[0,0]);
   const pc=x=>x[0]+x[1]?Math.round(100*x[0]/(x[0]+x[1]))+' %':'–';
   $('#j-stats').innerHTML=`<span>Total <b>${Math.round(tot/60*10)/10} h</b></span><span>Lecture <b>${pc(lec)}</b></span><span>Oreille <b>${pc(ear)}</b></span>`;}
-function renderEntries(){const list=S.seances.slice(0,40);$('#entries').innerHTML=list.length?list.map(s=>`<div class="entry"><div class="row between"><b>${esc(pieceT(s.piece))}</b><span class="stars" aria-label="ressenti ${s.feel}/5">${'●'.repeat(s.feel||0)}${'○'.repeat(5-(s.feel||0))}</span></div>
-  <div class="meta">${esc(fmtDate(s.date))} · ${s.min} min${s.bpm?' · noire = '+s.bpm:''}${s.pass?' · '+esc(s.pass):''}</div>${s.note?`<div class="small">${esc(s.note)}</div>`:''}<div><button class="btn ghost small" data-del="${esc(s.id)}" style="min-height:34px;padding:4px 10px">Supprimer</button></div></div>`).join(''):'<p class="small muted">Aucune séance notée. Lance la séance guidée, elle t’ouvre le formulaire à la fin.</p>';}
+function renderEntries(){const list=S.seances.slice(0,40);$('#entries').innerHTML=list.length?list.map(s=>`<div class="entry"><div class="row between"><b>${esc(pieceT(s.piece))}</b><span class="stars" aria-label="ressenti ${esc(s.feel)}/5">${'●'.repeat(s.feel)}${'○'.repeat(5-s.feel)}</span></div>
+  <div class="meta">${esc(fmtDate(s.date))} · ${esc(s.min)} min${s.bpm?' · noire = '+esc(s.bpm):''}${s.pass?' · '+esc(s.pass):''}</div>${s.note?`<div class="small">${esc(s.note)}</div>`:''}<div><button class="btn ghost small" data-del="${esc(s.id)}" style="min-height:34px;padding:4px 10px">Supprimer</button></div></div>`).join(''):'<p class="small muted">Aucune séance notée. Lance la séance guidée, elle t’ouvre le formulaire à la fin.</p>';}
 const QBASE=[
   ['pedales','Pédales de La Vestale : à faire vérifier par le technicien avant tout exercice de pédale.'],
   ['accords','Forme exacte des accords étudiés : quels renversements et quels doigtés à chaque main ?'],
@@ -707,7 +724,7 @@ function coachText(){const since=Date.now()-14*864e5;
   return `Bilan piano. Sois mon coach : adulte débutant, cours le vendredi, piano droit ancien au toucher résistant. Règles : les consignes et doigtés de mon prof priment ; jamais de travail en force ; trois réussites calmes avant d’avancer ; une erreur répétée = isoler deux mesures et ralentir ; séances de 25 à 40 min, 5 à 6 jours par semaine ; horizon Alkan sans brûler les étapes.
 Format attendu, 180 mots maximum : Verdict (une phrase) ; Ce qui progresse (2 puces) ; À corriger (2 puces) ; Mes 3 prochaines séances (morceau, passage, tempo de départ) ; À demander à mon prof vendredi (1 ou 2 questions). N’invente rien d’absent des données.
 Données (JSON) : ${JSON.stringify(data)}`;}
-async function coach(){await copy(coachText());toast('Copié : colle-le dans Claude');}
+async function coach(){await copy(coachText(),'Copié : colle-le dans Claude');}
 function updateBackupChip(){const lb=S.meta&&S.meta.lastBackup;const el=$('#sync');const tag=$('#bk-tag');
   if(!lb){el.textContent='à sauvegarder';el.classList.remove('on');if(tag)tag.textContent='Jamais';return;}
   const days=Math.floor((Date.now()-lb)/864e5);const txt=days===0?'sauvegardé aujourd’hui':days===1?'sauvegardé hier':`sauvegardé il y a ${days} j`;
@@ -719,11 +736,14 @@ async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
     S.meta=Object.assign({},S.meta,{lastBackup:Date.now()});saveLocal();updateBackupChip();toast('Sauvegarde exportée');}
   catch(e){if(e&&e.name==='AbortError')return;toast('Export impossible');}}
-async function importData(f){try{const j=JSON.parse(await f.text());const d=j&&j.app==='la-vestale'&&j.data;if(!d||!Array.isArray(d.seances))throw 0;
-  if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ? Les séances sont fusionnées, le reste est remplacé.`)))return;
-  const all={};[...S.seances,...d.seances].forEach(s=>{if(s&&s.id)all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
-  S.rep=d.rep||S.rep;S.stats=d.stats||S.stats;S.stats.lecture=S.stats.lecture||{};S.stats.oreille=S.stats.oreille||{};S.questions=d.questions||S.questions;
-  saveLocal();renderAll();toast('Import réussi');}catch(e){toast('Fichier non reconnu');}}
+async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}
+  const skipped=j.data.seances.length-d.seances.length;
+  if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Les séances sont fusionnées, le reste est remplacé.`)))return;
+  const before=JSON.stringify(S);
+  try{const all={};[...S.seances,...d.seances].forEach(s=>{all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
+    if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;
+    renderAll();}catch(e){Object.assign(S,JSON.parse(before));renderAll();toast('Fichier non reconnu');return;}
+  saveLocal();toast('Import réussi');}
 
 /* ---------- Navigation ---------- */
 const VIEWS=['seance','clavier','oreille','lecture','tempo','morceaux','journal'];
@@ -734,7 +754,10 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   if(v==='clavier')setTimeout(()=>KB.scrollTo(60),30);
   if(v==='lecture'&&!lecCur)lecNew();
   window.scrollTo(0,0);}
-function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')applyPreset(v);if(k==='mel'){curMel=v;$$('#mel-sel button').forEach(b=>b.classList.toggle('on',b.dataset.m===v));renderMel();}}
+function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')applyPreset(v);
+  if((k==='mel'||k==='pas')&&MEL[v]){stopBus();curMel=v;$$('#mel-sel button').forEach(b=>b.classList.toggle('on',b.dataset.m===v));renderMel();
+    // Après le changement d’onglet (route remet la page en haut) : montrer la carte Mélodies, puis lancer le pas à pas si demandé.
+    setTimeout(()=>{const card=$('#mel-sel').closest('.card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);if(k==='pas')stepMel();else KB.scrollTo(MEL[v].n[0][0]);},120);}}
 
 /* ---------- Rendu ---------- */
 let KB;

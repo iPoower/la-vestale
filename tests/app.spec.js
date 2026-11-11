@@ -4,6 +4,7 @@
 const { test, expect } = require('@playwright/test');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const SW_VERSION = /const VERSION = '([^']+)'/.exec(fs.readFileSync(require('path').join(__dirname, '..', 'sw.js'), 'utf8'))[1];
 
 const TABS = ['seance', 'clavier', 'oreille', 'lecture', 'tempo', 'morceaux', 'journal'];
 const FONT_FILES = ['atkinson-hyperlegible-latin-400', 'atkinson-hyperlegible-latin-700', 'cormorant-garamond-latin-500',
@@ -70,18 +71,18 @@ test('3. icônes 180, 192, 512 et 512 maskable aux bonnes dimensions', async ({ 
   }
 });
 
-test('4. service worker enregistré, contrôle la page, cache la-vestale-v2 complet', async ({ page }) => {
+test('4. service worker enregistré, contrôle la page, cache de la version courante complet', async ({ page }) => {
   await openControlled(page);
-  const info = await page.evaluate(async () => {
+  const info = await page.evaluate(async version => {
     const reg = await navigator.serviceWorker.getRegistration();
     const keys = await caches.keys();
-    const cache = await caches.open('la-vestale-v2');
+    const cache = await caches.open(version);
     const urls = (await cache.keys()).map(r => new URL(r.url).pathname);
     return { scope: reg && reg.scope, script: reg && reg.active && reg.active.scriptURL, keys, urls };
-  });
+  }, SW_VERSION);
   expect(info.scope).toBe(new URL('./', page.url()).href);
   expect(info.script).toMatch(/\/sw\.js$/);
-  expect(info.keys).toEqual(['la-vestale-v2']);
+  expect(info.keys).toEqual([SW_VERSION]);
   for (const p of ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png', ...FONT_FILES.map(f => `/fonts/${f}.woff2`)]) {
     expect(info.urls, p).toContain(p);
   }

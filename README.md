@@ -21,7 +21,7 @@ npx playwright install chromium webkit   # si les navigateurs ne sont pas déjà
 npm test
 ```
 
-Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et les icônes, le service worker et son cache, les polices locales, le rechargement hors ligne, le cycle séance → Export → Import, et la navigation dans les 7 onglets.
+Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et les icônes, le service worker et son cache, les polices locales, le rechargement hors ligne, le cycle séance → Export → Import, et la navigation dans les 7 onglets. `tests/regressions.spec.js` contient un test par bug corrigé.
 
 ## Mise à jour
 
