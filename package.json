@@ -1,0 +1,13 @@
+{
+  "name": "la-vestale",
+  "version": "2.0.0",
+  "private": true,
+  "description": "PWA de travail au piano. Tests locaux uniquement : l'app elle-même n'a aucune dépendance.",
+  "scripts": {
+    "serve": "node tests/serve.js",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
