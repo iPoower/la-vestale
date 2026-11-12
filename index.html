@@ -210,6 +210,19 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="kpi"><b id="k-streak">0</b><span>jours d’affilée</span></div>
     <div class="kpi"><b id="k-total">0</b><span>séances notées</span></div>
   </div>
+  <div class="card" id="wk-card">
+    <div class="row between"><h2>Travailler un morceau</h2><span class="tag" id="wk-pos">Mesure 1</span></div>
+    <select id="wk-piece" aria-label="Morceau à travailler"></select>
+    <p class="small muted" id="wk-src"></p>
+    <div class="seg" id="wk-hands"><button data-h="rh">Main droite</button><button data-h="lh">Main gauche</button><button data-h="both" class="on">Deux mains</button></div>
+    <div class="kb-wrap" id="kb-wk"></div>
+    <div class="small" id="wk-info" aria-live="polite"></div>
+    <div class="row"><button class="btn" id="wk-prev" aria-label="Mesure précédente">◀ Précédente</button><button class="btn primary" id="wk-play">Écouter la mesure</button><button class="btn" id="wk-next" aria-label="Mesure suivante">Suivante ▶</button></div>
+    <div class="row"><label class="toggle"><input type="checkbox" id="wk-loop"> En boucle</label><button class="btn ghost" id="wk-stop">Stop</button></div>
+    <label class="field">Tempo : noire = <b id="wk-bpm-v">60</b><input type="range" id="wk-bpm" min="40" max="100" value="60"></label>
+    <div class="row between"><div class="ladder" id="wk-dots"><i></i><i></i><i></i></div><span class="small muted" id="wk-msg">Joue la mesure, puis dis-moi si c’était propre.</span></div>
+    <div class="row"><button class="btn primary" id="wk-ok">Propre</button><button class="btn" id="wk-ko">Raté</button></div>
+  </div>
   <div class="card">
     <div class="row between"><h2>Séance guidée</h2>
       <div class="seg" id="fmt"><button data-f="std" class="on">35 min</button><button data-f="court">15 min</button></div></div>
@@ -429,7 +442,7 @@ function cleanSeance(s){if(!isObj(s))return null;const id=typeof s.id==='number'
   return {id,ts,date:s.date,piece:str(s.piece,40)||'libre',min:min==null?1:Math.max(1,Math.min(240,min)),pass:str(s.pass,200),bpm:intIn(s.bpm,20,240),feel:Math.max(1,Math.min(5,intIn(s.feel,-1e9,1e9)||3)),note:str(s.note,600)};}
 function cleanCounts(o,keyOk){const r={};if(isObj(o))for(const k in o){const v=o[k];if(keyOk(k)&&isObj(v))r[k]={ok:intIn(v.ok,0,1e7)||0,ko:intIn(v.ko,0,1e7)||0};}return r;}
 function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},q=isObj(d.questions)?d.questions:{};
-  if(isObj(d.rep))for(const k in d.rep){const v=d.rep[k];if(PIECES.some(p=>p.id===k)&&isObj(v)){const r={stage:intIn(v.stage,0,5)||0};const b=intIn(v.bpm,20,240);if(b)r.bpm=b;rep[k]=r;}}
+  if(isObj(d.rep))for(const k in d.rep){const v=d.rep[k];if(PIECES.some(p=>p.id===k)&&isObj(v)){const r={stage:intIn(v.stage,0,5)||0};const b=intIn(v.bpm,20,240);if(b)r.bpm=b;const mm=intIn(v.m,0,999);if(mm!=null)r.m=mm;rep[k]=r;}}
   const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
   const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
   return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
@@ -524,12 +537,13 @@ const CH={
   Am:{n:[69,72,76],b:45,fr:'La mineur',fn:'vi · relatif mineur',role:'Même armure que Do majeur, couleur plus sombre.'},
   Dm:{n:[62,65,69],b:50,fr:'Ré mineur',fn:'ii · préparation',role:'Prépare souvent G ou G7.'},
   Em:{n:[64,67,71],b:52,fr:'Mi mineur',fn:'iii',role:'Note du milieu : Sol naturel.'},
+  Cm:{n:[60,63,67],b:48,fr:'Do mineur',fn:'i · tonique de Do mineur',role:'La couleur sombre d’Odysseus : Do, Mi♭, Sol.',sp:{3:['Mi♭','E♭']}},
   E:{n:[64,68,71],b:52,fr:'Mi majeur',fn:'V de la mineur',role:'Note du milieu : Sol♯, la sensible de La. Il tire fort vers Am.'},
   F7M:{n:[65,69,72,76],b:53,fr:'Fa majeur septième',fn:'IV7M · sous-dominante avec septième majeure',role:'Fa majeur avec un Mi en plus : couleur douce, typique de la pop.'},
   D:{n:[62,66,69],b:50,fr:'Ré majeur',fn:'V de V · dominante de Sol',role:'Le Fa♯ monte au Sol : il annonce G7, puis le retour à C.'},
   'F/C':{n:[60,65,69],b:48,fr:'Fa avec Do à la basse',fn:'IV sur pédale de tonique',role:'Petite broderie avant le C final.'}
 };
-const CHORD_LIST=['C','F','G','G7','Am','Dm','Em','E','D','F7M'];
+const CHORD_LIST=['C','F','G','G7','Am','Dm','Em','E','D','F7M','Cm'];
 function voicing(name,inv){let n=CH[name].n.slice();for(let i=0;i<inv;i++){n.push(n.shift()+12);}if(Math.max(...n)>81)n=n.map(x=>x-12);return n;}
 let curChord='C',curInv=0;
 function chordNotes(name,inv,bass){const v=voicing(name,inv);return bass?[CH[name].b].concat(v):v;}
@@ -538,9 +552,10 @@ function renderChordInfo(){const c=CH[curChord],v=voicing(curChord,curInv);
   if(curChord==='E'||curChord==='Em')extra='<p class="small"><span class="tag verif">À vérifier en cours</span> Pourquoi « Em (ou E) » sur la feuille : en la mineur, l’accord de dominante prend souvent un Sol♯ (gamme harmonique), ce qui donne E au lieu de Em. Demande à ton prof si c’est son intention.</p>';
   if(curChord==='G7')extra='<p class="small">G7 = G + Fa. Joue G7 puis C et écoute Si→Do, Fa→Mi. Forme du cours à la main gauche (Hymne à la joie) : Si–Fa–Sol, doigts 5-2-1.</p>';
   if(curChord==='C')extra='<p class="small">Forme du cours à la main gauche (Hymne à la joie) : Do–Mi–Sol, doigts 5-3-1.</p>';
+  if(curChord==='Cm')extra='<p class="small">Tonalité d’Odysseus : Do mineur, trois bémols à la clé (Si♭, Mi♭, La♭). Compare avec C : seul le Mi descend d’une touche.</p>';
   if(curChord==='F7M')extra='<p class="small">F7M = F + Mi. Dans Let It Be, il suit Am dans la grille de l’intro.</p>';
   if(curChord==='D')extra='<p class="small">Dans Hymne à la joie (mesure 12), main gauche : Ré–Fa♯, doigts 4 et 2, juste avant G7.</p>';
-  $('#chord-info').innerHTML=`<div class="big">${esc(curChord)} · ${esc(c.fr)}</div><div>${v.map(m=>esc(nm(m,false))).join(' – ')}</div><div class="small muted">${esc(c.fn)}. ${esc(c.role)}</div>${extra}`;
+  $('#chord-info').innerHTML=`<div class="big">${esc(curChord)} · ${esc(c.fr)}</div><div>${v.map(m=>esc(c.sp&&c.sp[m%12]?c.sp[m%12][useEN?1:0]:nm(m,false))).join(' – ')}</div><div class="small muted">${esc(c.fn)}. ${esc(c.role)}</div>${extra}`;
   KB.clear();KB.mark(v,'hl');if($('#with-bass').checked)KB.mark([c.b],'hl2');KB.scrollTo(v[1]);}
 function playChord(name,inv,arp){const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.03;const bass=$('#with-bass').checked;
   if(bass)playNote(CH[name].b,t,2.2,.75,bus);const v=voicing(name,inv);v.forEach((m,i)=>playNote(m,t+(arp?(i+1)*.22:0),2,.7,bus));}
@@ -564,6 +579,51 @@ function playProg(){const a=ac();if(!a)return;const bus=newBus();const bpm=+$('#
     const tt=t-a.currentTime;at(tt,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));KB.clear();KB.mark(v,'hl');KB.mark([c.b],'hl2');});
     t+=dur;});
   at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
+
+/* ---------- Travailler un morceau, mesure par mesure ---------- */
+// Notes vérifiées sur les feuilles du cours (domaine public). Main gauche : accords nommés, doigts en regard des notes.
+const LHC={C:[[48,52,55],[5,3,1]],G7:[[47,53,55],[5,2,1]],D:[[50,54],[4,2]],C2:[[48,55],[5,1]],G2:[[47,55],[5,1]],Sol:[[55],[2]],FaD:[[54],[3]]};
+const TAB_A=[[72,1,1],[74,1],[76,1,3],[72,1],[74,2,2],[74,1],[76,1],[77,2,4],[77,2],[76,3,3],[null,1]];
+const TAB_A2=[[72,1,1],[74,1],[76,1,3],[72,1],[74,2,2],[74,1],[76,1],[77,2,4],[79,2,5],[72,3,1],[null,1]];
+const TAB_B=[[79,2,5],[79,1],[77,1],[76,2,3],[74,1],[76,1],[77,2,4],[79,2,5],[74,3,2],[null,1]];
+const TAB_LA=[['C2',4],['G2',4],['G2',4],['C2',3,null,1]],TAB_LB=[['G2',4],['C2',4],['G2',4],['G2',3,null,1]];
+const WORK={
+  hymne:{t:'Hymne à la joie',bpb:4,src:'D’après ta feuille : mélodie et doigtés imprimés ; main gauche en accords C (5-3-1), G7 (5-2-1) et D (4-2).',
+    rh:()=>MEL.hymne.n,lh:[['C',4],['G7',4],['C',4],['G7',4],['C',4],['G7',4],['C',4],['G7',2,'C',2],['G7',2,'C',2],['G7',2,'C',2],['G7',2,'C',2],['D',2,'G7',2],['C',4],['G7',4],['C',4],['G7',2,'C',2]]},
+  fontaine:{t:'À la claire fontaine',bpb:4,src:'D’après ta feuille : Sol majeur (Fa♯ à la clé). Main gauche : Sol3 avec le 2 ; Fa♯3 avec le 3 (déduit) aux mesures 8 et 12.',
+    rh:()=>MEL.fontaine.n,lh:[['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',2,'FaD',2],['Sol',4],['Sol',4],['Sol',4],['FaD',2,'Sol',2]]},
+  tabac:{t:'J’ai du bon tabac',bpb:4,src:'D’après ta feuille : main droite en position Do5 (doigts imprimés ; mesures 13 à 16 comme 9 à 12). Main gauche : C = Do3 + Sol3, G = Si2 + Sol3, doigts 5 et 1 déduits.',
+    rh:()=>[...TAB_A,...TAB_A2,...TAB_B,...TAB_B,...TAB_A,...TAB_A2],lh:[...TAB_LA,...TAB_LA,...TAB_LB,...TAB_LB,...TAB_LA,...TAB_LA]}
+};
+// Découpe une suite [note, durée, doigt] en mesures de bpb temps.
+function workBars(id){const w=WORK[id],bars=[];let cur=[],acc=0;
+  for(const [m,d,f] of w.rh()){cur.push([m==null?null:[m],d,f?[f]:null]);acc+=d;if(acc>=w.bpb-1e-9){bars.push(cur);cur=[];acc=0;}}
+  return bars.map((rh,i)=>{const spec=w.lh[i]||[],lh=[];for(let k=0;k<spec.length;k+=2){const c=spec[k];lh.push(c?[LHC[c][0],spec[k+1],LHC[c][1],c]:[null,spec[k+1],null,null]);}return {rh,lh};});}
+const DUR={4:'ronde',3:'blanche pointée',2:'blanche',1.5:'noire pointée',1:'noire',.5:'croche'};
+const LHNAME={C:'accord C',G7:'accord G7',D:'D (Ré–Fa♯)',C2:'accord C',G2:'accord G',Sol:'Sol',FaD:'Fa♯'};
+let WKKB=null;const WK={id:'hymne',bar:0,hands:'both',okRun:0};
+function wkEvLabel(e,hand){if(!e[0])return 'silence ('+(DUR[e[1]]||e[1]+' temps')+')';
+  const notes=e[0].map(m=>nm(m)).join(' + ');const fg=e[2]?' · doigt'+(e[2].length>1?'s ':' ')+e[2].join('-'):'';
+  return (hand==='lh'&&e[3]&&e[0].length>1?LHNAME[e[3]]+' : ':'')+notes+fg+' ('+(DUR[e[1]]||e[1]+' temps')+')';}
+function wkScroll(){if(!WKKB)return;const b=workBars(WK.id)[WK.bar];const ms=[];if(WK.hands!=='lh')b.rh.forEach(e=>e[0]&&ms.push(...e[0]));if(WK.hands!=='rh')b.lh.forEach(e=>e[0]&&ms.push(...e[0]));if(ms.length)WKKB.scrollTo(Math.round((Math.min(...ms)+Math.max(...ms))/2));}
+function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0,Math.min(bars.length-1,WK.bar));const b=bars[WK.bar];
+  $('#wk-pos').textContent=`Mesure ${WK.bar+1}/${bars.length}`;$('#wk-src').textContent=w.src;
+  $$('#wk-hands button').forEach(x=>x.classList.toggle('on',x.dataset.h===WK.hands));
+  WKKB.clear();WKKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
+  const mark=(evs,cls)=>{const done={};evs.forEach(e=>{if(!e[0])return;e[0].forEach((m,i)=>{const k=WKKB.keys[m];if(!k)return;k.classList.add(cls);if(e[2]&&!done[m]){done[m]=1;const s=document.createElement('span');s.className='fg';s.textContent=e[2][i];k.appendChild(s);}});});};
+  if(WK.hands!=='lh')mark(b.rh,'hl');if(WK.hands!=='rh')mark(b.lh,'hl2');
+  let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${b.rh.map(e=>esc(wkEvLabel(e,'rh'))).join(' · ')}</p>`;
+  if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${b.lh.map(e=>esc(wkEvLabel(e,'lh'))).join(' · ')}</p>`;
+  $('#wk-info').innerHTML=h;$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
+  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();}
+function wkGo(bar){stopBus();WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
+  S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
+function wkSelect(id){if(!WORK[id])return;stopBus();WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;renderWork();}
+function playWork(){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#wk-bpm').value;const b=workBars(WK.id)[WK.bar];const t0=a.currentTime+.1;
+  const hands=WK.hands==='both'?['rh','lh']:[WK.hands];
+  hands.forEach(hd=>{let t=t0;b[hd].forEach(e=>{if(e[0]){e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,hd==='lh'?.6:.75,bus));const ms=e[0];at(t-a.currentTime,()=>{WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));});}t+=e[1]*spb;});});
+  const dur=WORK[WK.id].bpb*spb;at(t0+dur-a.currentTime,()=>{WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));if($('#wk-loop').checked)playWork();});}
+function wkStop(){stopBus();if(WKKB)WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));}
 
 /* ---------- Main gauche ---------- */
 // Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:'notes' = notes imprimées, doigts déduits ;
@@ -606,11 +666,11 @@ const MEL={
     n:[[67,2,1],[67,1],[71,1],[71,1],[69,1],[71,1],[69,1],[67,2],[67,1],[71,1],[71,1],[69,1],[71,2],
        [71,2,3],[71,1],[69,1],[67,1],[71,1],[74,1,5],[71,1],[74,2],[74,1],[71,1],[67,1],[71,1],[69,2],
        [67,2,1],[67,1],[71,1],[71,1],[69,.5],[67,.5],[71,1],[69,1],[71,2],[71,1],[67,1],[71,1],[69,1],[67,2]]},
-  hymne:{t:'Hymne à la joie',src:'Transcrite de ta feuille : Do majeur, 16 mesures, doigtés imprimés compris. Main droite seule.',
-    n:[[64,1,3],[64,1],[65,1],[67,1,5],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],
-       [64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2],
-       [62,1,2],[62,1],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[60,1,1],[62,1],[64,.5],[65,.5],[64,1],[62,1],[60,1,1],[62,1,2],[55,2,1],
-       [64,1,3],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]]},
+  hymne:{t:'Hymne à la joie',src:'Transcrite de ta feuille : Do majeur, 16 mesures, doigtés imprimés compris, dans l’octave du Do5 (main droite au-dessus du Do du milieu). Main droite seule.',
+    n:[[76,1,3],[76,1],[77,1],[79,1,5],[79,1],[77,1],[76,1],[74,1],[72,1],[72,1],[74,1],[76,1],[76,1.5],[74,.5],[74,2],
+       [76,1],[76,1],[77,1],[79,1],[79,1],[77,1],[76,1],[74,1],[72,1],[72,1],[74,1],[76,1],[74,1.5],[72,.5],[72,2],
+       [74,1,2],[74,1],[76,1],[72,1],[74,1],[76,.5],[77,.5],[76,1],[72,1,1],[74,1],[76,.5],[77,.5],[76,1],[74,1],[72,1,1],[74,1,2],[67,2,1],
+       [76,1,3],[76,1],[77,1],[79,1],[79,1],[77,1],[76,1],[74,1],[72,1],[72,1],[74,1],[76,1],[74,1.5],[72,.5],[72,2]]},
   twinkle:{t:'Ah ! vous dirai-je maman',src:'Air traditionnel (thème varié par Mozart), version courante en Do majeur. Sur ta feuille (n° 54), la mélodie passe d’une main à l’autre : elle fait foi.',
     n:[[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],
        [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
@@ -715,7 +775,8 @@ const PRESETS=[
   {id:'jig',t:'Three-Note Jig',b:2,sub:false,start:60,note:'Mesure à 2/4 : deux temps égaux.'},
   {id:'playtune',t:'Play Tune',b:4,sub:false,start:60,note:'Pulsation fixe, même si le prof joue la partie de duo.'},
   {id:'letitbe',t:'Let It Be',b:4,sub:false,start:60,min:72,max:72,note:'Tempo de ta feuille : noire = 72.'},
-  {id:'sourire',t:'Il y a ton sourire',b:4,sub:false,start:66,min:80,max:80,note:'Tempo de ta feuille : noire = 80. Accompagnement en croches à partir de la mesure 58.'}
+  {id:'sourire',t:'Il y a ton sourire',b:4,sub:false,start:66,min:80,max:80,note:'Tempo de ta feuille : noire = 80. Accompagnement en croches à partir de la mesure 58.'},
+  {id:'odysseus',t:'Odysseus',b:3,sub:false,start:60,min:81,max:81,note:'Andante, noire = 81, mesure à 3/4 (version piano de Francesco Parrino).'}
 ];
 const MT={on:false,bpm:60,beats:4,sub:false,next:0,i:0,timer:null,queue:[],raf:0,preset:'libre',okRun:0,koRun:0};
 function mtSet(b){MT.bpm=Math.max(30,Math.min(180,Math.round(b)));$('#mt-bpm').textContent=MT.bpm;$('#mt-range').value=MT.bpm;}
@@ -754,7 +815,8 @@ const PIECES=[
   {id:'jig',t:'Three-Note Jig',a:'Méthode en anglais',focus:'Trois notes, 2/4, mains alternées',obj:'Deux temps égaux par mesure, sans arrêt au changement de main.',piege:'Raccourcir les blanches.'},
   {id:'playtune',t:'Play Tune',a:'Méthode en anglais',focus:'4/4, partie de duo optionnelle',obj:'Garder ta pulsation pendant que le prof joue la partie de duo.',piege:'Suivre l’autre partie au lieu de compter.'},
   {id:'letitbe',t:'Let It Be',a:'Beatles, arrangement du cours',focus:'Grille C, F, G, Am, E, Dm, avec F7M et F/C',obj:'La grille de l’intro en accords tenus, sans arrêt aux changements, à noire = 72.',piege:'Regarder les mains à chaque changement : prépare l’accord suivant pendant le précédent.',tip:'Écoute la grille dans Clavier › Enchaînements › Let It Be (intro).'},
-  {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches.',piege:'Ralentir au passage C → G ou G → D.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'}
+  {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches.',piege:'Ralentir au passage C → G ou G → D.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'},
+  {id:'odysseus',t:'Odysseus',a:'Ludwig Göransson (The Odyssey, 2026), version piano Francesco Parrino',focus:'Do mineur, 3/4, Andante',obj:'Objectif à long terme : une version adaptée à ton niveau, choisie avec ton prof, jouée à 3 temps réguliers.',piege:'Attaquer trop tôt la version complète (10 pages) : commence par l’accord de Do mineur et la pulsation à 3 temps.',tip:'Partitions légales sur Musicnotes (version Parrino et trois autres versions). En attendant : accord Cm dans Clavier, métronome à 3/4.'}
 ];
 const pieceT=id=>(PIECES.find(p=>p.id===id)||{t:id}).t;
 function lastWorked(id){const s=S.seances.find(x=>x.piece===id);return s?s.date:null;}
@@ -765,7 +827,7 @@ function renderPieces(){$('#pieces').innerHTML=PIECES.map(p=>{const r=S.rep[p.id
   <div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>
   <dl><dt>Objectif</dt><dd>${esc(p.obj)}</dd><dt>Piège</dt><dd>${esc(p.piege)}</dd><dt>Tempo</dt><dd>${esc(tempo)}</dd><dt>Dernière fois</dt><dd>${lw?esc(fmtDate(lw)):'pas encore noté'}</dd>${MGP[p.id]?`<dt>Main gauche</dt><dd>${esc(MGP[p.id].t)}</dd>`:''}</dl>
   ${p.extra?`<p class="small"><span class="tag verif">À vérifier</span> ${esc(p.extra)}</p>`:''}${p.tip?`<p class="small">${esc(p.tip)}</p>`:''}
-  <div class="row"><button class="btn primary" data-act="up" data-id="${p.id}"${st>=5?' disabled':''}>Étape suivante</button><button class="btn" data-act="down" data-id="${p.id}"${st<=0?' disabled':''}>Revenir</button><button class="btn ghost" data-act="metro" data-id="${p.id}">Métronome</button>${p.mel?`<button class="btn ghost" data-act="mel" data-id="${p.mel}">Mélodie</button>`:''}${MGP[p.id]&&MGP[p.id].mg?`<button class="btn ghost" data-act="mg" data-id="${MGP[p.id].mg}">Main gauche</button>`:''}</div></article>`;}).join('');}
+  <div class="row"><button class="btn primary" data-act="up" data-id="${p.id}"${st>=5?' disabled':''}>Étape suivante</button><button class="btn" data-act="down" data-id="${p.id}"${st<=0?' disabled':''}>Revenir</button><button class="btn ghost" data-act="metro" data-id="${p.id}">Métronome</button>${p.mel?`<button class="btn ghost" data-act="mel" data-id="${p.mel}">Mélodie</button>`:''}${MGP[p.id]&&MGP[p.id].mg?`<button class="btn ghost" data-act="mg" data-id="${MGP[p.id].mg}">Main gauche</button>`:''}${WORK[p.id]?`<button class="btn ghost" data-act="wk" data-id="${p.id}">Mesure par mesure</button>`:''}</div></article>`;}).join('');}
 
 /* ---------- Dates ---------- */
 const pad=n=>String(n).padStart(2,'0');
@@ -844,7 +906,8 @@ const QBASE=[
   ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?'],
   ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?'],
   ['mgPos','Main gauche : position de départ (doigt et note) pour Orientale et Let It Be ? Et pour Il y a ton sourire, quels doigts pour les basses Mi, Do, Sol, Ré ?'],
-  ['mgCancan','Cancan, main gauche : C = Do (4) + Mi (2) et G7 = Si (5) + Fa (1), c’est bien ça ?']
+  ['mgCancan','Cancan, main gauche : C = Do (4) + Mi (2) et G7 = Si (5) + Fa (1), c’est bien ça ?'],
+  ['odysseus','Odysseus (Göransson, version Parrino) : quelle version acheter pour mon niveau, ou peux-tu m’en préparer une simplifiée ?']
 ];
 function renderQ(){const items=QBASE.map(q=>({id:q[0],t:q[1],base:true,done:!!S.questions.done[q[0]]})).concat(S.questions.items);
   $('#q-list').innerHTML=items.map(q=>`<label class="q${q.done?' done':''}"><input type="checkbox" data-q="${esc(q.id)}"${q.base?' data-base="1"':''}${q.done?' checked':''}><span>${esc(q.t)}</span></label>`).join('');}
@@ -886,9 +949,11 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
   if(v!=='tempo'&&MT.on)mtStop();
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
+  if(v==='seance')setTimeout(wkScroll,30);
   if(v==='lecture'&&!lecCur)lecNew();
   window.scrollTo(0,0);}
 function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')applyPreset(v);
+  if(k==='wk'&&WORK[v]){wkSelect(v);setTimeout(()=>{const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);wkScroll();},120);}
   if(k==='mg'&&MG[v]){selectMg(v);setTimeout(()=>{const card=$('#mg-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);mgScroll();},120);}
   if((k==='mel'||k==='pas')&&MEL[v]){stopBus();curMel=v;$$('#mel-sel button').forEach(b=>b.classList.toggle('on',b.dataset.m===v));renderMel();
     // Après le changement d’onglet (route remet la page en haut) : montrer la carte Mélodies, puis lancer le pas à pas si demandé.
@@ -904,6 +969,14 @@ function init(){
   KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey});
   MINI=makeKeyboard($('#kb-mini'),36,84,{small:true});
   MGKB=makeKeyboard($('#kb-mg'),40,72,{});
+  WKKB=makeKeyboard($('#kb-wk'),43,84,{});
+  $('#wk-piece').innerHTML=Object.entries(WORK).map(([k,w])=>`<option value="${k}">${esc(w.t)}</option>`).join('');wkSelect('hymne');
+  $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
+  $('#wk-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();renderWork();});
+  $('#wk-prev').onclick=()=>wkGo(WK.bar-1);$('#wk-next').onclick=()=>wkGo(WK.bar+1);$('#wk-play').onclick=playWork;$('#wk-stop').onclick=wkStop;
+  $('#wk-bpm').addEventListener('input',e=>$('#wk-bpm-v').textContent=e.target.value);
+  $('#wk-ok').onclick=()=>{WK.okRun++;if(WK.okRun>=3){WK.okRun=3;$('#wk-msg').textContent=WK.bar<workBars(WK.id).length-1?'Trois fois propre : passe à la mesure suivante, puis enchaîne les deux.':'Trois fois propre sur la dernière mesure : rejoue tout le morceau, lentement.';}else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre.`;renderWork();};
+  $('#wk-ko').onclick=()=>{WK.okRun=0;$('#wk-msg').textContent='Raté : main par main, plus lent, puis les deux mains.';renderWork();};
   $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
   $('#mg-sel').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)selectMg(b.dataset.g);});$('#mg-play').onclick=playMg;
   $('#chord-chips').innerHTML=CHORD_LIST.map(c=>`<button class="chip${c===curChord?' on':''}" data-c="${c}">${c}</button>`).join('');
@@ -913,7 +986,7 @@ function init(){
   $('#mt-preset').innerHTML=PRESETS.map(p=>`<option value="${p.id}">${esc(p.t)}</option>`).join('');
   renderChordInfo();renderProg();renderMel();earRenderOpts();renderLecAns();drawStaff(null);applyPreset('libre');renderAll();
 
-  $('#lbl-en').addEventListener('change',e=>{useEN=e.target.checked;KB.labels();MINI.labels();MGKB.labels();selectMg(curMg);renderChordInfo();renderLecAns();});
+  $('#lbl-en').addEventListener('change',e=>{useEN=e.target.checked;KB.labels();MINI.labels();MGKB.labels();selectMg(curMg);WKKB.labels();renderWork();renderChordInfo();renderLecAns();});
   $('#chord-chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;curChord=b.dataset.c;$$('#chord-chips .chip').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#inv').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curInv=+b.dataset.i;$$('#inv button').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#with-bass').addEventListener('change',renderChordInfo);
@@ -951,7 +1024,8 @@ function init(){
     if(act==='up'||act==='down'){const r=S.rep[id]=Object.assign({stage:0},S.rep[id]);r.stage=Math.max(0,Math.min(5,(r.stage||0)+(act==='up'?1:-1)));renderPieces();saveRep();}
     if(act==='metro'){location.hash='#tempo';applyPreset(id);}
     if(act==='mel'){location.hash='#clavier';handleExtra('mel:'+id);}
-    if(act==='mg'){location.hash='#clavier';handleExtra('mg:'+id);}});
+    if(act==='mg'){location.hash='#clavier';handleExtra('mg:'+id);}
+    if(act==='wk'){location.hash='#seance';handleExtra('wk:'+id);}});
 
   $('#fmt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RUN.on)return;FMT=b.dataset.f;$$('#fmt button').forEach(x=>x.classList.toggle('on',x===b));runReset();});
   $('#t-start').onclick=runToggle;$('#t-skip').onclick=runSkip;$('#t-end').onclick=()=>runEnd(false);
