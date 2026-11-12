@@ -18,6 +18,7 @@ const EXPECTED = {
   'Fontaine : Sol3 et Fa♯3': [['Fa♯3', '3'], ['Sol3', '2']],
   'Tabac : accord C': [['Do3', '5'], ['Sol3', '1']],
   'Tabac : accord G': [['Si2', '5'], ['Sol3', '1']],
+  'Poney : pouces sur le Do': [['Sol3', '4'], ['La3', '3'], ['Si3', '2'], ['Do4', '1']],
   'Cancan : C': [['Do3', '4'], ['Mi3', '2']],
   'Cancan : G7': [['Si2', '5'], ['Fa3', '1']],
 };
@@ -59,7 +60,7 @@ test('M3. depuis le répertoire, « Main gauche » ouvre la bonne position, cart
 
 test('M4. morceaux sans position sûre : « à confirmer », questions ajoutées', async ({ page }) => {
   await page.goto('./#morceaux');
-  for (const title of ['Le Petit Poney', 'Orientale', 'Let It Be', 'Il y a ton sourire']) {
+  for (const title of ['Orientale', 'Let It Be', 'Il y a ton sourire']) {
     const card = page.locator('article.piece', { hasText: title });
     await expect(card, title).toContainText('À confirmer en cours');
     await expect(card.locator('button[data-act="mg"]'), title).toHaveCount(0);
@@ -109,5 +110,17 @@ test('M7. J’ai du bon tabac : notes de la feuille, doigts signalés comme déd
   await page.locator('#mg-sel button', { hasText: 'Tabac : accord G' }).click();
   await expect(page.locator('#mg-info')).toContainText('5 → Si2 · 1 → Sol3');
   await page.goto('./#journal');
-  await expect(page.locator('#q-list')).toContainText('position de départ (doigt et note) pour Le Petit Poney');
+  await expect(page.locator('#q-list')).toContainText('position de départ (doigt et note) pour Orientale');
+});
+
+test('M8. Le Petit Poney : position du schéma imprimé, accessible depuis le répertoire', async ({ page }) => {
+  await page.goto('./#morceaux');
+  const card = page.locator('article.piece', { hasText: 'Le Petit Poney' });
+  await expect(card).toContainText('Schéma imprimé : 4 Sol3, 3 La3, 2 Si3');
+  await expect(card).not.toContainText('À confirmer en cours');
+  await card.locator('button[data-act="mg"]').click();
+  await expect(page.locator('#mg-sel button.on')).toHaveText('Poney : pouces sur le Do');
+  await expect(page.locator('#mg-info')).toContainText('D’après ta feuille');
+  await expect(page.locator('#mg-info')).toContainText('4 → Sol3 · 3 → La3 · 2 → Si3 · 1 → Do4');
+  await expect(page.locator('#mg-info')).toContainText('barré au crayon');
 });
