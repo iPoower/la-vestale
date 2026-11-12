@@ -103,6 +103,9 @@ textarea{min-height:70px;resize:vertical}
 .kb.compact .fg{min-width:15px;height:15px;font-size:.6rem;border-width:1px;padding:0 1px;bottom:16px}
 .kb.compact .kl{font-size:.5rem}
 h1,h2,h3,.kpi b,.bpm b,.timer b,ol.blocks li .m,.info .big,.nextnote,.count{font-variant-numeric:lining-nums tabular-nums}
+.ry-tap{width:100%;min-height:84px;font-size:1.1rem;touch-action:manipulation}
+.ry-tap.hit{filter:brightness(1.25)}
+.ry-staff{width:100%;background:var(--ivoire);border-radius:10px}
 .mt-chip{position:fixed;right:12px;bottom:12px;z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .seg button:disabled{opacity:.35;cursor:default}
 .kb.fit .key.white{padding-bottom:3px}
@@ -354,6 +357,17 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="row between"><div class="score">Juste <b id="lec-ok">0</b> Erreurs <b id="lec-ko">0</b></div>
       <div class="row"><button class="btn" id="lec-next">Suivant</button><button class="btn primary" id="lec-sprint">Sprint 20 notes</button></div></div>
   </div>
+  <div class="card" id="ry-card">
+    <div class="row between"><h2>Rythme</h2><span class="tag" id="ry-tag">Niveau 1</span></div>
+    <div class="seg" id="ry-lvl"><button data-l="1" class="on">1 · noires, blanches</button><button data-l="2">2 · + rondes, silences</button><button data-l="3">3 · + croches</button><button data-l="4">4 · + pointées</button></div>
+    <p class="small muted" id="ry-help"></p>
+    <svg class="ry-staff" id="ry-staff" viewBox="0 0 320 110" role="img" aria-label="Rythme à frapper"></svg>
+    <div class="row"><button class="btn" id="ry-listen">Écouter</button><button class="btn primary" id="ry-go">À toi</button><button class="btn ghost" id="ry-new">Nouveau rythme</button></div>
+    <button class="btn primary ry-tap" id="ry-tap" aria-label="Frapper le rythme">Frappe ici · ou barre d’espace</button>
+    <div class="fb" id="ry-fb" aria-live="polite"></div>
+    <label class="field">Tempo : noire = <b id="ry-bpm-v">60</b><input type="range" id="ry-bpm" min="50" max="100" value="60"></label>
+    <div class="score">Réussites d’affilée <b id="ry-ok">0</b>/3 · au total <b id="ry-tot">0</b></div>
+  </div>
   <div class="card">
     <h3>Tes notes fragiles</h3>
     <p class="small muted">Elles reviennent plus souvent jusqu’à ce que tu les lises sans hésiter.</p>
@@ -458,7 +472,7 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
   const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
   const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
   return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
-    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k))},questions:{done,items}};}
+    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{})},questions:{done,items}};}
 function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];}}catch(e){}}
 /* Copies automatiques : 10 au plus, sur ce téléphone, dans une clé séparée. Un échec d'écriture n'empêche jamais l'enregistrement normal. */
 const SNAP='vestale-copies-v1',SNAP_MAX=10;
@@ -614,6 +628,61 @@ function playProg(){const id=progPiece();if(id)return playPiece(id);const a=ac()
     const tt=t-a.currentTime;at(tt,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));KB.clear();KB.mark(v,'hl');KB.mark([c.b],'hl2');FKB.clear();FKB.mark(v,'hl');FKB.mark([c.b],'hl2');});
     t+=dur;});
   at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));FKB.clear();});}
+
+/* ---------- Rythme : lire, écouter, frapper ---------- */
+// Cellules par niveau (en temps, mesure à 4/4) ; 'r' = silence. Une cellule commence toujours sur un temps.
+const RY_CELLS={1:[[1],[2]],2:[[1],[2],[4],['r1'],['r2']],3:[[1],[2],[4],['r1'],['r2'],[.5,.5]],4:[[1],[2],[4],['r1'],['r2'],[.5,.5],[1.5,.5]]};
+const RY_HELP={1:'Noires (1 temps) et blanches (2 temps).',2:'+ rondes (4 temps), soupirs (silence d’1 temps) et demi-pauses (silence de 2 temps) : on ne frappe pas les silences.',
+  3:'+ croches : deux croches = 1 temps, compte « 1 et ».',4:'+ noire pointée (1 temps et demi) suivie d’une croche : « 1 – et 2 ».'};
+const RY_GOOD=.09,RY_OK=.18;
+const RY={lvl:1,ev:[],exp:[],taps:[],barStart:0,listening:false,run:0};
+function ryCellLen(c){return c.reduce((a,x)=>a+(typeof x==='string'?+x.slice(1):x),0);}
+function ryGen(lvl){const need={2:e=>e.r||e.d===4,3:e=>e.d===.5,4:e=>e.d===1.5}[lvl];
+  for(let k=0;k<200;k++){let left=4;const ev=[];while(left>0){const fit=RY_CELLS[lvl].filter(c=>ryCellLen(c)<=left);const c=fit[Math.floor(Math.random()*fit.length)];c.forEach(x=>ev.push(typeof x==='string'?{d:+x.slice(1),r:true}:{d:x,r:false}));left-=ryCellLen(c);}
+    if(ev.some(e=>!e.r)&&(!need||ev.some(need)))return ev;}
+  return [{d:1,r:false},{d:1,r:false},{d:2,r:false}];}
+function ryOnsets(ev){let t=0;return ev.map(e=>{const o=t;t+=e.d;return o;});}
+// Dessin : ligne de rythme, têtes, hampes, ligatures, points, silences, et le comptage sous chaque note.
+function ryDraw(marks){const ink='#2a221b',X=o=>48+o*64,Y=58;let h=`<text x="10" y="50" font-size="17" font-weight="700" fill="${ink}">4</text><text x="10" y="70" font-size="17" font-weight="700" fill="${ink}">4</text>`;
+  h+=`<line x1="30" x2="312" y1="${Y}" y2="${Y}" stroke="${ink}" stroke-width="1.4"/><line x1="312" x2="312" y1="${Y-22}" y2="${Y+22}" stroke="${ink}" stroke-width="2"/>`;
+  for(let b=0;b<4;b++)h+=`<text x="${X(b)-3}" y="104" font-size="11" fill="#8f7238">${b+1}</text>`;
+  const on=ryOnsets(RY.ev);
+  RY.ev.forEach((e,i)=>{const x=X(on[i]),col=marks&&marks[i]?marks[i]:ink;
+    if(on[i]%1)h+=`<text x="${x-6}" y="104" font-size="11" fill="#8f7238">et</text>`;
+    if(e.r){h+=e.d===1?`<path class="ry-r" d="M${x-3} ${Y-16} l7 8 l-6 6 l7 8 q-9 -3 -6 6" fill="none" stroke="${col}" stroke-width="2.4"/>`:`<rect class="ry-r" x="${x-8}" y="${Y-7}" width="16" height="7" fill="${col}"/>`;return;}
+    const hollow=e.d>=2,fill=hollow?'none':col;h+=`<ellipse class="ry-n" cx="${x}" cy="${Y}" rx="8" ry="6" transform="rotate(-20 ${x} ${Y})" fill="${fill}" stroke="${col}" stroke-width="2"/>`;
+    if(e.d!==4)h+=`<line x1="${x+7}" x2="${x+7}" y1="${Y-2}" y2="${Y-40}" stroke="${col}" stroke-width="1.8"/>`;
+    if(e.d===1.5)h+=`<circle cx="${x+15}" cy="${Y}" r="2.6" fill="${col}"/>`;
+    if(e.d===.5){const pair=RY.ev[i+1]&&RY.ev[i+1].d===.5&&!RY.ev[i+1].r&&on[i]%1===0,prev=RY.ev[i-1]&&RY.ev[i-1].d===.5&&!RY.ev[i-1].r&&on[i]%1!==0;
+      if(pair)h+=`<rect x="${x+6}" y="${Y-41}" width="${32+2}" height="5" fill="${col}"/>`;
+      else if(!prev)h+=`<path d="M${x+7} ${Y-40} q10 8 6 22" fill="none" stroke="${col}" stroke-width="2"/>`;}});
+  $('#ry-staff').innerHTML=h;}
+function ryNew(){ryStop();RY.ev=ryGen(RY.lvl);RY.exp=ryOnsets(RY.ev).filter((o,i)=>!RY.ev[i].r);RY.taps=[];$('#ry-fb').textContent='';$('#ry-fb').className='fb';ryDraw();}
+function ryStats(){return S.stats.rythme=S.stats.rythme||{lvl:1,ok:0,ko:0};}
+function ryRender(){$('#ry-tag').textContent='Niveau '+RY.lvl;$('#ry-help').textContent=RY_HELP[RY.lvl]+' Écoute, puis « À toi » : frappe en même temps que le clic, après une mesure de décompte.';
+  $$('#ry-lvl button').forEach(b=>b.classList.toggle('on',+b.dataset.l===RY.lvl));$('#ry-ok').textContent=RY.run;$('#ry-tot').textContent=(S.stats.rythme&&S.stats.rythme.ok)||0;}
+function rySetLvl(l){RY.lvl=l;RY.run=0;ryStats().lvl=l;saveStats();ryRender();ryNew();}
+function ryStop(){RY.listening=false;stopBus();}
+// Joue (clics + rythme) ; avec listen=true, les notes ne sont pas jouées : c'est toi qui frappes.
+function ryPlay(listen){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#ry-bpm').value;const s0=a.currentTime+.15;
+  for(let k=0;k<8;k++)click(s0+k*spb,k%4===0?'acc':'beat',bus);
+  RY.barStart=s0+4*spb;RY.taps=[];
+  if(!listen)ryOnsets(RY.ev).forEach((o,i)=>{const e=RY.ev[i];if(!e.r)playNote(72,RY.barStart+o*spb,e.d*spb*.85,.7,bus);});
+  RY.listening=!!listen;$('#ry-fb').className='fb';$('#ry-fb').textContent=listen?'Décompte : 1, 2, 3, 4… puis frappe !':'Écoute le rythme après le décompte.';
+  at(RY.barStart+4*spb+RY_OK-a.currentTime,()=>{if(listen&&RY.listening){RY.listening=false;ryJudgeNow(spb);}else if(!listen)$('#ry-fb').textContent='À toi : appuie sur « À toi ».';});}
+function ryTap(){if(!RY.listening||!AC)return;const lat=Math.min(.05,(AC.outputLatency||0)+(AC.baseLatency||0));RY.taps.push(AC.currentTime-lat-RY.barStart);
+  const b=$('#ry-tap');b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),90);}
+// Compare chaque attaque attendue à la frappe la plus proche (en secondes) ; frappes en trop comptées.
+function ryJudge(exp,taps,spb){const used=new Set();const res=exp.map(o=>{const t=o*spb;let best=-1,bd=1e9;taps.forEach((x,i)=>{if(used.has(i))return;const d=x-t;if(Math.abs(d)<Math.abs(bd)){bd=d;best=i;}});
+    if(best>=0&&Math.abs(bd)<=RY_OK){used.add(best);return {dt:bd,v:Math.abs(bd)<=RY_GOOD?'ok':bd<0?'tôt':'tard'};}return {dt:null,v:'manqué'};});
+  return {res,extra:taps.length-used.size,success:res.every(r=>r.v!=='manqué')&&taps.length===used.size};}
+function ryJudgeNow(spb){const j=ryJudge(RY.exp,RY.taps,spb);const st=ryStats();let k=0;
+  const col={ok:'#3f7a2e','tôt':'#c7782b','tard':'#c7782b','manqué':'#b4432c'};const marks=RY.ev.map(e=>e.r?null:col[j.res[k++].v]);ryDraw(marks);
+  const n={ok:0,'tôt':0,'tard':0,'manqué':0};j.res.forEach(r=>n[r.v]++);
+  let msg=`${n.ok} à l’heure`+(n['tôt']?`, ${n['tôt']} en avance`:'')+(n.tard?`, ${n.tard} en retard`:'')+(n['manqué']?`, ${n['manqué']} oubliée(s)`:'')+(j.extra?`, ${j.extra} frappe(s) en trop (un silence ?)`:'')+'.';
+  if(j.success){RY.run++;st.ok++;msg='Réussi : '+msg+(RY.run>=3?(RY.lvl<4?` Trois réussites : passe au niveau ${RY.lvl+1}.`:' Trois réussites au niveau le plus haut : monte le tempo.'):' Encore '+(3-RY.run)+' pour valider.');}
+  else{RY.run=0;st.ko++;msg='À reprendre : '+msg;}
+  saveStats();$('#ry-fb').className='fb '+(j.success?'ok':'ko');$('#ry-fb').textContent=msg;ryRender();}
 
 /* ---------- Écran allumé pendant le travail ---------- */
 const AWAKE=new Set();let LOCK=null;
@@ -971,7 +1040,7 @@ function md(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').spl
 function coachText(){const since=Date.now()-14*864e5;
   const data={aujourdhui:dkey(new Date()),seances_14j:S.seances.filter(s=>s.ts>=since).map(s=>({date:s.date,morceau:pieceT(s.piece),min:s.min,tempo:s.bpm,ressenti:s.feel,passage:s.pass,note:s.note})),
     repertoire:PIECES.map(p=>({morceau:p.t,etape:STAGES[(S.rep[p.id]||{}).stage||0],tempo:(S.rep[p.id]||{}).bpm||null})),
-    oreille:S.stats.oreille,lecture_erreurs:Object.entries(S.stats.lecture).filter(([k,s])=>s.ko).map(([k,s])=>({note:nm(fromDiat(+k.split(':')[1])),cle:k.split(':')[0],ok:s.ok,ko:s.ko})),
+    oreille:S.stats.oreille,rythme:S.stats.rythme||null,lecture_erreurs:Object.entries(S.stats.lecture).filter(([k,s])=>s.ko).map(([k,s])=>({note:nm(fromDiat(+k.split(':')[1])),cle:k.split(':')[0],ok:s.ok,ko:s.ko})),
     questions_ouvertes:QBASE.filter(q=>!S.questions.done[q[0]]).map(q=>q[1]).concat(S.questions.items.filter(q=>!q.done).map(q=>q.t))};
   return `Bilan piano. Sois mon coach : adulte débutant, cours le vendredi, piano droit ancien au toucher résistant. Règles : les consignes et doigtés de mon prof priment ; jamais de travail en force ; trois réussites calmes avant d’avancer ; une erreur répétée = isoler deux mesures et ralentir ; séances de 25 à 40 min, 5 à 6 jours par semaine ; horizon Alkan sans brûler les étapes.
 Format attendu, 180 mots maximum : Verdict (une phrase) ; Ce qui progresse (2 puces) ; À corriger (2 puces) ; Mes 3 prochaines séances (morceau, passage, tempo de départ) ; À demander à mon prof vendredi (1 ou 2 questions). N’invente rien d’absent des données.
@@ -1064,6 +1133,13 @@ function init(){
   $('#lec-lvl').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;lecLvl=+b.dataset.l;$$('#lec-lvl button').forEach(x=>x.classList.toggle('on',x===b));lecCur=null;lecNew();});
   $('#lec-ans').addEventListener('click',e=>{const b=e.target.closest('button');if(b){ac();lecAnswer(b);}});
   $('#lec-next').onclick=lecNew;
+  RY.lvl=(S.stats.rythme&&S.stats.rythme.lvl)||1;ryRender();ryNew();
+  $('#ry-lvl').addEventListener('click',e=>{const b=e.target.closest('button[data-l]');if(b)rySetLvl(+b.dataset.l);});
+  $('#ry-new').onclick=ryNew;$('#ry-listen').onclick=()=>ryPlay(false);$('#ry-go').onclick=e=>{e.currentTarget.blur();ryPlay(true);};
+  $('#ry-tap').addEventListener('pointerdown',e=>{e.preventDefault();ryTap();});
+  $('#ry-bpm').addEventListener('input',e=>$('#ry-bpm-v').textContent=e.target.value);
+  document.addEventListener('keydown',e=>{if(e.code==='Space'&&RY.listening&&!e.repeat){e.preventDefault();ryTap();}});
+  document.addEventListener('keyup',e=>{if(e.code==='Space'&&RY.listening)e.preventDefault();});
   $('#lec-sprint').onclick=()=>{sprint={n:0,ok:0,t0:performance.now()};$('#lec-sprint-tag').textContent='Sprint 0/20';lecNew();};
 
   $('#mt-go').onclick=()=>{MT.on?mtStop():mtStart();mtChip();};$('#mt-chip').onclick=()=>{mtStop();mtChip();};
