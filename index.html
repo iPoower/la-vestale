@@ -246,11 +246,11 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div class="card">
     <div class="row between"><h2>Clavier</h2><label class="toggle"><input type="checkbox" id="lbl-en"> Noms anglais (C, D, E)</label></div>
     <div class="kb-wrap" id="kb-main"></div>
-    <p class="hint">Do4 = Do central. Sur iPhone, coupe le mode silencieux pour entendre le son.</p>
+    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. Sur iPhone, coupe le mode silencieux pour entendre le son.</p>
   </div>
   <div class="card">
     <h2>Les accords de ton prof</h2>
-    <p class="small muted">Feuille « Accords Do Maj / la min » : C, F, G, Am, Dm, Em (ou E), plus G7 du premier cours.</p>
+    <p class="small muted">Feuille « Accords Do Maj / la min » : C, F, G, Am, Dm, Em (ou E), plus G7 du premier cours, D (Ré) de l’Hymne à la joie et F7M de Let It Be.</p>
     <div class="chips" id="chord-chips"></div>
     <div class="seg" id="inv"><button data-i="0" class="on">Fondamental</button><button data-i="1">1er renversement</button><button data-i="2">2e renversement</button></div>
     <div class="info" id="chord-info"></div>
@@ -341,7 +341,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 
 <!-- MORCEAUX -->
 <section class="view" id="v-morceaux">
-  <div class="card"><h2>Ton répertoire</h2><p class="small muted">Dix morceaux, six étapes chacun. Avance une étape quand l’objectif vérifiable est atteint, pas avant.</p></div>
+  <div class="card"><h2>Ton répertoire</h2><p class="small muted">Six étapes par morceau. Avance d’une étape quand l’objectif vérifiable est atteint, pas avant.</p></div>
   <div id="pieces" style="display:flex;flex-direction:column;gap:14px"></div>
 </section>
 
@@ -464,16 +464,21 @@ const CH={
   Dm:{n:[62,65,69],b:50,fr:'Ré mineur',fn:'ii · préparation',role:'Prépare souvent G ou G7.'},
   Em:{n:[64,67,71],b:52,fr:'Mi mineur',fn:'iii',role:'Note du milieu : Sol naturel.'},
   E:{n:[64,68,71],b:52,fr:'Mi majeur',fn:'V de la mineur',role:'Note du milieu : Sol♯, la sensible de La. Il tire fort vers Am.'},
+  F7M:{n:[65,69,72,76],b:53,fr:'Fa majeur septième',fn:'IV7M · sous-dominante avec septième majeure',role:'Fa majeur avec un Mi en plus : couleur douce, typique de la pop.'},
+  D:{n:[62,66,69],b:50,fr:'Ré majeur',fn:'V de V · dominante de Sol',role:'Le Fa♯ monte au Sol : il annonce G7, puis le retour à C.'},
   'F/C':{n:[60,65,69],b:48,fr:'Fa avec Do à la basse',fn:'IV sur pédale de tonique',role:'Petite broderie avant le C final.'}
 };
-const CHORD_LIST=['C','F','G','G7','Am','Dm','Em','E'];
+const CHORD_LIST=['C','F','G','G7','Am','Dm','Em','E','D','F7M'];
 function voicing(name,inv){let n=CH[name].n.slice();for(let i=0;i<inv;i++){n.push(n.shift()+12);}if(Math.max(...n)>81)n=n.map(x=>x-12);return n;}
 let curChord='C',curInv=0;
 function chordNotes(name,inv,bass){const v=voicing(name,inv);return bass?[CH[name].b].concat(v):v;}
 function renderChordInfo(){const c=CH[curChord],v=voicing(curChord,curInv);
   let extra='';
   if(curChord==='E'||curChord==='Em')extra='<p class="small"><span class="tag verif">À vérifier en cours</span> Pourquoi « Em (ou E) » sur la feuille : en la mineur, l’accord de dominante prend souvent un Sol♯ (gamme harmonique), ce qui donne E au lieu de Em. Demande à ton prof si c’est son intention.</p>';
-  if(curChord==='G7')extra='<p class="small">G7 = G + Fa. Joue G7 puis C et écoute Si→Do, Fa→Mi.</p>';
+  if(curChord==='G7')extra='<p class="small">G7 = G + Fa. Joue G7 puis C et écoute Si→Do, Fa→Mi. Forme du cours à la main gauche (Hymne à la joie) : Si–Fa–Sol, doigts 5-2-1.</p>';
+  if(curChord==='C')extra='<p class="small">Forme du cours à la main gauche (Hymne à la joie) : Do–Mi–Sol, doigts 5-3-1.</p>';
+  if(curChord==='F7M')extra='<p class="small">F7M = F + Mi. Dans Let It Be, il suit Am dans la grille de l’intro.</p>';
+  if(curChord==='D')extra='<p class="small">Dans Hymne à la joie (mesure 12), main gauche : Ré–Fa♯, doigts 4 et 2, juste avant G7.</p>';
   $('#chord-info').innerHTML=`<div class="big">${esc(curChord)} · ${esc(c.fr)}</div><div>${v.map(m=>esc(nm(m,false))).join(' – ')}</div><div class="small muted">${esc(c.fn)}. ${esc(c.role)}</div>${extra}`;
   KB.clear();KB.mark(v,'hl');if($('#with-bass').checked)KB.mark([c.b],'hl2');KB.scrollTo(v[1]);}
 function playChord(name,inv,arp){const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.03;const bass=$('#with-bass').checked;
@@ -484,6 +489,8 @@ const PROG={
   cadence:{t:'C – G7 – C',src:'Le premier enchaînement du cours : repos, tension, retour.',s:[['C',4],['G7',4],['C',4]]},
   grille:{t:'Grille de la feuille',src:'Feuille « Accords Do Maj / la min », mesures 1 à 8 : C, G, Em, Am, Dm, F, G, puis C avec F/C.',s:[['C',4],['G',4],['Em',4],['Am',4],['Dm',4],['F',4],['G',4],['C',1],['F/C',1],['C',2]]},
   i4v:{t:'C – F – G – C',src:'Le trio de base : tonique, sous-dominante, dominante.',s:[['C',4],['F',4],['G',4],['C',4]]},
+  letitbe:{t:'Let It Be (intro)',src:'Grille de l’intro de ta feuille, noire = 72 : C G | Am F7M | C G | F C, deux temps par accord.',s:[['C',2],['G',2],['Am',2],['F7M',2],['C',2],['G',2],['F',2],['C',2]]},
+  sourire:{t:'Il y a ton sourire',src:'Grille de ta feuille, noire = 80 : Em C G D, un accord par mesure, en boucle.',s:[['Em',4],['C',4],['G',4],['D',4],['Em',4],['C',4],['G',4],['D',4]]},
   lamin:{t:'Am – Dm – E – Am',src:'La mineur : écoute la différence avec Em à la place de E.',s:[['Am',4],['Dm',4],['E',4],['Am',4]]}
 };
 let curProg='grille',progPat='bloc';
@@ -503,9 +510,20 @@ const MEL={
     n:[[67,2,1],[67,1],[71,1],[71,1],[69,1],[71,1],[69,1],[67,2],[67,1],[71,1],[71,1],[69,1],[71,2],
        [71,2,3],[71,1],[69,1],[67,1],[71,1],[74,1,5],[71,1],[74,2],[74,1],[71,1],[67,1],[71,1],[69,2],
        [67,2,1],[67,1],[71,1],[71,1],[69,.5],[67,.5],[71,1],[69,1],[71,2],[71,1],[67,1],[71,1],[69,1],[67,2]]},
-  hymne:{t:'Hymne à la joie',src:'Mélodie de Beethoven, version courante en Do majeur. Ta feuille peut différer : elle fait foi.',
-    n:[[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],
-       [64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]]}
+  hymne:{t:'Hymne à la joie',src:'Transcrite de ta feuille : Do majeur, 16 mesures, doigtés imprimés compris. Main droite seule.',
+    n:[[64,1,3],[64,1],[65,1],[67,1,5],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],
+       [64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2],
+       [62,1,2],[62,1],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[60,1,1],[62,1],[64,.5],[65,.5],[64,1],[62,1],[60,1,1],[62,1,2],[55,2,1],
+       [64,1,3],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]]},
+  twinkle:{t:'Ah ! vous dirai-je maman',src:'Air traditionnel (thème varié par Mozart), version courante en Do majeur. Sur ta feuille (n° 54), la mélodie passe d’une main à l’autre : elle fait foi.',
+    n:[[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],
+       [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
+       [60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]]},
+  wenceslas:{t:'Good King Wenceslas',src:'Chant ancien, version courante transposée en Do comme ta feuille. La mélodie passe d’une main à l’autre (pointillés) : Sol–La–Si sous le Do central à la main gauche. Ta feuille fait foi.',
+    n:[[60,1,1],[60,1],[60,1],[62,1],[60,1],[60,1],[55,2],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
+       [60,1],[60,1],[60,1],[62,1],[60,1],[60,1],[55,2],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
+       [67,1,5],[65,1],[64,1],[62,1],[64,1],[62,1],[60,2],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
+       [55,1],[55,1],[57,1],[59,1],[60,1],[60,1],[62,2],[67,1],[65,1],[64,1],[62,1],[60,2],[65,2],[60,4]]}
 };
 let curMel='fontaine',stepIdx=-1;
 function renderMel(){const m=MEL[curMel];$('#mel-src').textContent=m.src;$('#mel-next').textContent='';stepIdx=-1;KB.clear();KB.scrollTo(m.n[0][0]);}
@@ -589,11 +607,19 @@ const PRESETS=[
   {id:'cancan',t:'Cancan',b:4,sub:false,start:66,note:'Moderato imprimé. La vitesse n’est pas l’objectif immédiat.'},
   {id:'orientale',t:'Orientale',b:4,sub:false,start:60,note:'Une phrase en deux couleurs : piano puis forte, même rythme.'},
   {id:'tambourin',t:'Tambourin',b:4,sub:true,start:72,min:108,max:120,note:'Cible imprimée noire = 108–120, objectif non immédiat.'},
-  {id:'chantmodal',t:'Chant modal en sol',b:2,sub:false,start:60,note:'Mesure à 2/4 : deux temps identifiables par mesure.'},
+  {id:'chantmodal',t:'Chant modal en sol',b:2,sub:false,start:56,min:66,max:80,note:'Cible imprimée noire = 66–80. Mesure à 2/4 : deux temps identifiables par mesure.'},
   {id:'lapin',t:'Légende du lapin blanc',b:4,sub:true,start:56,min:66,max:80,note:'Cible imprimée noire = 66–80.'},
   {id:'divertissement',t:'Divertissement en croches',b:4,sub:true,start:52,min:60,max:72,note:'Cible imprimée noire = 60–72.'},
   {id:'tabac',t:'J’ai du bon tabac',b:4,sub:false,start:60,note:'Tenir les blanches et notes pointées jusqu’au bout.'},
-  {id:'poney',t:'Le Petit Poney',b:4,sub:false,start:60,note:'Les entrées de main gauche à leur temps exact.'}
+  {id:'poney',t:'Le Petit Poney',b:4,sub:false,start:66,min:84,max:84,note:'Cible imprimée noire = 84. Les entrées de main gauche à leur temps exact.'},
+  {id:'melodies',t:'Mélodies à 2, 3 et 4 doigts',b:2,sub:false,start:60,note:'Nomme les notes, puis compte : le métronome contrôle la régularité.'},
+  {id:'twinkle',t:'Ah ! vous dirai-je maman',b:4,sub:false,start:72,min:96,max:96,note:'Cible imprimée noire = 96, mf non legato. Pars plus lent et monte par paliers.'},
+  {id:'allegretto',t:'Allegretto',b:4,sub:false,start:80,min:116,max:116,note:'Cible imprimée noire = 116. Nuances p, mf, f.'},
+  {id:'wenceslas',t:'Good King Wenceslas',b:4,sub:false,start:60,note:'Mélodie partagée entre les mains ; ralentis (rit.) à la fin.'},
+  {id:'jig',t:'Three-Note Jig',b:2,sub:false,start:60,note:'Mesure à 2/4 : deux temps égaux.'},
+  {id:'playtune',t:'Play Tune',b:4,sub:false,start:60,note:'Pulsation fixe, même si le prof joue la partie de duo.'},
+  {id:'letitbe',t:'Let It Be',b:4,sub:false,start:60,min:72,max:72,note:'Tempo de ta feuille : noire = 72.'},
+  {id:'sourire',t:'Il y a ton sourire',b:4,sub:false,start:66,min:80,max:80,note:'Tempo de ta feuille : noire = 80. Accompagnement en croches à partir de la mesure 58.'}
 ];
 const MT={on:false,bpm:60,beats:4,sub:false,next:0,i:0,timer:null,queue:[],raf:0,preset:'libre',okRun:0,koRun:0};
 function mtSet(b){MT.bpm=Math.max(30,Math.min(180,Math.round(b)));$('#mt-bpm').textContent=MT.bpm;$('#mt-range').value=MT.bpm;}
@@ -617,23 +643,32 @@ const STAGES=['À découvrir','Lecture','Mains séparées','Mains ensemble, lent
 const PIECES=[
   {id:'fontaine',t:'À la claire fontaine',a:'Traditionnel',focus:'Lecture, legato, bonne octave',obj:'Je retrouve Sol4 du premier coup et joue deux mesures sans m’arrêter.',piege:'Changer d’octave par réflexe ; oublier le Fa♯ de l’armure.',mel:'fontaine'},
   {id:'hymne',t:'Hymne à la joie',a:'Beethoven',focus:'Mélodie liée sur C et G7',obj:'Les deux premières mesures sans perdre la pulsation.',piege:'Faire d’une liaison un seul long son : chaque note doit s’entendre.',mel:'hymne'},
-  {id:'cancan',t:'Cancan',a:'Offenbach',focus:'« Tout détaché »',obj:'Détaché audible, sans accent incontrôlé ni poignet raide.',piege:'Le f imprimé ne veut pas dire taper.'},
+  {id:'cancan',t:'Cancan',a:'Offenbach',focus:'« Tout détaché », position Do puis position Ré',obj:'La mélodie par cœur, avec ses articulations, détaché audible et poignet souple.',piege:'Le f imprimé ne veut pas dire taper.'},
   {id:'orientale',t:'Orientale',a:'Alexandre Tansman, « Je joue pour maman »',focus:'Phrasé, contraste p / f',obj:'Un début doux et une section plus forte, avec les mêmes doigtés.',piege:'Deviner une annotation au crayon trop pâle.'},
   {id:'tambourin',t:'Tambourin',a:'Méthode, ex. 66',focus:'Croches égales, pulsation',obj:'Croches égales, sans accélération involontaire.',piege:'Viser 120 trop tôt : ralentis dès que ça se crispe.'},
   {id:'chantmodal',t:'Chant modal en sol',a:'Méthode, ex. 67',focus:'Liaisons, 2/4',obj:'Deux temps identifiables par mesure, fins de phrases tenues.',piege:'Supposer Sol majeur.',extra:'Un bémol à la clé et un titre « en sol » : c’est la signature du mode de ré transposé sur sol (Si♭ et Mi naturel). À confirmer en cours.'},
   {id:'lapin',t:'Légende du lapin blanc',a:'Méthode, ex. 65',focus:'Croches, doigtés imprimés',obj:'Un son égal dans les groupes de croches, même au ralenti.',piege:'Se dépêcher vers la note finale d’une liaison.'},
   {id:'divertissement',t:'Divertissement en croches',a:'Méthode, ex. 64',focus:'Croches, accords main gauche',obj:'Deux mesures, croches égales, accords tenus.',piege:'Chercher la vitesse avant les accords de la main gauche.'},
   {id:'tabac',t:'J’ai du bon tabac',a:'Traditionnel',focus:'Valeurs longues, C et G7',obj:'Les fins de phrases ont exactement leur durée.',piege:'Raccourcir la dernière note parce qu’on connaît l’air.'},
-  {id:'poney',t:'Le Petit Poney',a:'Méthode, ex. 17',focus:'Entrées de main gauche',obj:'Une entrée de main gauche ne fait pas hésiter la mélodie.',piege:'Confondre liaison expressive et liaison de prolongation.'}
+  {id:'poney',t:'Le Petit Poney',a:'Méthode, ex. 17',focus:'Entrées de main gauche',obj:'Une entrée de main gauche ne fait pas hésiter la mélodie.',piege:'Confondre liaison expressive et liaison de prolongation.'},
+  {id:'melodies',t:'Mélodies à 2, 3 et 4 doigts',a:'Méthode, n° 1 à 13',focus:'Les deux pouces sur le Do du milieu ; nommer, puis compter',obj:'Une pièce jouée en nommant les notes, puis en comptant, sans arrêt.',piege:'Accélérer avant que le rythme soit stable au métronome.',tip:'Pour les 5 premiers exercices, le doigté 2-3-4 peut remplacer 1-2-3 pour mieux stabiliser la main.'},
+  {id:'twinkle',t:'Ah ! vous dirai-je maman',a:'Mozart, n° 54',focus:'mf non legato',obj:'Toute la pièce non legato à noire = 96, avec un son égal.',piege:'Confondre non legato et piqué sec : la main se lève légèrement, les doigts rebondissent, coude et avant-bras souples.',mel:'twinkle'},
+  {id:'allegretto',t:'Allegretto',a:'Méthode, n° 55',focus:'Fa♯, liaisons, nuances p, mf, f',obj:'Les nuances audibles et le legato sous les liaisons, à noire = 116.',piege:'Oublier le Fa♯ au retour du motif.',tip:'U.C. : pédale una corda enfoncée jusqu’à la fin (voir la question sur les pédales).'},
+  {id:'wenceslas',t:'Good King Wenceslas',a:'Chant ancien',focus:'Mélodie partagée entre les deux mains',obj:'Les passages d’une main à l’autre (pointillés) sans trou dans la mélodie.',piege:'Attendre au dernier moment : la main suivante doit être prête avant son entrée.',mel:'wenceslas',tip:'Ralentir (rit.) sur les dernières mesures.'},
+  {id:'jig',t:'Three-Note Jig',a:'Méthode en anglais',focus:'Trois notes, 2/4, mains alternées',obj:'Deux temps égaux par mesure, sans arrêt au changement de main.',piege:'Raccourcir les blanches.'},
+  {id:'playtune',t:'Play Tune',a:'Méthode en anglais',focus:'4/4, partie de duo optionnelle',obj:'Garder ta pulsation pendant que le prof joue la partie de duo.',piege:'Suivre l’autre partie au lieu de compter.'},
+  {id:'letitbe',t:'Let It Be',a:'Beatles, arrangement du cours',focus:'Grille C, F, G, Am, E, Dm, avec F7M et F/C',obj:'La grille de l’intro en accords tenus, sans arrêt aux changements, à noire = 72.',piege:'Regarder les mains à chaque changement : prépare l’accord suivant pendant le précédent.',tip:'Écoute la grille dans Clavier › Enchaînements › Let It Be (intro).'},
+  {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches.',piege:'Ralentir au passage C → G ou G → D.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'}
 ];
 const pieceT=id=>(PIECES.find(p=>p.id===id)||{t:id}).t;
 function lastWorked(id){const s=S.seances.find(x=>x.piece===id);return s?s.date:null;}
 function renderPieces(){$('#pieces').innerHTML=PIECES.map(p=>{const r=S.rep[p.id]||{};const st=r.stage||0;const pr=PRESETS.find(x=>x.id===p.id);const lw=lastWorked(p.id);
-  const tempo=r.bpm?`${r.bpm}${pr&&pr.max?' / cible '+pr.min+'–'+pr.max:''}`:(pr&&pr.max?'cible '+pr.min+'–'+pr.max:'au calme');
+  const cible=pr&&pr.max?'cible '+(pr.min===pr.max?pr.max:pr.min+'–'+pr.max):'';
+  const tempo=r.bpm?`${r.bpm}${cible?' / '+cible:''}`:(cible||'au calme');
   return `<article class="card piece"><div class="head"><div><h3>${esc(p.t)}</h3><div class="small muted">${esc(p.a)} · ${esc(p.focus)}</div></div><span class="stage s${st}">${esc(STAGES[st])}</span></div>
   <div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>
   <dl><dt>Objectif</dt><dd>${esc(p.obj)}</dd><dt>Piège</dt><dd>${esc(p.piege)}</dd><dt>Tempo</dt><dd>${esc(tempo)}</dd><dt>Dernière fois</dt><dd>${lw?esc(fmtDate(lw)):'pas encore noté'}</dd></dl>
-  ${p.extra?`<p class="small"><span class="tag verif">À vérifier</span> ${esc(p.extra)}</p>`:''}
+  ${p.extra?`<p class="small"><span class="tag verif">À vérifier</span> ${esc(p.extra)}</p>`:''}${p.tip?`<p class="small">${esc(p.tip)}</p>`:''}
   <div class="row"><button class="btn primary" data-act="up" data-id="${p.id}"${st>=5?' disabled':''}>Étape suivante</button><button class="btn" data-act="down" data-id="${p.id}"${st<=0?' disabled':''}>Revenir</button><button class="btn ghost" data-act="metro" data-id="${p.id}">Métronome</button>${p.mel?`<button class="btn ghost" data-act="mel" data-id="${p.mel}">Mélodie</button>`:''}</div></article>`;}).join('');}
 
 /* ---------- Dates ---------- */
@@ -650,7 +685,7 @@ function weekMinutes(){const d=new Date();const dow=(d.getDay()+6)%7;let t=0;for
 const PLAN={
   1:{t:'À la claire fontaine',d:'Repère Sol4 au pouce droit, deux mesures, puis jouer librement.',piece:'fontaine',pass:'Mesures 1–2 main droite, puis accords main gauche',go:[['Mélodie pas à pas','#clavier','pas:fontaine'],['Lecture éclair','#lecture']]},
   2:{t:'Accords C, F, G, Am',d:'Connaître trois notes par accord, écouter la grille de la feuille, puis ton morceau préféré.',piece:'hymne',pass:'Grille C G Em Am Dm F G C, lentement',go:[['Accords','#clavier'],['Oreille','#oreille']]},
-  3:{t:'Cancan, tout détaché',d:'Dix minutes de détaché léger, le reste pour le plaisir.',piece:'cancan',pass:'Une mesure : même séparation entre chaque son',go:[['Métronome','#tempo','preset:cancan']]},
+  3:{t:'Cancan, tout détaché',d:'Devoir du cours : la mélodie par cœur, avec ses articulations. Position Do, puis position Ré.',piece:'cancan',pass:'La mélodie par cœur, tout détaché',go:[['Métronome','#tempo','preset:cancan']]},
   4:{t:'Divertissement en croches',d:'Une phrase et deux accords, à tempo lent. Compte « 1 et 2 et ».',piece:'divertissement',pass:'Deux mesures main droite, trois fois à pulsation identique',go:[['Métronome croches','#tempo','preset:divertissement']]},
   5:{t:'Jour de cours',d:'Cours ce soir. Quinze minutes légères : rejoue ce qui a progressé et prépare tes questions.',piece:'fontaine',pass:'Rejouer la meilleure réussite de la semaine',go:[['Questions pour le cours','#journal']],short:true},
   6:{t:'Orientale',d:'Une phrase en deux couleurs : piano puis forte, même rythme, même doigté.',piece:'orientale',pass:'Une phrase de deux mesures, p puis f',go:[['Morceaux','#morceaux']]},
@@ -710,7 +745,8 @@ const QBASE=[
   ['orientale','Orientale : relire avec lui les annotations au crayon trop pâles.'],
   ['doigtes','Doigtés peu lisibles sur Le Petit Poney et Orientale.'],
   ['fontaineMG','À la claire fontaine : vérifier la main gauche des mesures 8 et 12 (Fa♯ avec rappel ?).'],
-  ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?']
+  ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?'],
+  ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?']
 ];
 function renderQ(){const items=QBASE.map(q=>({id:q[0],t:q[1],base:true,done:!!S.questions.done[q[0]]})).concat(S.questions.items);
   $('#q-list').innerHTML=items.map(q=>`<label class="q${q.done?' done':''}"><input type="checkbox" data-q="${esc(q.id)}"${q.base?' data-base="1"':''}${q.done?' checked':''}><span>${esc(q.t)}</span></label>`).join('');}
