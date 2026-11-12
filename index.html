@@ -98,6 +98,9 @@ textarea{min-height:70px;resize:vertical}
 .kb-wrap{overflow-x:auto;overflow-y:hidden;border-radius:10px;background:#0c0a09;padding:8px 0 4px;-webkit-overflow-scrolling:touch;touch-action:pan-x}
 .kb{position:relative;height:160px;margin:0 8px}
 .kb.small{height:96px}
+.kb.fit{height:110px}
+.seg button:disabled{opacity:.35;cursor:default}
+.kb.fit .key.white{padding-bottom:3px}
 .key{position:absolute;top:0;border:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:pan-x}
 .key.white{height:100%;background:linear-gradient(180deg,#fbf6ea,#e9dfc8);border:1px solid #9c917c;border-radius:0 0 6px 6px;z-index:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
 .key.black{height:62%;background:linear-gradient(180deg,#2c2724,#0b0908);border:1px solid #000;border-radius:0 0 4px 4px;z-index:2;box-shadow:0 3px 4px rgba(0,0,0,.5)}
@@ -296,6 +299,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="seg" id="prog-sel"></div>
     <p class="small muted" id="prog-src"></p>
     <div class="seq" id="prog-seq"></div>
+    <div class="kb-wrap" id="kb-full" aria-label="Clavier complet"></div>
+    <p class="small muted">Clavier complet : <b style="color:var(--laiton)">doré</b> = main droite, <b style="color:var(--feutre)">vert</b> = main gauche. Les touches s’allument pendant l’écoute.</p>
     <div class="seg" id="prog-pat"><button data-p="bloc" class="on">Accords tenus</button><button data-p="croches">Croches arpégées</button></div>
     <label class="field">Tempo : noire = <b id="prog-bpm-v">60</b><input type="range" id="prog-bpm" min="40" max="110" value="60"></label>
     <div class="row"><button class="btn primary" id="prog-play">Écouter</button><button class="btn" id="prog-stop">Stop</button></div>
@@ -515,11 +520,13 @@ function stopBus(){TIMERS.forEach(clearTimeout);TIMERS=[];if(BUS&&AC){const b=BU
 function at(sec,fn){TIMERS.push(setTimeout(fn,Math.max(0,sec*1000)));}
 
 /* ---------- Clavier ---------- */
-function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=document.createElement('div');inner.className='kb'+(opts.small?' small':'');
-  const W=opts.small?24:40;let x=0;const keys={};
-  for(let m=lo;m<=hi;m++)if(!isBlack(m)){const k=document.createElement('button');k.className='key white'+(m===60?' c4':'');k.style.left=x+'px';k.style.width=W+'px';k.dataset.m=m;k.innerHTML='<span class="kl"></span>';inner.appendChild(k);keys[m]=k;x+=W;}
-  for(let m=lo;m<=hi;m++)if(isBlack(m)){const lw=keys[m-1];const k=document.createElement('button');k.className='key black';k.style.left=(parseFloat(lw.style.left)+W*.69)+'px';k.style.width=(W*.62)+'px';k.dataset.m=m;inner.appendChild(k);keys[m]=k;}
-  inner.style.width=x+'px';el.appendChild(inner);
+function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=document.createElement('div');inner.className='kb'+(opts.small?' small':'')+(opts.fit?' fit':'');
+  // opts.fit : toute l'étendue tient dans la largeur (positions en %), sans défilement.
+  let nW=0;for(let m=lo;m<=hi;m++)if(!isBlack(m))nW++;
+  const U=opts.fit?'%':'px',W=opts.fit?100/nW:(opts.small?24:40);let x=0;const keys={};
+  for(let m=lo;m<=hi;m++)if(!isBlack(m)){const k=document.createElement('button');k.className='key white'+(m===60?' c4':'');k.style.left=x+U;k.style.width=W+U;k.dataset.m=m;k.innerHTML='<span class="kl"></span>';inner.appendChild(k);keys[m]=k;x+=W;}
+  for(let m=lo;m<=hi;m++)if(isBlack(m)){const lw=keys[m-1];if(!lw)continue;const k=document.createElement('button');k.className='key black';k.style.left=(parseFloat(lw.style.left)+W*.69)+U;k.style.width=(W*.62)+U;k.dataset.m=m;inner.appendChild(k);keys[m]=k;}
+  inner.style.width=opts.fit?'calc(100% - 16px)':x+'px';el.appendChild(inner);
   inner.addEventListener('pointerdown',e=>{const k=e.target.closest('.key');if(!k)return;const m=+k.dataset.m;if(!opts.silent)playNote(m,0,1.1,.8);k.classList.add('down');setTimeout(()=>k.classList.remove('down'),160);if(opts.onKey)opts.onKey(m);});
   const api={el,keys,W,
     labels(){for(const m in keys){const k=keys[m],mm=+m,l=k.querySelector('.kl');k.setAttribute('aria-label',nm(mm));if(l)l.textContent=(mm%12===0)?nm(mm):(opts.small?'':nm(mm,false));}},
@@ -570,15 +577,34 @@ const PROG={
   lamin:{t:'Am – Dm – E – Am',src:'La mineur : écoute la différence avec Em à la place de E.',s:[['Am',4],['Dm',4],['E',4],['Am',4]]}
 };
 let curProg='grille',progPat='bloc';
-function renderProg(){const p=PROG[curProg];$('#prog-src').textContent=p.src;$('#prog-seq').innerHTML=p.s.map((x,i)=>`<span data-i="${i}">${esc(x[0])}</span>`).join('');}
-function playProg(){const a=ac();if(!a)return;const bus=newBus();const bpm=+$('#prog-bpm').value,spb=60/bpm;let t=a.currentTime+.08;const t0=t;
+let FKB=null;
+const LHSHORT={C:'C',G7:'G7',D:'D',C2:'C',G2:'G',Sol:'Sol',FaD:'Fa♯'};
+const progPiece=()=>curProg.startsWith('w:')&&WORK[curProg.slice(2)]?curProg.slice(2):null;
+// Clavier complet à la mesure de la sélection : de la basse la plus grave à la note la plus aiguë, bornes sur touches blanches.
+function buildFull(){const id=progPiece();let ms=[];
+  if(id)workBars(id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
+  else PROG[curProg].s.forEach(([n])=>{ms.push(CH[n].b,...voicing(n,0));});
+  let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
+  FKB=makeKeyboard($('#kb-full'),lo,hi,{fit:true,small:true});}
+function renderProg(){const id=progPiece();
+  if(id){const bars=workBars(id);$('#prog-src').textContent=`${WORK[id].t} : toute la partition, deux mains (${bars.length} mesures). ${WORK[id].src}`;
+    $('#prog-seq').innerHTML=bars.map((b,i)=>`<span data-i="${i}">${i+1} · ${esc(b.lh.filter(e=>e[3]).map(e=>LHSHORT[e[3]]).join('/'))}</span>`).join('');}
+  else{const p=PROG[curProg];$('#prog-src').textContent=p.src;$('#prog-seq').innerHTML=p.s.map((x,i)=>`<span data-i="${i}">${esc(x[0])}</span>`).join('');}
+  $$('#prog-pat button').forEach(b=>b.disabled=!!id);buildFull();}
+function playPiece(id){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#prog-bpm').value;const bars=workBars(id);const t0=a.currentTime+.1;const bpb=WORK[id].bpb;
+  FKB.clear();
+  bars.forEach((b,i)=>{const tb=t0+i*bpb*spb;at(tb-a.currentTime,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));});
+    [['rh','hl',.75],['lh','hl2',.6]].forEach(([hd,cls,vel])=>{let t=tb;b[hd].forEach(e=>{const ms=e[0];if(ms)ms.forEach(m=>playNote(m,t,e[1]*spb*.92,vel,bus));
+      at(t-a.currentTime,()=>{FKB.clear(cls);if(ms)FKB.mark(ms,cls);});t+=e[1]*spb;});});});
+  at(t0+bars.length*bpb*spb-a.currentTime+.2,()=>{FKB.clear();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
+function playProg(){const id=progPiece();if(id)return playPiece(id);const a=ac();if(!a)return;const bus=newBus();const bpm=+$('#prog-bpm').value,spb=60/bpm;let t=a.currentTime+.08;const t0=t;
   PROG[curProg].s.forEach((x,i)=>{const [name,beats]=x;const v=voicing(name,0),c=CH[name],dur=beats*spb;
     playNote(c.b,t,dur*.98,.75,bus);
     if(progPat==='bloc'){v.forEach(m=>playNote(m,t,dur*.95,.62,bus));}
     else{const pat=[0,2,1,2];for(let k=0;k<beats*2;k++)playNote(v[pat[k%4]],t+k*spb/2,spb*.55,.55,bus);}
-    const tt=t-a.currentTime;at(tt,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));KB.clear();KB.mark(v,'hl');KB.mark([c.b],'hl2');});
+    const tt=t-a.currentTime;at(tt,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));KB.clear();KB.mark(v,'hl');KB.mark([c.b],'hl2');FKB.clear();FKB.mark(v,'hl');FKB.mark([c.b],'hl2');});
     t+=dur;});
-  at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
+  at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));FKB.clear();});}
 
 /* ---------- Travailler un morceau, mesure par mesure ---------- */
 // Notes vérifiées sur les feuilles du cours (domaine public). Main gauche : accords nommés, doigts en regard des notes.
@@ -980,13 +1006,13 @@ function init(){
   $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
   $('#mg-sel').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)selectMg(b.dataset.g);});$('#mg-play').onclick=playMg;
   $('#chord-chips').innerHTML=CHORD_LIST.map(c=>`<button class="chip${c===curChord?' on':''}" data-c="${c}">${c}</button>`).join('');
-  $('#prog-sel').innerHTML=Object.entries(PROG).map(([k,p])=>`<button data-p="${k}" class="${k===curProg?'on':''}">${esc(p.t)}</button>`).join('');
+  $('#prog-sel').innerHTML=Object.entries(PROG).map(([k,p])=>`<button data-p="${k}" class="${k===curProg?'on':''}">${esc(p.t)}</button>`).join('')+Object.entries(WORK).map(([k,w])=>`<button data-p="w:${k}">${esc(w.t)} · partition</button>`).join('');
   $('#mel-sel').innerHTML=Object.entries(MEL).map(([k,m])=>`<button data-m="${k}" class="${k===curMel?'on':''}">${esc(m.t)}</button>`).join('');
   $('#ear-mode').innerHTML=Object.entries(EAR).map(([k,e])=>`<button data-m="${k}" class="${k===earMode?'on':''}">${esc(e.t)}</button>`).join('');
   $('#mt-preset').innerHTML=PRESETS.map(p=>`<option value="${p.id}">${esc(p.t)}</option>`).join('');
   renderChordInfo();renderProg();renderMel();earRenderOpts();renderLecAns();drawStaff(null);applyPreset('libre');renderAll();
 
-  $('#lbl-en').addEventListener('change',e=>{useEN=e.target.checked;KB.labels();MINI.labels();MGKB.labels();selectMg(curMg);WKKB.labels();renderWork();renderChordInfo();renderLecAns();});
+  $('#lbl-en').addEventListener('change',e=>{useEN=e.target.checked;KB.labels();MINI.labels();if(FKB)FKB.labels();MGKB.labels();selectMg(curMg);WKKB.labels();renderWork();renderChordInfo();renderLecAns();});
   $('#chord-chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;curChord=b.dataset.c;$$('#chord-chips .chip').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#inv').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curInv=+b.dataset.i;$$('#inv button').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#with-bass').addEventListener('change',renderChordInfo);
@@ -994,7 +1020,7 @@ function init(){
   $('#prog-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curProg=b.dataset.p;$$('#prog-sel button').forEach(x=>x.classList.toggle('on',x===b));renderProg();});
   $('#prog-pat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;progPat=b.dataset.p;$$('#prog-pat button').forEach(x=>x.classList.toggle('on',x===b));});
   $('#prog-bpm').addEventListener('input',e=>$('#prog-bpm-v').textContent=e.target.value);
-  $('#prog-play').onclick=playProg;$('#prog-stop').onclick=()=>{stopBus();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));};
+  $('#prog-play').onclick=playProg;$('#prog-stop').onclick=()=>{stopBus();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));if(FKB)FKB.clear();};
   $('#mel-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;stopBus();curMel=b.dataset.m;$$('#mel-sel button').forEach(x=>x.classList.toggle('on',x===b));renderMel();});
   $('#mel-bpm').addEventListener('input',e=>$('#mel-bpm-v').textContent=e.target.value);
   $('#mel-play').onclick=playMel;$('#mel-step').onclick=stepMel;$('#mel-stop').onclick=()=>{stopBus();stepIdx=-1;KB.clear();$('#mel-next').textContent='';};
