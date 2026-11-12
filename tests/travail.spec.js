@@ -16,7 +16,7 @@ test('T1. données : chaque mesure fait juste 4 temps aux deux mains, nombre de 
     const pk = WORK[id].pickup || 0, len = i => (i === 0 && pk ? pk : bpb);
     return [id, { n: bars.length, ok: bars.every((b, i) => Math.abs(sum(b.rh) - len(i)) < 1e-9 && Math.abs(sum(b.lh) - len(i)) < 1e-9) }];
   })));
-  expect(r).toEqual({ hymne: { n: 16, ok: true }, fontaine: { n: 12, ok: true }, tabac: { n: 24, ok: true }, clair: { n: 16, ok: true }, frere: { n: 8, ok: true }, bach120: { n: 29, ok: true }, alkan8: { n: 45, ok: true } });
+  expect(r).toEqual({ hymne: { n: 16, ok: true }, fontaine: { n: 12, ok: true }, tabac: { n: 24, ok: true }, clair: { n: 16, ok: true }, frere: { n: 8, ok: true }, bebe: { n: 18, ok: true }, bach120: { n: 29, ok: true }, alkan8: { n: 45, ok: true } });
 });
 
 test('T2. Hymne, mesure 1 : notes et doigts des deux mains sur le clavier', async ({ page }) => {
