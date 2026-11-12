@@ -171,6 +171,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 .coach strong{color:var(--laiton)}
 .dialog{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .dialog .card{max-width:380px;width:100%}
+.remind{border-color:var(--laiton-d);display:flex;flex-direction:column;gap:10px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--laiton);color:#1a140c;padding:10px 16px;border-radius:99px;font-weight:700;z-index:60;font-size:.9rem}
 @media (max-width:420px){ h1{font-size:1.6rem} .kpi b{font-size:1.6rem} .grid2{grid-template-columns:1fr} }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
@@ -194,6 +195,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 
 <!-- SÉANCE -->
 <section class="view" id="v-seance">
+  <div id="bk-remind" class="card remind hidden" role="status"><p id="rm-t" class="small"></p><div class="row"><button class="btn primary" id="rm-go">Sauvegarder maintenant</button><button class="btn ghost" id="rm-later">Plus tard</button></div></div>
   <div class="card hero">
     <div class="eyebrow" id="today-date">Aujourd’hui</div>
     <h1 id="today-title">Plan du jour</h1>
@@ -361,6 +363,9 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="row between"><h2>Sauvegarde</h2><span class="tag" id="bk-tag">Jamais</span></div>
     <p class="small muted">Tes données vivent sur ce téléphone. Exporte un fichier de temps en temps (Fichiers ou iCloud Drive) : c’est lui qui te protège si tu changes d’iPhone ou supprimes l’app.</p>
     <div class="row"><button class="btn primary" id="bk-export">Exporter</button><label class="btn" for="bk-file" style="display:inline-flex;align-items:center">Importer</label><input type="file" id="bk-file" accept="application/json,.json" class="hidden"></div>
+    <h3>Copies automatiques</h3>
+    <p class="small muted">L’app garde seule une copie par jour et une copie avant chaque suppression, import ou restauration. Elles réparent une erreur, mais restent sur ce téléphone : seul l’export te protège si tu le perds.</p>
+    <div class="row"><select id="snap-sel" aria-label="Copie automatique" style="flex:1;min-width:0"></select><button class="btn" id="snap-restore">Restaurer</button></div>
   </div>
   <div class="card">
     <h2>À demander en cours</h2>
@@ -409,7 +414,31 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
   const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
   return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
     stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k))},questions:{done,items}};}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta=isObj(j.meta)&&Number.isFinite(+j.meta.lastBackup)?{lastBackup:+j.meta.lastBackup}:{};}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];}}catch(e){}}
+/* Copies automatiques : 10 au plus, sur ce téléphone, dans une clé séparée. Un échec d'écriture n'empêche jamais l'enregistrement normal. */
+const SNAP='vestale-copies-v1',SNAP_MAX=10;
+const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
+function loadSnaps(){try{const a=JSON.parse(localStorage.getItem(SNAP)||'[]');return Array.isArray(a)?a.filter(s=>isObj(s)&&Number.isFinite(+s.ts)&&isObj(s.data)&&Object.prototype.hasOwnProperty.call(SNAP_WHY,s.why)):[];}catch(e){return [];}}
+function saveSnaps(a){for(let n=a.length;n>0;n=Math.floor(n/2)){try{localStorage.setItem(SNAP,JSON.stringify(a.slice(0,n)));return true;}catch(e){}}return false;}
+function snapData(){return {seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions};}
+function snapshot(why){try{const list=loadSnaps(),data=snapData(),json=JSON.stringify(data);
+    if(!S.seances.length&&!Object.keys(S.rep).length&&!Object.keys(S.stats.lecture).length&&!Object.keys(S.stats.oreille).length&&!Object.keys(S.questions.done).length&&!S.questions.items.length)return false;
+    if(why==='auto'&&list.some(s=>dkey(new Date(+s.ts))===dkey(new Date())))return false;
+    if(list.length&&JSON.stringify(list[0].data)===json)return false;
+    list.unshift({ts:Date.now(),why,n:S.seances.length,data:JSON.parse(json)});return saveSnaps(list.slice(0,SNAP_MAX));}catch(e){return false;}}
+function renderSnaps(){const el=$('#snap-sel');if(!el)return;const list=loadSnaps();
+  el.innerHTML=list.length?list.map((s,i)=>{const d=new Date(+s.ts);return `<option value="${i}">${esc(fmtDate(dkey(d)))} ${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(s.n)} séance(s) · ${esc(SNAP_WHY[s.why])}</option>`;}).join(''):'<option value="">Aucune copie pour l’instant</option>';
+  $('#snap-restore').disabled=!list.length;}
+async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value];if(!s)return;const d=new Date(+s.ts);
+  if(!(await ask(`Revenir à la copie du ${fmtDate(dkey(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())} (${s.n} séance(s)) ? L’état actuel est d’abord gardé en copie.`)))return;
+  snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;saveLocal();renderAll();toast('Copie restaurée');}
+/* Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours (ou n'a jamais eu lieu). */
+function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.meta&&S.meta.remindAfter;
+  if(!S.seances.length||(lb&&now-lb<=7*864e5)||(ra&&now<ra))return false;
+  const days=lb?Math.floor((now-lb)/864e5):0;
+  $('#rm-t').textContent=lb?`Ta dernière sauvegarde date de ${days} jours. Un toucher suffit pour la mettre à jour (Fichiers ou iCloud Drive).`:'Tes séances ne sont encore sauvegardées que sur ce téléphone. Un toucher suffit pour en garder une copie (Fichiers ou iCloud Drive).';
+  const el=$('#bk-remind'),nav=$('nav');el.classList.remove('hidden');window.scrollTo(0,el.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);return true;}
+function hideRemind(){$('#bk-remind').classList.add('hidden');}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
 let DB=null;const writing={},pending={};
 function setSync(t,on){const el=$('#sync');el.textContent=t;el.classList.toggle('on',!!on);}
@@ -719,7 +748,7 @@ function openLog(min){$('#f-piece').innerHTML=PIECES.map(p=>`<option value="${p.
   $('#logform').classList.remove('hidden');$('#logform').scrollIntoView({behavior:'smooth',block:'start'});}
 async function saveLog(){const d=new Date();const e={id:String(d.getTime()),ts:d.getTime(),date:dkey(d),piece:$('#f-piece').value,min:Math.max(1,Math.min(240,+$('#f-min').value||0)),pass:$('#f-pass').value.trim().slice(0,200),bpm:intIn($('#f-bpm').value,20,240),feel:FEEL,note:$('#f-note').value.trim().slice(0,600)};
   S.seances.unshift(e);if(e.bpm&&PIECES.find(p=>p.id===e.piece)){S.rep[e.piece]=Object.assign({},S.rep[e.piece],{bpm:e.bpm});saveRep();}
-  $('#logform').classList.add('hidden');runReset();renderAll();toast('Séance enregistrée');await put('seances/'+e.id,e);}
+  $('#logform').classList.add('hidden');runReset();renderAll();toast('Séance enregistrée');await put('seances/'+e.id,e);maybeRemind();}
 
 /* ---------- Journal ---------- */
 function renderChart(){const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d);}
@@ -770,12 +799,12 @@ async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}
   const file=new File([body],name,{type:'application/json'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
-    S.meta=Object.assign({},S.meta,{lastBackup:Date.now()});saveLocal();updateBackupChip();toast('Sauvegarde exportée');}
-  catch(e){if(e&&e.name==='AbortError')return;toast('Export impossible');}}
+    S.meta=Object.assign({},S.meta,{lastBackup:Date.now()});delete S.meta.remindAfter;saveLocal();updateBackupChip();hideRemind();toast('Sauvegarde exportée');return true;}
+  catch(e){if(e&&e.name==='AbortError')return false;toast('Export impossible');return false;}}
 async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}
   const skipped=j.data.seances.length-d.seances.length;
   if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Les séances sont fusionnées, le reste est remplacé.`)))return;
-  const before=JSON.stringify(S);
+  snapshot('import');const before=JSON.stringify(S);
   try{const all={};[...S.seances,...d.seances].forEach(s=>{all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
     if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;
     renderAll();}catch(e){Object.assign(S,JSON.parse(before));renderAll();toast('Fichier non reconnu');return;}
@@ -797,10 +826,11 @@ function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')ap
 
 /* ---------- Rendu ---------- */
 let KB;
-function renderAll(){renderToday();renderBlocks();renderPieces();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();}
+function renderAll(){renderToday();renderBlocks();renderPieces();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();renderSnaps();}
 
 function init(){
   loadLocal();
+  snapshot('auto');
   KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey});
   MINI=makeKeyboard($('#kb-mini'),36,84,{small:true});
   $('#chord-chips').innerHTML=CHORD_LIST.map(c=>`<button class="chip${c===curChord?' on':''}" data-c="${c}">${c}</button>`).join('');
@@ -856,12 +886,12 @@ function init(){
   $('#f-save').onclick=saveLog;$('#f-cancel').onclick=()=>$('#logform').classList.add('hidden');
   $('#today-actions').addEventListener('click',e=>{const a=e.target.closest('a');if(a)setTimeout(()=>handleExtra(a.dataset.extra),50);});
 
-  $('#entries').addEventListener('click',async e=>{const b=e.target.closest('button[data-del]');if(!b)return;if(!(await ask('Supprimer cette séance du journal ?')))return;const id=b.dataset.del;S.seances=S.seances.filter(s=>s.id!==id);renderAll();await del('seances/'+id);});
+  $('#entries').addEventListener('click',async e=>{const b=e.target.closest('button[data-del]');if(!b)return;if(!(await ask('Supprimer cette séance du journal ?')))return;snapshot('suppression');const id=b.dataset.del;S.seances=S.seances.filter(s=>s.id!==id);renderAll();await del('seances/'+id);});
   $('#q-list').addEventListener('change',e=>{const c=e.target.closest('input[data-q]');if(!c)return;const id=c.dataset.q;if(c.dataset.base)S.questions.done[id]=c.checked;else{const it=S.questions.items.find(x=>x.id===id);if(it)it.done=c.checked;}renderQ();saveQ();});
   const addQ=()=>{const t=$('#q-new').value.trim();if(!t)return;S.questions.items.push({id:'u'+Date.now(),t:t.slice(0,240),done:false});$('#q-new').value='';renderQ();saveQ();};
   $('#q-add').onclick=addQ;$('#q-new').addEventListener('keydown',e=>{if(e.key==='Enter')addQ();});
   $('#j-copy').onclick=()=>copy(journalText());
-  $('#coach-go').onclick=coach;$('#bk-export').onclick=exportData;$('#bk-file').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value='';});
+  $('#coach-go').onclick=coach;$('#bk-export').onclick=exportData;$('#snap-restore').onclick=restoreSnap;$('#rm-go').onclick=exportData;$('#rm-later').onclick=()=>{S.meta=Object.assign({},S.meta,{remindAfter:Date.now()+864e5});saveLocal();hideRemind();};$('#bk-file').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value='';});
 
   window.addEventListener('hashchange',route);route();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick&&RUN.iv&&tick();});
