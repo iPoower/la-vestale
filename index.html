@@ -250,7 +250,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
   <div class="card">
     <h2>Les accords de ton prof</h2>
-    <p class="small muted">Feuille « Accords Do Maj / la min » : C, F, G, Am, Dm, Em (ou E), plus G7 du premier cours et D (Ré) de l’Hymne à la joie.</p>
+    <p class="small muted">Feuille « Accords Do Maj / la min » : C, F, G, Am, Dm, Em (ou E), plus G7 du premier cours, D (Ré) de l’Hymne à la joie et F7M de Let It Be.</p>
     <div class="chips" id="chord-chips"></div>
     <div class="seg" id="inv"><button data-i="0" class="on">Fondamental</button><button data-i="1">1er renversement</button><button data-i="2">2e renversement</button></div>
     <div class="info" id="chord-info"></div>
@@ -464,10 +464,11 @@ const CH={
   Dm:{n:[62,65,69],b:50,fr:'Ré mineur',fn:'ii · préparation',role:'Prépare souvent G ou G7.'},
   Em:{n:[64,67,71],b:52,fr:'Mi mineur',fn:'iii',role:'Note du milieu : Sol naturel.'},
   E:{n:[64,68,71],b:52,fr:'Mi majeur',fn:'V de la mineur',role:'Note du milieu : Sol♯, la sensible de La. Il tire fort vers Am.'},
+  F7M:{n:[65,69,72,76],b:53,fr:'Fa majeur septième',fn:'IV7M · sous-dominante avec septième majeure',role:'Fa majeur avec un Mi en plus : couleur douce, typique de la pop.'},
   D:{n:[62,66,69],b:50,fr:'Ré majeur',fn:'V de V · dominante de Sol',role:'Le Fa♯ monte au Sol : il annonce G7, puis le retour à C.'},
   'F/C':{n:[60,65,69],b:48,fr:'Fa avec Do à la basse',fn:'IV sur pédale de tonique',role:'Petite broderie avant le C final.'}
 };
-const CHORD_LIST=['C','F','G','G7','Am','Dm','Em','E','D'];
+const CHORD_LIST=['C','F','G','G7','Am','Dm','Em','E','D','F7M'];
 function voicing(name,inv){let n=CH[name].n.slice();for(let i=0;i<inv;i++){n.push(n.shift()+12);}if(Math.max(...n)>81)n=n.map(x=>x-12);return n;}
 let curChord='C',curInv=0;
 function chordNotes(name,inv,bass){const v=voicing(name,inv);return bass?[CH[name].b].concat(v):v;}
@@ -476,6 +477,7 @@ function renderChordInfo(){const c=CH[curChord],v=voicing(curChord,curInv);
   if(curChord==='E'||curChord==='Em')extra='<p class="small"><span class="tag verif">À vérifier en cours</span> Pourquoi « Em (ou E) » sur la feuille : en la mineur, l’accord de dominante prend souvent un Sol♯ (gamme harmonique), ce qui donne E au lieu de Em. Demande à ton prof si c’est son intention.</p>';
   if(curChord==='G7')extra='<p class="small">G7 = G + Fa. Joue G7 puis C et écoute Si→Do, Fa→Mi. Forme du cours à la main gauche (Hymne à la joie) : Si–Fa–Sol, doigts 5-2-1.</p>';
   if(curChord==='C')extra='<p class="small">Forme du cours à la main gauche (Hymne à la joie) : Do–Mi–Sol, doigts 5-3-1.</p>';
+  if(curChord==='F7M')extra='<p class="small">F7M = F + Mi. Dans Let It Be, il suit Am dans la grille de l’intro.</p>';
   if(curChord==='D')extra='<p class="small">Dans Hymne à la joie (mesure 12), main gauche : Ré–Fa♯, doigts 4 et 2, juste avant G7.</p>';
   $('#chord-info').innerHTML=`<div class="big">${esc(curChord)} · ${esc(c.fr)}</div><div>${v.map(m=>esc(nm(m,false))).join(' – ')}</div><div class="small muted">${esc(c.fn)}. ${esc(c.role)}</div>${extra}`;
   KB.clear();KB.mark(v,'hl');if($('#with-bass').checked)KB.mark([c.b],'hl2');KB.scrollTo(v[1]);}
@@ -487,6 +489,8 @@ const PROG={
   cadence:{t:'C – G7 – C',src:'Le premier enchaînement du cours : repos, tension, retour.',s:[['C',4],['G7',4],['C',4]]},
   grille:{t:'Grille de la feuille',src:'Feuille « Accords Do Maj / la min », mesures 1 à 8 : C, G, Em, Am, Dm, F, G, puis C avec F/C.',s:[['C',4],['G',4],['Em',4],['Am',4],['Dm',4],['F',4],['G',4],['C',1],['F/C',1],['C',2]]},
   i4v:{t:'C – F – G – C',src:'Le trio de base : tonique, sous-dominante, dominante.',s:[['C',4],['F',4],['G',4],['C',4]]},
+  letitbe:{t:'Let It Be (intro)',src:'Grille de l’intro de ta feuille, noire = 72 : C G | Am F7M | C G | F C, deux temps par accord.',s:[['C',2],['G',2],['Am',2],['F7M',2],['C',2],['G',2],['F',2],['C',2]]},
+  sourire:{t:'Il y a ton sourire',src:'Grille de ta feuille, noire = 80 : Em C G D, un accord par mesure, en boucle.',s:[['Em',4],['C',4],['G',4],['D',4],['Em',4],['C',4],['G',4],['D',4]]},
   lamin:{t:'Am – Dm – E – Am',src:'La mineur : écoute la différence avec Em à la place de E.',s:[['Am',4],['Dm',4],['E',4],['Am',4]]}
 };
 let curProg='grille',progPat='bloc';
@@ -607,13 +611,15 @@ const PRESETS=[
   {id:'lapin',t:'Légende du lapin blanc',b:4,sub:true,start:56,min:66,max:80,note:'Cible imprimée noire = 66–80.'},
   {id:'divertissement',t:'Divertissement en croches',b:4,sub:true,start:52,min:60,max:72,note:'Cible imprimée noire = 60–72.'},
   {id:'tabac',t:'J’ai du bon tabac',b:4,sub:false,start:60,note:'Tenir les blanches et notes pointées jusqu’au bout.'},
-  {id:'poney',t:'Le Petit Poney',b:4,sub:false,start:60,note:'Les entrées de main gauche à leur temps exact.'},
+  {id:'poney',t:'Le Petit Poney',b:4,sub:false,start:66,min:84,max:84,note:'Cible imprimée noire = 84. Les entrées de main gauche à leur temps exact.'},
   {id:'melodies',t:'Mélodies à 2, 3 et 4 doigts',b:2,sub:false,start:60,note:'Nomme les notes, puis compte : le métronome contrôle la régularité.'},
   {id:'twinkle',t:'Ah ! vous dirai-je maman',b:4,sub:false,start:72,min:96,max:96,note:'Cible imprimée noire = 96, mf non legato. Pars plus lent et monte par paliers.'},
   {id:'allegretto',t:'Allegretto',b:4,sub:false,start:80,min:116,max:116,note:'Cible imprimée noire = 116. Nuances p, mf, f.'},
   {id:'wenceslas',t:'Good King Wenceslas',b:4,sub:false,start:60,note:'Mélodie partagée entre les mains ; ralentis (rit.) à la fin.'},
   {id:'jig',t:'Three-Note Jig',b:2,sub:false,start:60,note:'Mesure à 2/4 : deux temps égaux.'},
-  {id:'playtune',t:'Play Tune',b:4,sub:false,start:60,note:'Pulsation fixe, même si le prof joue la partie de duo.'}
+  {id:'playtune',t:'Play Tune',b:4,sub:false,start:60,note:'Pulsation fixe, même si le prof joue la partie de duo.'},
+  {id:'letitbe',t:'Let It Be',b:4,sub:false,start:60,min:72,max:72,note:'Tempo de ta feuille : noire = 72.'},
+  {id:'sourire',t:'Il y a ton sourire',b:4,sub:false,start:66,min:80,max:80,note:'Tempo de ta feuille : noire = 80. Accompagnement en croches à partir de la mesure 58.'}
 ];
 const MT={on:false,bpm:60,beats:4,sub:false,next:0,i:0,timer:null,queue:[],raf:0,preset:'libre',okRun:0,koRun:0};
 function mtSet(b){MT.bpm=Math.max(30,Math.min(180,Math.round(b)));$('#mt-bpm').textContent=MT.bpm;$('#mt-range').value=MT.bpm;}
@@ -650,7 +656,9 @@ const PIECES=[
   {id:'allegretto',t:'Allegretto',a:'Méthode, n° 55',focus:'Fa♯, liaisons, nuances p, mf, f',obj:'Les nuances audibles et le legato sous les liaisons, à noire = 116.',piege:'Oublier le Fa♯ au retour du motif.',tip:'U.C. : pédale una corda enfoncée jusqu’à la fin (voir la question sur les pédales).'},
   {id:'wenceslas',t:'Good King Wenceslas',a:'Chant ancien',focus:'Mélodie partagée entre les deux mains',obj:'Les passages d’une main à l’autre (pointillés) sans trou dans la mélodie.',piege:'Attendre au dernier moment : la main suivante doit être prête avant son entrée.',mel:'wenceslas',tip:'Ralentir (rit.) sur les dernières mesures.'},
   {id:'jig',t:'Three-Note Jig',a:'Méthode en anglais',focus:'Trois notes, 2/4, mains alternées',obj:'Deux temps égaux par mesure, sans arrêt au changement de main.',piege:'Raccourcir les blanches.'},
-  {id:'playtune',t:'Play Tune',a:'Méthode en anglais',focus:'4/4, partie de duo optionnelle',obj:'Garder ta pulsation pendant que le prof joue la partie de duo.',piege:'Suivre l’autre partie au lieu de compter.'}
+  {id:'playtune',t:'Play Tune',a:'Méthode en anglais',focus:'4/4, partie de duo optionnelle',obj:'Garder ta pulsation pendant que le prof joue la partie de duo.',piege:'Suivre l’autre partie au lieu de compter.'},
+  {id:'letitbe',t:'Let It Be',a:'Beatles, arrangement du cours',focus:'Grille C, F, G, Am, E, Dm, avec F7M et F/C',obj:'La grille de l’intro en accords tenus, sans arrêt aux changements, à noire = 72.',piege:'Regarder les mains à chaque changement : prépare l’accord suivant pendant le précédent.',tip:'Écoute la grille dans Clavier › Enchaînements › Let It Be (intro).'},
+  {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches.',piege:'Ralentir au passage C → G ou G → D.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'}
 ];
 const pieceT=id=>(PIECES.find(p=>p.id===id)||{t:id}).t;
 function lastWorked(id){const s=S.seances.find(x=>x.piece===id);return s?s.date:null;}

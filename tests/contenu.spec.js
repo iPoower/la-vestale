@@ -68,3 +68,25 @@ test('C6. plan du mercredi : devoir du Cancan par cœur', async ({ page }) => {
   await expect(page.locator('#today-title')).toHaveText('Cancan, tout détaché');
   await expect(page.locator('#today-desc')).toContainText('par cœur');
 });
+
+test('C7. grilles des chansons du cours : accords connus, lecture sans erreur', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('./#clavier');
+  // @ts-ignore
+  const unknown = await page.evaluate(() => Object.values(PROG).flatMap(p => p.s.map(x => x[0])).filter(n => !CH[n]));
+  expect(unknown).toEqual([]);
+  for (const [id, text] of [['letitbe', 'noire = 72'], ['sourire', 'noire = 80']]) {
+    await page.locator(`#prog-sel button[data-p="${id}"]`).click();
+    await expect(page.locator('#prog-src')).toContainText(text);
+    await page.locator('#prog-play').click();
+    await expect(page.locator('#prog-seq span.now')).toHaveCount(1);
+    await page.locator('#prog-stop').click();
+  }
+  await page.locator('#chord-chips .chip[data-c="F7M"]').click();
+  await expect(page.locator('#chord-info')).toContainText('Fa – La – Do – Mi');
+  await page.goto('./#morceaux');
+  await expect(page.locator('article.piece', { hasText: 'Le Petit Poney' })).toContainText('cible 84');
+  await expect(page.locator('article.piece', { hasText: 'Let It Be' })).toContainText('cible 72');
+  expect(errors).toEqual([]);
+});
