@@ -251,7 +251,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div class="card">
     <div class="row between"><h2>Clavier</h2><label class="toggle"><input type="checkbox" id="lbl-en"> Noms anglais (C, D, E)</label></div>
     <div class="kb-wrap" id="kb-main"></div>
-    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. Sur iPhone, coupe le mode silencieux pour entendre le son.</p>
+    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux.</p>
   </div>
   <div class="card" id="mg-card">
     <h2>Main gauche</h2>
@@ -470,8 +470,20 @@ const saveQ=()=>put('etat/questions',S.questions);
 
 
 /* ---------- Son ---------- */
-let AC=null,MASTER=null;
-function ac(){try{if(!AC){const C=window.AudioContext||window.webkitAudioContext;AC=new C();const comp=AC.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;MASTER=AC.createGain();MASTER.gain.value=.9;MASTER.connect(comp);comp.connect(AC.destination);}if(AC.state==='suspended')AC.resume();}catch(e){}return AC;}
+let AC=null,MASTER=null,AC_STALE=false;
+/* Moteur audio robuste pour iPhone : l'iPhone peut laisser le contexte « suspended », le passer en « interrupted »
+   (notification, arrière-plan, écran verrouillé) ou le fermer. À chaque toucher, on le relance ; s'il ne repart pas,
+   ou après un passage en arrière-plan, on en recrée un neuf au toucher suivant. */
+function buildAC(){const C=window.AudioContext||window.webkitAudioContext;AC=new C();const comp=AC.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;MASTER=AC.createGain();MASTER.gain.value=.9;MASTER.connect(comp);comp.connect(AC.destination);}
+function ac(){try{
+    // iOS 17 et plus : son traité comme de la musique (joue aussi en mode silencieux, moins de coupures).
+    if(navigator.audioSession&&navigator.audioSession.type!=='playback'){try{navigator.audioSession.type='playback';}catch(e){}}
+    if(AC&&(AC_STALE||AC.state==='closed'||AC.state==='interrupted')){const old=AC;AC=null;MASTER=null;BUS=null;AC_STALE=false;if(typeof MT!=='undefined'&&MT.on)mtStop();try{old.close().catch(()=>{});}catch(e){}}
+    if(!AC)buildAC();
+    if(AC.state!=='running'){const cur=AC;try{cur.resume().catch(()=>{});}catch(e){}setTimeout(()=>{if(cur===AC&&cur.state!=='running')AC_STALE=true;},400);}
+    // Déverrouillage iOS : un son vide joué pendant le toucher.
+    const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource();s.buffer=b;s.connect(AC.destination);s.start(0);
+  }catch(e){}return AC;}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function playNote(m,when,dur,vel,dest){const a=ac();if(!a)return;dur=dur||1.2;vel=vel==null?.8:vel;
   const t=Math.max(when||0,a.currentTime+.005),f=hz(m);
@@ -957,6 +969,9 @@ function init(){
 
   window.addEventListener('hashchange',route);route();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick&&RUN.iv&&tick();});
+  // Au retour d'arrière-plan, l'iPhone peut rendre le contexte muet tout en le disant actif : on en recrée un au prochain toucher.
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&AC&&!MT.on)AC_STALE=true;});
+  window.addEventListener('pageshow',e=>{if(e.persisted&&AC)AC_STALE=true;});
   updateBackupChip();
   if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
   if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
