@@ -6,6 +6,8 @@ Studio de travail au piano, en application web installable (PWA) : séance guid�
 - Fonctionne hors ligne dès le premier lancement : le service worker (`sw.js`) met en cache l'app, les icônes et les polices.
 - Aucun appel à un tiers : les polices sont hébergées dans `fonts/`.
 - Les données restent sur l'appareil (`localStorage`). Le bouton « Exporter » du Journal produit une sauvegarde JSON, et « Importer » la restaure.
+- Copies automatiques sur l'appareil : une par jour et une avant chaque suppression, import ou restauration (10 au plus), restaurables depuis le Journal. Elles réparent une erreur mais ne remplacent pas l'export.
+- Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours, un bandeau propose de sauvegarder en un toucher (report possible de 24 h).
 
 ## Installer sur iPhone
 
