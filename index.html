@@ -111,6 +111,9 @@ textarea{min-height:70px;resize:vertical}
 .key.white.ok{background:linear-gradient(180deg,#cfe8c2,#86b872)}
 .key.ko{background:linear-gradient(180deg,#f2b8a8,#e07a62)!important}
 .key.next{box-shadow:inset 0 0 0 3px var(--laiton)}
+.key .fg{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#1a140c;color:var(--laiton);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;pointer-events:none;border:2px solid var(--laiton)}
+.key.white .fg{top:auto;bottom:26px}
+.key.black .fg{top:auto;bottom:8px}
 .key.down{filter:brightness(.85)}
 .hint{font-size:.8rem;color:var(--muted)}
 .info{background:var(--ebene);border:1px solid var(--ligne);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
@@ -249,6 +252,23 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="row between"><h2>Clavier</h2><label class="toggle"><input type="checkbox" id="lbl-en"> Noms anglais (C, D, E)</label></div>
     <div class="kb-wrap" id="kb-main"></div>
     <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. Sur iPhone, coupe le mode silencieux pour entendre le son.</p>
+  </div>
+  <div class="card" id="mg-card">
+    <h2>Main gauche</h2>
+    <p class="small">Le chiffre écrit sous la première note de la portée du bas = le doigt à poser sur cette touche. Les autres doigts se posent sur les touches blanches voisines, un doigt par touche. À la main gauche, 5 = petit doigt, côté grave ; 1 = pouce, côté Do du milieu.</p>
+    <div class="seg" id="mg-sel"></div>
+    <div class="kb-wrap" id="kb-mg"></div>
+    <div class="small" id="mg-info" aria-live="polite"></div>
+    <div class="row"><button class="btn primary" id="mg-play">Écouter</button></div>
+    <details><summary>Lire la portée du bas (clé de fa)</summary><ul class="small">
+      <li>Les deux points de la clé encadrent la ligne du Fa, la 4e en partant du bas : c’est le Fa3.</li>
+      <li>Le 2e interligne en partant du bas est le Do3, une octave sous le Do du milieu.</li>
+      <li>La petite ligne au-dessus de la portée du bas est le Do du milieu (Do4).</li>
+      <li>Lignes de bas en haut : Sol, Si, Ré, Fa, La. Interlignes : La, Do, Mi, Sol.</li></ul></details>
+    <details><summary>Exercice de 5 minutes : C ↔ G7</summary><ol class="small">
+      <li>Pouce gauche sur Sol3 (la 2e touche Sol à gauche du Do du milieu), petit doigt sur Do3.</li>
+      <li>Joue Do, Mi, Sol ensemble (accord C), puis glisse le 5 d’une touche vers la gauche, sur Si, et pose le 2 sur Fa (accord G7).</li>
+      <li>Dix allers-retours lents, sans regarder les mains. Choisis « Hymne : accord C » puis « Hymne : G7 » ci-dessus pour vérifier.</li></ol></details>
   </div>
   <div class="card">
     <h2>Les accords de ton prof</h2>
@@ -533,6 +553,34 @@ function playProg(){const a=ac();if(!a)return;const bus=newBus();const bpm=+$('#
     t+=dur;});
   at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
 
+/* ---------- Main gauche ---------- */
+// Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:false = lu sur des annotations au crayon, à confirmer.
+const MG={
+  methode:{t:'Méthode : pouces sur le Do',ok:true,pos:[[1,60],[2,59],[3,57],[4,55]],note:'Pouce gauche sur le Do du milieu, partagé avec le pouce droit. La main gauche descend Do, Si, La, Sol avec 1, 2, 3, 4.'},
+  hymneC:{t:'Hymne : accord C',ok:true,pos:[[5,48],[3,52],[1,55]],note:'Une octave sous le Do du milieu. Doigts imprimés 5-3-1.'},
+  hymneG7:{t:'Hymne : G7',ok:true,pos:[[5,47],[2,53],[1,55]],note:'Le pouce reste sur Sol3, le 2 se pose sur Fa3, le 5 descend d’une touche sur Si2. Doigts imprimés 5-2-1.'},
+  hymneD:{t:'Hymne : D (mesure 12)',ok:true,pos:[[4,50],[2,54]],note:'Juste avant G7. Doigts imprimés 4 et 2.'},
+  cancanC:{t:'Cancan : C',ok:false,pos:[[4,48],[2,52]],note:'Lu sur tes annotations au crayon (« C » avec 2 et 4).'},
+  cancanG7:{t:'Cancan : G7',ok:false,pos:[[5,47],[1,53]],note:'Lu sur tes annotations au crayon (« G7 » avec 1 et 5).'}
+};
+// Ce que chaque morceau affiche dans le répertoire : position à voir, ou à confirmer en cours.
+const MG_TODO='À confirmer en cours (question dans Journal › À demander en cours).';
+const MGP={
+  melodies:{mg:'methode',t:'Pouce gauche sur le Do du milieu (1), puis Si (2), La (3), Sol (4).'},
+  hymne:{mg:'hymneC',t:'C : 5 Do3, 3 Mi3, 1 Sol3. G7 : 5 Si2, 2 Fa3, 1 Sol3.'},
+  cancan:{mg:'cancanC',t:'À confirmer en cours : C = Do3 (4) + Mi3 (2) ; G7 = Si2 (5) + Fa3 (1).'},
+  fontaine:{t:MG_TODO},tabac:{t:MG_TODO},poney:{t:MG_TODO},orientale:{t:MG_TODO},letitbe:{t:MG_TODO},sourire:{t:MG_TODO}
+};
+let MGKB=null,curMg='methode';
+function mgScroll(){const x=MG[curMg];if(!x||!MGKB)return;const ms=x.pos.map(p=>p[1]);MGKB.scrollTo(Math.round((Math.min(...ms)+Math.max(...ms))/2));}
+function selectMg(id){if(!MG[id])return;curMg=id;const x=MG[id];$$('#mg-sel button').forEach(b=>b.classList.toggle('on',b.dataset.g===id));
+  MGKB.clear();MGKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
+  x.pos.forEach(([f,m])=>{const k=MGKB.keys[m];if(!k)return;k.classList.add('hl');const s=document.createElement('span');s.className='fg';s.textContent=f;k.appendChild(s);});
+  const list=x.pos.slice().sort((a,b)=>b[0]-a[0]).map(([f,m])=>`${f} → ${esc(nm(m))}`).join(' · ');
+  $('#mg-info').innerHTML=`<p><b>${esc(x.t)}</b> <span class="tag${x.ok?'':' verif'}">${x.ok?'D’après ta feuille':'À vérifier en cours'}</span></p><p>${list}</p><p class="muted">${esc(x.note)}</p>`;
+  mgScroll();}
+function playMg(){const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.03;MG[curMg].pos.forEach(([f,m])=>playNote(m,t,2,.7,bus));}
+
 /* ---------- Mélodies ---------- */
 const MEL={
   fontaine:{t:'À la claire fontaine',src:'Transcrite de ta feuille série C (photo du 26/10). Sol majeur, Fa♯ à la clé. Main droite seule.',
@@ -696,9 +744,9 @@ function renderPieces(){$('#pieces').innerHTML=PIECES.map(p=>{const r=S.rep[p.id
   const tempo=r.bpm?`${r.bpm}${cible?' / '+cible:''}`:(cible||'au calme');
   return `<article class="card piece"><div class="head"><div><h3>${esc(p.t)}</h3><div class="small muted">${esc(p.a)} · ${esc(p.focus)}</div></div><span class="stage s${st}">${esc(STAGES[st])}</span></div>
   <div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>
-  <dl><dt>Objectif</dt><dd>${esc(p.obj)}</dd><dt>Piège</dt><dd>${esc(p.piege)}</dd><dt>Tempo</dt><dd>${esc(tempo)}</dd><dt>Dernière fois</dt><dd>${lw?esc(fmtDate(lw)):'pas encore noté'}</dd></dl>
+  <dl><dt>Objectif</dt><dd>${esc(p.obj)}</dd><dt>Piège</dt><dd>${esc(p.piege)}</dd><dt>Tempo</dt><dd>${esc(tempo)}</dd><dt>Dernière fois</dt><dd>${lw?esc(fmtDate(lw)):'pas encore noté'}</dd>${MGP[p.id]?`<dt>Main gauche</dt><dd>${esc(MGP[p.id].t)}</dd>`:''}</dl>
   ${p.extra?`<p class="small"><span class="tag verif">À vérifier</span> ${esc(p.extra)}</p>`:''}${p.tip?`<p class="small">${esc(p.tip)}</p>`:''}
-  <div class="row"><button class="btn primary" data-act="up" data-id="${p.id}"${st>=5?' disabled':''}>Étape suivante</button><button class="btn" data-act="down" data-id="${p.id}"${st<=0?' disabled':''}>Revenir</button><button class="btn ghost" data-act="metro" data-id="${p.id}">Métronome</button>${p.mel?`<button class="btn ghost" data-act="mel" data-id="${p.mel}">Mélodie</button>`:''}</div></article>`;}).join('');}
+  <div class="row"><button class="btn primary" data-act="up" data-id="${p.id}"${st>=5?' disabled':''}>Étape suivante</button><button class="btn" data-act="down" data-id="${p.id}"${st<=0?' disabled':''}>Revenir</button><button class="btn ghost" data-act="metro" data-id="${p.id}">Métronome</button>${p.mel?`<button class="btn ghost" data-act="mel" data-id="${p.mel}">Mélodie</button>`:''}${MGP[p.id]&&MGP[p.id].mg?`<button class="btn ghost" data-act="mg" data-id="${MGP[p.id].mg}">Main gauche</button>`:''}</div></article>`;}).join('');}
 
 /* ---------- Dates ---------- */
 const pad=n=>String(n).padStart(2,'0');
@@ -775,7 +823,9 @@ const QBASE=[
   ['doigtes','Doigtés peu lisibles sur Le Petit Poney et Orientale.'],
   ['fontaineMG','À la claire fontaine : vérifier la main gauche des mesures 8 et 12 (Fa♯ avec rappel ?).'],
   ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?'],
-  ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?']
+  ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?'],
+  ['mgPos','Main gauche : position de départ (doigt et note) pour À la claire fontaine, J’ai du bon tabac, Le Petit Poney, Orientale, Let It Be et Il y a ton sourire ?'],
+  ['mgCancan','Cancan, main gauche : C = Do (4) + Mi (2) et G7 = Si (5) + Fa (1), c’est bien ça ?']
 ];
 function renderQ(){const items=QBASE.map(q=>({id:q[0],t:q[1],base:true,done:!!S.questions.done[q[0]]})).concat(S.questions.items);
   $('#q-list').innerHTML=items.map(q=>`<label class="q${q.done?' done':''}"><input type="checkbox" data-q="${esc(q.id)}"${q.base?' data-base="1"':''}${q.done?' checked':''}><span>${esc(q.t)}</span></label>`).join('');}
@@ -816,10 +866,11 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
   if(v!=='tempo'&&MT.on)mtStop();
-  if(v==='clavier')setTimeout(()=>KB.scrollTo(60),30);
+  if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
   if(v==='lecture'&&!lecCur)lecNew();
   window.scrollTo(0,0);}
 function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')applyPreset(v);
+  if(k==='mg'&&MG[v]){selectMg(v);setTimeout(()=>{const card=$('#mg-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);mgScroll();},120);}
   if((k==='mel'||k==='pas')&&MEL[v]){stopBus();curMel=v;$$('#mel-sel button').forEach(b=>b.classList.toggle('on',b.dataset.m===v));renderMel();
     // Après le changement d’onglet (route remet la page en haut) : montrer la carte Mélodies, puis lancer le pas à pas si demandé.
     setTimeout(()=>{const card=$('#mel-sel').closest('.card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);if(k==='pas')stepMel();else KB.scrollTo(MEL[v].n[0][0]);},120);}}
@@ -833,6 +884,9 @@ function init(){
   snapshot('auto');
   KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey});
   MINI=makeKeyboard($('#kb-mini'),36,84,{small:true});
+  MGKB=makeKeyboard($('#kb-mg'),43,72,{});
+  $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
+  $('#mg-sel').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)selectMg(b.dataset.g);});$('#mg-play').onclick=playMg;
   $('#chord-chips').innerHTML=CHORD_LIST.map(c=>`<button class="chip${c===curChord?' on':''}" data-c="${c}">${c}</button>`).join('');
   $('#prog-sel').innerHTML=Object.entries(PROG).map(([k,p])=>`<button data-p="${k}" class="${k===curProg?'on':''}">${esc(p.t)}</button>`).join('');
   $('#mel-sel').innerHTML=Object.entries(MEL).map(([k,m])=>`<button data-m="${k}" class="${k===curMel?'on':''}">${esc(m.t)}</button>`).join('');
@@ -840,7 +894,7 @@ function init(){
   $('#mt-preset').innerHTML=PRESETS.map(p=>`<option value="${p.id}">${esc(p.t)}</option>`).join('');
   renderChordInfo();renderProg();renderMel();earRenderOpts();renderLecAns();drawStaff(null);applyPreset('libre');renderAll();
 
-  $('#lbl-en').addEventListener('change',e=>{useEN=e.target.checked;KB.labels();MINI.labels();renderChordInfo();renderLecAns();});
+  $('#lbl-en').addEventListener('change',e=>{useEN=e.target.checked;KB.labels();MINI.labels();MGKB.labels();selectMg(curMg);renderChordInfo();renderLecAns();});
   $('#chord-chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;curChord=b.dataset.c;$$('#chord-chips .chip').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#inv').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curInv=+b.dataset.i;$$('#inv button').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#with-bass').addEventListener('change',renderChordInfo);
@@ -877,7 +931,8 @@ function init(){
   $('#pieces').addEventListener('click',async e=>{const b=e.target.closest('button[data-act]');if(!b)return;const id=b.dataset.id,act=b.dataset.act;
     if(act==='up'||act==='down'){const r=S.rep[id]=Object.assign({stage:0},S.rep[id]);r.stage=Math.max(0,Math.min(5,(r.stage||0)+(act==='up'?1:-1)));renderPieces();saveRep();}
     if(act==='metro'){location.hash='#tempo';applyPreset(id);}
-    if(act==='mel'){location.hash='#clavier';handleExtra('mel:'+id);}});
+    if(act==='mel'){location.hash='#clavier';handleExtra('mel:'+id);}
+    if(act==='mg'){location.hash='#clavier';handleExtra('mg:'+id);}});
 
   $('#fmt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RUN.on)return;FMT=b.dataset.f;$$('#fmt button').forEach(x=>x.classList.toggle('on',x===b));runReset();});
   $('#t-start').onclick=runToggle;$('#t-skip').onclick=runSkip;$('#t-end').onclick=()=>runEnd(false);
