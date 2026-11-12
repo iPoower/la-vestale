@@ -554,13 +554,16 @@ function playProg(){const a=ac();if(!a)return;const bus=newBus();const bpm=+$('#
   at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
 
 /* ---------- Main gauche ---------- */
-// Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:false = lu sur des annotations au crayon, à confirmer.
+// Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:'notes' = notes imprimées, doigts déduits ;
+// ok:false = lu sur des annotations au crayon, à confirmer.
 const MG={
   methode:{t:'Méthode : pouces sur le Do',ok:true,pos:[[1,60],[2,59],[3,57],[4,55]],note:'Pouce gauche sur le Do du milieu, partagé avec le pouce droit. La main gauche descend Do, Si, La, Sol avec 1, 2, 3, 4.'},
   hymneC:{t:'Hymne : accord C',ok:true,pos:[[5,48],[3,52],[1,55]],note:'Une octave sous le Do du milieu. Doigts imprimés 5-3-1.'},
   hymneG7:{t:'Hymne : G7',ok:true,pos:[[5,47],[2,53],[1,55]],note:'Le pouce reste sur Sol3, le 2 se pose sur Fa3, le 5 descend d’une touche sur Si2. Doigts imprimés 5-2-1.'},
   hymneD:{t:'Hymne : D (mesure 12)',ok:true,pos:[[4,50],[2,54]],note:'Juste avant G7. Doigts imprimés 4 et 2.'},
   fontaine:{t:'Fontaine : Sol3 et Fa♯3',ok:true,pos:[[3,54],[2,55]],note:'Rondes sur Sol3 avec le 2 (imprimé). Mesure 8 : Sol puis Fa♯ ; mesure 12 : Fa♯ puis Sol. Le Fa♯ est la touche noire juste à gauche du Sol : le 3 y est déduit (un doigt par touche voisine). Le ♯ écrit devant est un dièse de rappel, le Fa étant déjà dièse à la clé.'},
+  tabacC:{t:'Tabac : accord C',ok:'notes',pos:[[5,48],[1,55]],note:'Do3 et Sol3 ensemble. Notes lues sur ta feuille ; pas de doigtés imprimés à la main gauche, donc 5 et 1 comme dans l’Hymne.'},
+  tabacG:{t:'Tabac : accord G',ok:'notes',pos:[[5,47],[1,55]],note:'Si2 et Sol3 ensemble (noté « G(7) » au crayon). Le pouce reste sur Sol3, le 5 descend d’une touche : le même passage que C → G7 dans l’Hymne.'},
   cancanC:{t:'Cancan : C',ok:false,pos:[[4,48],[2,52]],note:'Lu sur tes annotations au crayon (« C » avec 2 et 4).'},
   cancanG7:{t:'Cancan : G7',ok:false,pos:[[5,47],[1,53]],note:'Lu sur tes annotations au crayon (« G7 » avec 1 et 5).'}
 };
@@ -571,7 +574,7 @@ const MGP={
   hymne:{mg:'hymneC',t:'C : 5 Do3, 3 Mi3, 1 Sol3. G7 : 5 Si2, 2 Fa3, 1 Sol3.'},
   cancan:{mg:'cancanC',t:'À confirmer en cours : C = Do3 (4) + Mi3 (2) ; G7 = Si2 (5) + Fa3 (1).'},
   fontaine:{mg:'fontaine',t:'Rondes sur Sol3 avec le 2 (imprimé) ; Fa♯3 avec le 3 aux mesures 8 et 12.'},
-  tabac:{t:MG_TODO},poney:{t:MG_TODO},orientale:{t:MG_TODO},letitbe:{t:MG_TODO},sourire:{t:MG_TODO}
+  tabac:{mg:'tabacC',t:'C = Do3 + Sol3 ; G = Si2 + Sol3. Le pouce reste sur Sol3 (doigts 5 et 1 déduits).'},poney:{t:MG_TODO},orientale:{t:MG_TODO},letitbe:{t:MG_TODO},sourire:{t:MG_TODO}
 };
 let MGKB=null,curMg='methode';
 function mgScroll(){const x=MG[curMg];if(!x||!MGKB)return;const ms=x.pos.map(p=>p[1]);MGKB.scrollTo(Math.round((Math.min(...ms)+Math.max(...ms))/2));}
@@ -579,7 +582,7 @@ function selectMg(id){if(!MG[id])return;curMg=id;const x=MG[id];$$('#mg-sel butt
   MGKB.clear();MGKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
   x.pos.forEach(([f,m])=>{const k=MGKB.keys[m];if(!k)return;k.classList.add('hl');const s=document.createElement('span');s.className='fg';s.textContent=f;k.appendChild(s);});
   const list=x.pos.slice().sort((a,b)=>b[0]-a[0]).map(([f,m])=>`${f} → ${esc(nm(m))}`).join(' · ');
-  $('#mg-info').innerHTML=`<p><b>${esc(x.t)}</b> <span class="tag${x.ok?'':' verif'}">${x.ok?'D’après ta feuille':'À vérifier en cours'}</span></p><p>${list}</p><p class="muted">${esc(x.note)}</p>`;
+  $('#mg-info').innerHTML=`<p><b>${esc(x.t)}</b> <span class="tag${x.ok?'':' verif'}">${x.ok===true?'D’après ta feuille':x.ok==='notes'?'Notes de ta feuille · doigts déduits':'À vérifier en cours'}</span></p><p>${list}</p><p class="muted">${esc(x.note)}</p>`;
   mgScroll();}
 function playMg(){const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.03;MG[curMg].pos.forEach(([f,m])=>playNote(m,t,2,.7,bus));}
 
@@ -826,7 +829,7 @@ const QBASE=[
   ['fontaineMG','À la claire fontaine : vérifier la main gauche des mesures 8 et 12 (Fa♯ avec rappel ?).'],
   ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?'],
   ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?'],
-  ['mgPos','Main gauche : position de départ (doigt et note) pour J’ai du bon tabac, Le Petit Poney, Orientale, Let It Be et Il y a ton sourire ?'],
+  ['mgPos','Main gauche : position de départ (doigt et note) pour Le Petit Poney, Orientale, Let It Be et Il y a ton sourire ?'],
   ['mgCancan','Cancan, main gauche : C = Do (4) + Mi (2) et G7 = Si (5) + Fa (1), c’est bien ça ?']
 ];
 function renderQ(){const items=QBASE.map(q=>({id:q[0],t:q[1],base:true,done:!!S.questions.done[q[0]]})).concat(S.questions.items);
