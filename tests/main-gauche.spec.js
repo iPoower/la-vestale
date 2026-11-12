@@ -15,6 +15,7 @@ const EXPECTED = {
   'Hymne : accord C': [['Do3', '5'], ['Mi3', '3'], ['Sol3', '1']],
   'Hymne : G7': [['Si2', '5'], ['Fa3', '2'], ['Sol3', '1']],
   'Hymne : D (mesure 12)': [['Ré3', '4'], ['Fa♯3', '2']],
+  'Fontaine : Sol3 et Fa♯3': [['Fa♯3', '3'], ['Sol3', '2']],
   'Cancan : C': [['Do3', '4'], ['Mi3', '2']],
   'Cancan : G7': [['Si2', '5'], ['Fa3', '1']],
 };
@@ -56,7 +57,7 @@ test('M3. depuis le répertoire, « Main gauche » ouvre la bonne position, cart
 
 test('M4. morceaux sans position sûre : « à confirmer », questions ajoutées', async ({ page }) => {
   await page.goto('./#morceaux');
-  for (const title of ['À la claire fontaine', 'J’ai du bon tabac', 'Le Petit Poney', 'Orientale', 'Let It Be', 'Il y a ton sourire']) {
+  for (const title of ['J’ai du bon tabac', 'Le Petit Poney', 'Orientale', 'Let It Be', 'Il y a ton sourire']) {
     const card = page.locator('article.piece', { hasText: title });
     await expect(card, title).toContainText('À confirmer en cours');
     await expect(card.locator('button[data-act="mg"]'), title).toHaveCount(0);
@@ -79,4 +80,17 @@ test('M5. repères de la clé de fa, exercice C ↔ G7 et noms anglais', async (
   await page.locator('#lbl-en').check();
   await expect(page.locator('#mg-info')).toContainText('5 → C3 · 3 → E3 · 1 → G3');
   await expect(page.locator('#kb-mg .fg')).toHaveCount(3);
+});
+
+test('M6. À la claire fontaine : position lue sur la feuille, accessible depuis le répertoire', async ({ page }) => {
+  await page.goto('./#morceaux');
+  const card = page.locator('article.piece', { hasText: 'À la claire fontaine' });
+  await expect(card).toContainText('Rondes sur Sol3 avec le 2 (imprimé)');
+  await expect(card).not.toContainText('À confirmer en cours');
+  await card.locator('button[data-act="mg"]').click();
+  await expect(page.locator('#mg-sel button.on')).toHaveText('Fontaine : Sol3 et Fa♯3');
+  await expect(page.locator('#mg-info')).toContainText('3 → Fa♯3 · 2 → Sol3');
+  await expect(page.locator('#mg-info')).toContainText('dièse de rappel');
+  await page.goto('./#journal');
+  await expect(page.locator('#q-list')).not.toContainText('position de départ (doigt et note) pour À la claire fontaine');
 });
