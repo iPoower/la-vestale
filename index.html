@@ -73,18 +73,18 @@ main{max-width:760px;margin:0 auto;padding:14px 16px 80px}
 .chip.now{background:var(--laiton);color:#1a140c}
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .kpi{background:var(--bois);border:1px solid var(--ligne);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px}
-.kpi b{font-family:var(--display);font-size:1.9rem;color:var(--ivoire);font-variant-numeric:tabular-nums;line-height:1}
+.kpi b{font-family:var(--display);font-size:1.9rem;color:var(--ivoire);font-variant-numeric:lining-nums tabular-nums;line-height:1}
 .kpi span{font-size:.78rem;color:var(--muted)}
 .bar{height:6px;background:var(--bois2);border-radius:99px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--feutre);width:0}
 ol.blocks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 ol.blocks li{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:10px;border:1px solid var(--ligne)}
-ol.blocks li .m{font-family:var(--display);font-size:1.3rem;color:var(--laiton);font-variant-numeric:tabular-nums}
+ol.blocks li .m{font-family:var(--display);font-size:1.3rem;color:var(--laiton);font-variant-numeric:lining-nums tabular-nums}
 ol.blocks li.cur{border-color:var(--laiton);background:#2a2219}
 ol.blocks li.done{opacity:.55}
-ol.blocks li a{font-size:.85rem;color:var(--laiton);text-decoration:none;font-weight:700;white-space:nowrap}
+ol.blocks li a{font-size:.85rem;color:var(--laiton);text-decoration:none;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;min-height:44px;padding:0 12px}
 .timer{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--ligne);padding-top:10px}
-.timer b{font-family:var(--display);font-size:2.4rem;font-variant-numeric:tabular-nums;color:var(--ivoire)}
+.timer b{font-family:var(--display);font-size:2.4rem;font-variant-numeric:lining-nums tabular-nums;color:var(--ivoire)}
 .rules li{margin-bottom:4px}
 .rules ul{margin:0;padding-left:18px}
 label.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
@@ -98,7 +98,12 @@ textarea{min-height:70px;resize:vertical}
 .kb-wrap{overflow-x:auto;overflow-y:hidden;border-radius:10px;background:#0c0a09;padding:8px 0 4px;-webkit-overflow-scrolling:touch;touch-action:pan-x}
 .kb{position:relative;height:160px;margin:0 8px}
 .kb.small{height:96px}
-.kb.fit{height:110px}
+.kb.fit.small{height:110px}
+.kb.compact{height:130px}
+.kb.compact .fg{min-width:15px;height:15px;font-size:.6rem;border-width:1px;padding:0 1px;bottom:16px}
+.kb.compact .kl{font-size:.5rem}
+h1,h2,h3,.kpi b,.bpm b,.timer b,ol.blocks li .m,.info .big,.nextnote,.count{font-variant-numeric:lining-nums tabular-nums}
+.mt-chip{position:fixed;right:12px;bottom:12px;z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .seg button:disabled{opacity:.35;cursor:default}
 .kb.fit .key.white{padding-bottom:3px}
 .key{position:absolute;top:0;border:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:pan-x}
@@ -134,12 +139,12 @@ textarea{min-height:70px;resize:vertical}
 .answers button.ko{background:#4a2a22;border-color:var(--ko);color:#ffd9cf}
 .fb{min-height:1.6em;font-weight:700}
 .fb.ok{color:var(--ok)} .fb.ko{color:var(--ko)}
-.score{display:flex;gap:16px;font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.score{display:flex;gap:16px;font-size:.9rem;color:var(--muted);font-variant-numeric:lining-nums tabular-nums}
 .score b{color:var(--ivoire)}
 .staff{width:100%;max-width:420px;align-self:center;background:var(--ivoire);border-radius:10px}
 /* Tempo */
 .bpm{display:flex;align-items:center;justify-content:center;gap:14px}
-.bpm b{font-family:var(--display);font-size:4.2rem;color:var(--ivoire);font-variant-numeric:tabular-nums;min-width:3ch;text-align:center;line-height:1}
+.bpm b{font-family:var(--display);font-size:4.2rem;color:var(--ivoire);font-variant-numeric:lining-nums tabular-nums;min-width:3ch;text-align:center;line-height:1}
 .bpm .round{width:52px;height:52px;border-radius:50%;font-size:1.4rem}
 input[type=range]{width:100%;accent-color:var(--laiton);min-height:30px}
 .dots{display:flex;justify-content:center;gap:12px;min-height:30px;align-items:center}
@@ -221,7 +226,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="kb-wrap" id="kb-wk"></div>
     <div class="small" id="wk-info" aria-live="polite"></div>
     <div class="row"><button class="btn" id="wk-prev" aria-label="Mesure précédente">◀ Précédente</button><button class="btn primary" id="wk-play">Écouter la mesure</button><button class="btn" id="wk-next" aria-label="Mesure suivante">Suivante ▶</button></div>
-    <div class="row"><label class="toggle"><input type="checkbox" id="wk-loop"> En boucle</label><button class="btn ghost" id="wk-stop">Stop</button></div>
+    <div class="row"><label class="toggle"><input type="checkbox" id="wk-loop"> En boucle</label><label class="toggle"><input type="checkbox" id="wk-click"> Décompte et clic</label><button class="btn ghost" id="wk-stop">Stop</button></div>
+    <div class="seg" id="wk-span"><button data-n="1" class="on">1 mesure</button><button data-n="2">2 mesures</button></div>
     <label class="field">Tempo : noire = <b id="wk-bpm-v">60</b><input type="range" id="wk-bpm" min="40" max="100" value="60"></label>
     <div class="row between"><div class="ladder" id="wk-dots"><i></i><i></i><i></i></div><span class="small muted" id="wk-msg">Joue la mesure, puis dis-moi si c’était propre.</span></div>
     <div class="row"><button class="btn primary" id="wk-ok">Propre</button><button class="btn" id="wk-ko">Raté</button></div>
@@ -267,7 +273,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div class="card">
     <div class="row between"><h2>Clavier</h2><label class="toggle"><input type="checkbox" id="lbl-en"> Noms anglais (C, D, E)</label></div>
     <div class="kb-wrap" id="kb-main"></div>
-    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux.</p>
+    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. En France, on l’appelle souvent Do3 (La3 = 440 Hz) : l’app suit la notation internationale, une octave au-dessus. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux.</p>
   </div>
   <div class="card" id="mg-card">
     <h2>Main gauche</h2>
@@ -282,7 +288,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
       <li>La petite ligne au-dessus de la portée du bas est le Do du milieu (Do4).</li>
       <li>Lignes de bas en haut : Sol, Si, Ré, Fa, La. Interlignes : La, Do, Mi, Sol.</li></ul></details>
     <details><summary>Exercice de 5 minutes : C ↔ G7</summary><ol class="small">
-      <li>Pouce gauche sur Sol3 (la 2e touche Sol à gauche du Do du milieu), petit doigt sur Do3.</li>
+      <li>Pouce gauche sur Sol3 (la 1re touche Sol à gauche du Do du milieu), petit doigt sur Do3.</li>
       <li>Joue Do, Mi, Sol ensemble (accord C), puis glisse le 5 d’une touche vers la gauche, sur Si, et pose le 2 sur Fa (accord G7).</li>
       <li>Dix allers-retours lents, sans regarder les mains. Choisis « Hymne : accord C » puis « Hymne : G7 » ci-dessus pour vérifier.</li></ol></details>
   </div>
@@ -417,6 +423,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
 </section>
 </main>
+<button class="btn primary mt-chip hidden" id="mt-chip" aria-label="Arrêter le métronome"></button>
 <div id="dlg" class="dialog hidden"><div class="card"><p id="dlg-t"></p><div class="row"><button class="btn primary" id="dlg-ok">Confirmer</button><button class="btn ghost" id="dlg-no">Annuler</button></div></div></div>
 
 <script>
@@ -511,8 +518,8 @@ function playNote(m,when,dur,vel,dest){const a=ac();if(!a)return;dur=dur||1.2;ve
   lp.connect(g);g.connect(dest||MASTER);
   const peak=.2*vel*(m<55?1.2:1),tau=Math.max(.3,1.5-(m-48)*.022);
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+.006);g.gain.setTargetAtTime(peak*.22,t+.012,tau);g.gain.setTargetAtTime(.0001,t+dur,.12);}
-function click(t,kind){const a=AC;const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=kind==='acc'?1650:kind==='beat'?1150:820;
-  const v=kind==='sub'?.12:kind==='acc'?.5:.32;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);o.connect(g);g.connect(MASTER);o.start(t);o.stop(t+.06);}
+function click(t,kind,dest){const a=AC;const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=kind==='acc'?1650:kind==='beat'?1150:820;
+  const v=kind==='sub'?.12:kind==='acc'?.5:.32;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.05);o.connect(g);g.connect(dest||MASTER);o.start(t);o.stop(t+.06);}
 function chime(){const a=ac();if(!a)return;const t=a.currentTime;[72,76,79].forEach((m,i)=>playNote(m,t+i*.12,.8,.5));}
 let BUS=null,TIMERS=[];
 function newBus(){stopBus();const a=ac();if(!a)return null;BUS=a.createGain();BUS.connect(MASTER);return BUS;}
@@ -520,16 +527,18 @@ function stopBus(){TIMERS.forEach(clearTimeout);TIMERS=[];if(BUS&&AC){const b=BU
 function at(sec,fn){TIMERS.push(setTimeout(fn,Math.max(0,sec*1000)));}
 
 /* ---------- Clavier ---------- */
-function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=document.createElement('div');inner.className='kb'+(opts.small?' small':'')+(opts.fit?' fit':'');
+function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=document.createElement('div');inner.className='kb'+(opts.small?' small':'')+(opts.fit===true?' fit':'');
   // opts.fit : toute l'étendue tient dans la largeur (positions en %), sans défilement.
   let nW=0;for(let m=lo;m<=hi;m++)if(!isBlack(m))nW++;
+  let compact=false;
+  if(opts.fit==='auto'||opts.fit==='always'){const avail=(el.clientWidth||Math.min(window.innerWidth,760)-66)-16;const wide=avail/nW>=26;compact=opts.fit==='always'&&!wide;opts=Object.assign({},opts,{fit:wide||opts.fit==='always'});if(opts.fit)inner.className+=' fit'+(compact?' compact':'');}
   const U=opts.fit?'%':'px',W=opts.fit?100/nW:(opts.small?24:40);let x=0;const keys={};
   for(let m=lo;m<=hi;m++)if(!isBlack(m)){const k=document.createElement('button');k.className='key white'+(m===60?' c4':'');k.style.left=x+U;k.style.width=W+U;k.dataset.m=m;k.innerHTML='<span class="kl"></span>';inner.appendChild(k);keys[m]=k;x+=W;}
   for(let m=lo;m<=hi;m++)if(isBlack(m)){const lw=keys[m-1];if(!lw)continue;const k=document.createElement('button');k.className='key black';k.style.left=(parseFloat(lw.style.left)+W*.69)+U;k.style.width=(W*.62)+U;k.dataset.m=m;inner.appendChild(k);keys[m]=k;}
   inner.style.width=opts.fit?'calc(100% - 16px)':x+'px';el.appendChild(inner);
   inner.addEventListener('pointerdown',e=>{const k=e.target.closest('.key');if(!k)return;const m=+k.dataset.m;if(!opts.silent)playNote(m,0,1.1,.8);k.classList.add('down');setTimeout(()=>k.classList.remove('down'),160);if(opts.onKey)opts.onKey(m);});
   const api={el,keys,W,
-    labels(){for(const m in keys){const k=keys[m],mm=+m,l=k.querySelector('.kl');k.setAttribute('aria-label',nm(mm));if(l)l.textContent=(mm%12===0)?nm(mm):(opts.small?'':nm(mm,false));}},
+    labels(){for(const m in keys){const k=keys[m],mm=+m,l=k.querySelector('.kl');k.setAttribute('aria-label',nm(mm));if(l)l.textContent=(mm%12===0)?nm(mm):(opts.small||compact?'':nm(mm,false));}},
     mark(ms,cls){(ms||[]).forEach(m=>keys[m]&&keys[m].classList.add(cls||'hl'));},
     clear(cls){const cs=cls?[cls]:['hl','hl2','ok','ko','next'];Object.values(keys).forEach(k=>cs.forEach(c=>k.classList.remove(c)));},
     scrollTo(m){const k=keys[m];if(!k)return;el.scrollLeft=parseFloat(k.style.left)-el.clientWidth/2+W/2;}};
@@ -601,10 +610,16 @@ function playProg(){const id=progPiece();if(id)return playPiece(id);const a=ac()
   PROG[curProg].s.forEach((x,i)=>{const [name,beats]=x;const v=voicing(name,0),c=CH[name],dur=beats*spb;
     playNote(c.b,t,dur*.98,.75,bus);
     if(progPat==='bloc'){v.forEach(m=>playNote(m,t,dur*.95,.62,bus));}
-    else{const pat=[0,2,1,2];for(let k=0;k<beats*2;k++)playNote(v[pat[k%4]],t+k*spb/2,spb*.55,.55,bus);}
+    else{const pat=v.length>3?[0,2,1,3]:[0,2,1,2];for(let k=0;k<beats*2;k++)playNote(v[pat[k%4]],t+k*spb/2,spb*.55,.55,bus);}
     const tt=t-a.currentTime;at(tt,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));KB.clear();KB.mark(v,'hl');KB.mark([c.b],'hl2');FKB.clear();FKB.mark(v,'hl');FKB.mark([c.b],'hl2');});
     t+=dur;});
   at(t-a.currentTime+.2,()=>{$$('#prog-seq span').forEach(s=>s.classList.remove('now'));FKB.clear();});}
+
+/* ---------- Écran allumé pendant le travail ---------- */
+const AWAKE=new Set();let LOCK=null;
+async function lockSync(){try{if(AWAKE.size&&!LOCK&&navigator.wakeLock&&!document.hidden){LOCK=await navigator.wakeLock.request('screen');LOCK.addEventListener&&LOCK.addEventListener('release',()=>{LOCK=null;});}
+  else if(!AWAKE.size&&LOCK){const l=LOCK;LOCK=null;await l.release();}}catch(e){LOCK=null;}}
+function awake(why,on){on?AWAKE.add(why):AWAKE.delete(why);lockSync();}
 
 /* ---------- Travailler un morceau, mesure par mesure ---------- */
 // Notes vérifiées sur les feuilles du cours (domaine public). Main gauche : accords nommés, doigts en regard des notes.
@@ -627,7 +642,7 @@ function workBars(id){const w=WORK[id],bars=[];let cur=[],acc=0;
   return bars.map((rh,i)=>{const spec=w.lh[i]||[],lh=[];for(let k=0;k<spec.length;k+=2){const c=spec[k];lh.push(c?[LHC[c][0],spec[k+1],LHC[c][1],c]:[null,spec[k+1],null,null]);}return {rh,lh};});}
 const DUR={4:'ronde',3:'blanche pointée',2:'blanche',1.5:'noire pointée',1:'noire',.5:'croche'};
 const LHNAME={C:'accord C',G7:'accord G7',D:'D (Ré–Fa♯)',C2:'accord C',G2:'accord G',Sol:'Sol',FaD:'Fa♯'};
-let WKKB=null;const WK={id:'hymne',bar:0,hands:'both',okRun:0};
+let WKKB=null;const WK={id:'hymne',bar:0,hands:'both',okRun:0,span:1};
 function wkEvLabel(e,hand){if(!e[0])return 'silence ('+(DUR[e[1]]||e[1]+' temps')+')';
   const notes=e[0].map(m=>nm(m)).join(' + ');const fg=e[2]?' · doigt'+(e[2].length>1?'s ':' ')+e[2].join('-'):'';
   return (hand==='lh'&&e[3]&&e[0].length>1?LHNAME[e[3]]+' : ':'')+notes+fg+' ('+(DUR[e[1]]||e[1]+' temps')+')';}
@@ -644,12 +659,25 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();}
 function wkGo(bar){stopBus();WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
-function wkSelect(id){if(!WORK[id])return;stopBus();WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;renderWork();}
-function playWork(){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#wk-bpm').value;const b=workBars(WK.id)[WK.bar];const t0=a.currentTime+.1;
+function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
+  let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
+  WKKB=makeKeyboard($('#kb-wk'),lo,hi,{fit:'always'});WKKB.labels();}
+function wkSelect(id){if(!WORK[id])return;stopBus();WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;wkBuild();renderWork();}
+// Mesures jouées : la mesure courante, ou elle et la suivante (« 2 mesures »).
+function wkSeg(){const bars=workBars(WK.id);return bars.slice(WK.bar,WK.bar+(WK.span===2&&WK.bar<bars.length-1?2:1));}
+const wkClear=()=>{if(WKKB)WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));};
+// Programme le passage à l'heure exacte `start` (horloge audio). La boucle suivante est programmée 0,3 s avant la fin,
+// sur le même canal, à `start + durée` : aucun décalage d'une reprise à l'autre.
+function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;const seg=wkSeg();const clicks=$('#wk-click').checked;
   const hands=WK.hands==='both'?['rh','lh']:[WK.hands];
-  hands.forEach(hd=>{let t=t0;b[hd].forEach(e=>{if(e[0]){e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,hd==='lh'?.6:.75,bus));const ms=e[0];at(t-a.currentTime,()=>{WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));});}t+=e[1]*spb;});});
-  const dur=WORK[WK.id].bpb*spb;at(t0+dur-a.currentTime,()=>{WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));if($('#wk-loop').checked)playWork();});}
-function wkStop(){stopBus();if(WKKB)WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));}
+  seg.forEach((b,bi)=>{const tb=start+bi*bpb*spb;if(clicks)for(let k=0;k<bpb;k++)click(tb+k*spb,k===0?'acc':'beat',bus);
+    hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,hd==='lh'?.6:.75,bus));const ms=e[0];at(t-a.currentTime,()=>{wkClear();ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));});}t+=e[1]*spb;});});});
+  const end=start+seg.length*bpb*spb;
+  at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{wkClear();awake('wk',false);});}});}
+function playWork(){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
+  if($('#wk-click').checked){for(let k=0;k<bpb;k++)click(start+k*spb,k===0?'acc':'beat',bus);start+=bpb*spb;}   // décompte d'une mesure
+  awake('wk',$('#wk-loop').checked);wkSchedule(bus,start);}
+function wkStop(){stopBus();wkClear();awake('wk',false);}
 
 /* ---------- Main gauche ---------- */
 // Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:'notes' = notes imprimées, doigts déduits ;
@@ -739,7 +767,7 @@ function earAnswer(btn){if(!earCur||earAnswered)return;const e=EAR[earMode];cons
   $$('#ear-ans button').forEach(b=>{b.disabled=true;if(b.dataset.a===right)b.classList.add('ok');else if(b===btn)b.classList.add('ko');});
   const fb=$('#ear-fb');fb.className='fb '+(ok?'ok':'ko');fb.textContent=(ok?'Juste. ':'Non : c’était '+earCur.c+'. ')+CH[earCur.c].role;
   earUpdateScore();if(ok)setTimeout(()=>{if(earAnswered)earNew();},1600);}
-function earCompare(){const pool=earPool();if(earMode==='mode'){seqChords(['C','Am']);return;}seqChords(pool.slice(0,Math.min(pool.length,3)));}
+function earCompare(){const pool=earPool();if(earMode==='mode'){seqChords(['C','Am']);return;}seqChords(pool);}
 function seqChords(list){const a=ac();if(!a)return;const bus=newBus();let t=a.currentTime+.05;list.forEach(n=>{playNote(CH[n].b,t,1.3,.7,bus);voicing(n,0).forEach(m=>playNote(m,t,1.2,.6,bus));const tt=t-a.currentTime;at(tt,()=>{$('#ear-fb').className='fb';$('#ear-fb').textContent='Comparaison : '+n;});t+=1.4;});}
 
 /* ---------- Lecture ---------- */
@@ -813,8 +841,9 @@ function mtSchedule(){const a=AC;const step=60/MT.bpm/(MT.sub?2:1);const per=MT.
 function mtDraw(){const a=AC;while(MT.queue.length&&MT.queue[0].t<=a.currentTime){const q=MT.queue.shift();$$('#mt-dots i').forEach(x=>x.classList.remove('lit'));
     const el=$(`#mt-dots i[data-k="${q.isBeat?'b':'s'}${q.beat}"]`);if(el)el.classList.add('lit');$('#mt-count').textContent=q.isBeat?String(q.beat+1):'et';}
   if(MT.on)MT.raf=requestAnimationFrame(mtDraw);}
-function mtStart(){const a=ac();if(!a)return;MT.on=true;MT.i=0;MT.queue=[];MT.next=a.currentTime+.08;mtSchedule();MT.timer=setInterval(mtSchedule,25);MT.raf=requestAnimationFrame(mtDraw);$('#mt-go').textContent='Arrêter';}
-function mtStop(){MT.on=false;clearInterval(MT.timer);cancelAnimationFrame(MT.raf);$$('#mt-dots i').forEach(x=>x.classList.remove('lit'));$('#mt-count').textContent='';$('#mt-go').textContent='Démarrer';}
+function mtStart(){const a=ac();if(!a)return;MT.on=true;awake('metro',true);MT.i=0;MT.queue=[];MT.next=a.currentTime+.08;mtSchedule();MT.timer=setInterval(mtSchedule,25);MT.raf=requestAnimationFrame(mtDraw);$('#mt-go').textContent='Arrêter';}
+function mtStop(){MT.on=false;awake('metro',false);clearInterval(MT.timer);cancelAnimationFrame(MT.raf);$$('#mt-dots i').forEach(x=>x.classList.remove('lit'));$('#mt-count').textContent='';$('#mt-go').textContent='Démarrer';}
+function mtChip(){const c=$('#mt-chip');if(!c)return;const v=(location.hash||'').slice(1)||'seance';c.classList.toggle('hidden',!MT.on||v==='tempo');c.textContent=`♩ = ${MT.bpm} · Arrêter`;}
 function mtRestartIfOn(){if(MT.on){mtStop();mtStart();}}
 function applyPreset(id){const p=PRESETS.find(x=>x.id===id)||PRESETS[0];MT.preset=p.id;MT.beats=p.b;MT.sub=p.sub;$('#mt-sub').checked=p.sub;
   $$('#mt-beats button').forEach(b=>b.classList.toggle('on',+b.dataset.b===p.b));const saved=S.rep[p.id]&&S.rep[p.id].bpm;mtSet(saved||p.start);
@@ -890,13 +919,13 @@ const fmt=s=>`${pad(Math.floor(s/60))}:${pad(Math.floor(s%60))}`;
 function tick(){const bs=blocks();const now=Date.now();const bEl=RUN.blockAcc+(RUN.on?(now-RUN.blockStart)/1000:0);const lim=bs[RUN.idx][1]*60;const left=Math.max(0,lim-bEl);
   $('#t-clock').textContent=fmt(left);$('#t-label').textContent=`${RUN.idx+1}/${bs.length} · ${bs[RUN.idx][0]}`+(RUN.on?'':' · en pause');
   if(RUN.on&&left<=0){chime();if(RUN.idx<bs.length-1){RUN.idx++;RUN.blockAcc=0;RUN.blockStart=Date.now();renderBlocks();}else{runEnd(true);}}}
-function runToggle(){ac();if(RUN.on){RUN.on=false;RUN.acc+=(Date.now()-RUN.start)/1000;RUN.blockAcc+=(Date.now()-RUN.blockStart)/1000;$('#t-start').textContent='Reprendre';}
-  else{RUN.on=true;RUN.start=Date.now();RUN.blockStart=Date.now();if(!RUN.iv)RUN.iv=setInterval(tick,500);$('#t-start').textContent='Pause';}renderBlocks();tick();}
+function runToggle(){ac();if(RUN.on){RUN.on=false;awake('seance',false);RUN.acc+=(Date.now()-RUN.start)/1000;RUN.blockAcc+=(Date.now()-RUN.blockStart)/1000;$('#t-start').textContent='Reprendre';}
+  else{RUN.on=true;awake('seance',true);RUN.start=Date.now();RUN.blockStart=Date.now();if(!RUN.iv)RUN.iv=setInterval(tick,500);$('#t-start').textContent='Pause';}renderBlocks();tick();}
 function runSkip(){const bs=blocks();if(RUN.idx<bs.length-1){RUN.idx++;RUN.blockAcc=0;RUN.blockStart=Date.now();renderBlocks();tick();}}
 function runElapsed(){return RUN.acc+(RUN.on?(Date.now()-RUN.start)/1000:0);}
-function runEnd(auto){const el=runElapsed();if(RUN.on){RUN.acc=el;RUN.on=false;}clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';
+function runEnd(auto){const el=runElapsed();awake('seance',false);if(RUN.on){RUN.acc=el;RUN.on=false;}clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';
   openLog(el<60?30:Math.round(el/60));if(auto)toast('Séance terminée. Note ce qui a progressé.');}
-function runReset(){RUN.on=false;RUN.idx=0;RUN.acc=0;RUN.blockAcc=0;clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';$('#t-clock').textContent='00:00';$('#t-label').textContent='Prêt quand tu l’es';renderBlocks();}
+function runReset(){RUN.on=false;awake('seance',false);RUN.idx=0;RUN.acc=0;RUN.blockAcc=0;clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';$('#t-clock').textContent='00:00';$('#t-label').textContent='Prêt quand tu l’es';renderBlocks();}
 let FEEL=3;
 function openLog(min){$('#f-piece').innerHTML=PIECES.map(p=>`<option value="${p.id}">${esc(p.t)}</option>`).join('')+'<option value="accords">Accords et grille</option><option value="libre">Jeu libre</option>';
   $('#f-piece').value=today().piece;$('#f-min').value=min||30;$('#f-pass').value='';$('#f-bpm').value=MT.preset===today().piece?MT.bpm:'';$('#f-note').value='';
@@ -973,7 +1002,7 @@ const VIEWS=['seance','clavier','oreille','lecture','tempo','morceaux','journal'
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
-  if(v!=='tempo'&&MT.on)mtStop();
+  mtChip();
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
   if(v==='seance')setTimeout(wkScroll,30);
   if(v==='lecture'&&!lecCur)lecNew();
@@ -992,16 +1021,17 @@ function renderAll(){renderToday();renderBlocks();renderPieces();renderChart();r
 function init(){
   loadLocal();
   snapshot('auto');
-  KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey});
+  KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey,fit:'auto'});
   MINI=makeKeyboard($('#kb-mini'),36,84,{small:true});
-  MGKB=makeKeyboard($('#kb-mg'),40,72,{});
-  WKKB=makeKeyboard($('#kb-wk'),43,84,{});
+  MGKB=makeKeyboard($('#kb-mg'),40,72,{fit:'auto'});
   $('#wk-piece').innerHTML=Object.entries(WORK).map(([k,w])=>`<option value="${k}">${esc(w.t)}</option>`).join('');wkSelect('hymne');
   $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
+  $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)lockSync();});
   $('#wk-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();renderWork();});
   $('#wk-prev').onclick=()=>wkGo(WK.bar-1);$('#wk-next').onclick=()=>wkGo(WK.bar+1);$('#wk-play').onclick=playWork;$('#wk-stop').onclick=wkStop;
   $('#wk-bpm').addEventListener('input',e=>$('#wk-bpm-v').textContent=e.target.value);
-  $('#wk-ok').onclick=()=>{WK.okRun++;if(WK.okRun>=3){WK.okRun=3;$('#wk-msg').textContent=WK.bar<workBars(WK.id).length-1?'Trois fois propre : passe à la mesure suivante, puis enchaîne les deux.':'Trois fois propre sur la dernière mesure : rejoue tout le morceau, lentement.';}else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre.`;renderWork();};
+  $('#wk-ok').onclick=()=>{WK.okRun++;if(WK.okRun>=3){WK.okRun=3;$('#wk-msg').textContent=WK.bar<workBars(WK.id).length-1?'Trois fois propre : passe à la mesure suivante, puis choisis « 2 mesures » pour les enchaîner.':'Trois fois propre sur la dernière mesure : rejoue tout le morceau, lentement.';}else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre.`;renderWork();};
   $('#wk-ko').onclick=()=>{WK.okRun=0;$('#wk-msg').textContent='Raté : main par main, plus lent, puis les deux mains.';renderWork();};
   $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
   $('#mg-sel').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)selectMg(b.dataset.g);});$('#mg-play').onclick=playMg;
@@ -1036,7 +1066,7 @@ function init(){
   $('#lec-next').onclick=lecNew;
   $('#lec-sprint').onclick=()=>{sprint={n:0,ok:0,t0:performance.now()};$('#lec-sprint-tag').textContent='Sprint 0/20';lecNew();};
 
-  $('#mt-go').onclick=()=>MT.on?mtStop():mtStart();
+  $('#mt-go').onclick=()=>{MT.on?mtStop():mtStart();mtChip();};$('#mt-chip').onclick=()=>{mtStop();mtChip();};
   $('#mt-minus').onclick=()=>{mtSet(MT.bpm-2);};$('#mt-plus').onclick=()=>{mtSet(MT.bpm+2);};
   $('#mt-range').addEventListener('input',e=>mtSet(+e.target.value));
   $('#mt-beats').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;MT.beats=+b.dataset.b;$$('#mt-beats button').forEach(x=>x.classList.toggle('on',x===b));mtDots();mtRestartIfOn();});
@@ -1067,6 +1097,11 @@ function init(){
   $('#j-copy').onclick=()=>copy(journalText());
   $('#coach-go').onclick=coach;$('#bk-export').onclick=exportData;$('#snap-restore').onclick=restoreSnap;$('#rm-go').onclick=exportData;$('#rm-later').onclick=()=>{S.meta=Object.assign({},S.meta,{remindAfter:Date.now()+864e5});saveLocal();hideRemind();};$('#bk-file').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value='';});
 
+  let fitW=0;const refit=()=>{const w=Math.min(window.innerWidth,760);if(w===fitW)return;fitW=w;
+    KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey,fit:'auto'});renderChordInfo();
+    MGKB=makeKeyboard($('#kb-mg'),40,72,{fit:'auto'});selectMg(curMg);
+    wkBuild();renderWork();};
+  let refitT=null;window.addEventListener('resize',()=>{clearTimeout(refitT);refitT=setTimeout(refit,150);});
   window.addEventListener('hashchange',route);route();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick&&RUN.iv&&tick();});
   // Au retour d'arrière-plan, l'iPhone peut rendre le contexte muet tout en le disant actif : on en recrée un au prochain toucher.
