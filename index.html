@@ -111,7 +111,7 @@ textarea{min-height:70px;resize:vertical}
 .key.white.ok{background:linear-gradient(180deg,#cfe8c2,#86b872)}
 .key.ko{background:linear-gradient(180deg,#f2b8a8,#e07a62)!important}
 .key.next{box-shadow:inset 0 0 0 3px var(--laiton)}
-.key .fg{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#1a140c;color:var(--laiton);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;pointer-events:none;border:2px solid var(--laiton)}
+.key .fg{position:absolute;left:50%;top:10px;transform:translateX(-50%);min-width:24px;height:24px;padding:0 3px;border-radius:12px;background:#1a140c;color:var(--laiton);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;pointer-events:none;border:2px solid var(--laiton)}
 .key.white .fg{top:auto;bottom:26px}
 .key.black .fg{top:auto;bottom:8px}
 .key.down{filter:brightness(.85)}
@@ -565,6 +565,7 @@ const MG={
   tabacC:{t:'Tabac : accord C',ok:'notes',pos:[[5,48],[1,55]],note:'Do3 et Sol3 ensemble. Notes lues sur ta feuille ; pas de doigtés imprimés à la main gauche, donc 5 et 1 comme dans l’Hymne.'},
   tabacG:{t:'Tabac : accord G',ok:'notes',pos:[[5,47],[1,55]],note:'Si2 et Sol3 ensemble (noté « G(7) » au crayon). Le pouce reste sur Sol3, le 5 descend d’une touche : le même passage que C → G7 dans l’Hymne.'},
   poney:{t:'Poney : pouces sur le Do',ok:true,pos:[[4,55],[3,57],[2,59],[1,60]],note:'Schéma imprimé en tête du morceau : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (partagé avec le pouce droit, qui joue Do-Ré-Mi-Fa-Sol avec 1-2-3-4-5). La main gauche joue Sol (4) en blanches, puis La (3) et Si (2) en noires, et le Do (1) à la mesure 6. Le dernier Do de la main gauche est barré au crayon sur ta feuille.'},
+  sourire:{t:'Sourire : basses Em C G D',ok:'notes',seq:true,pos:[['Em',40],['C',48],['G',43],['D',50]],note:'Intro de ta feuille : une seule note grave par accord, sur le 1er temps, puis silence. La main gauche se déplace d’un accord à l’autre ; aucun doigt n’est imprimé : prends chaque basse avec le 5 (petit doigt) ou le 3, comme te convient le mieux. Sur la touche, le nom de l’accord remplace le numéro de doigt.'},
   cancanC:{t:'Cancan : C',ok:false,pos:[[4,48],[2,52]],note:'Lu sur tes annotations au crayon (« C » avec 2 et 4).'},
   cancanG7:{t:'Cancan : G7',ok:false,pos:[[5,47],[1,53]],note:'Lu sur tes annotations au crayon (« G7 » avec 1 et 5).'}
 };
@@ -575,17 +576,17 @@ const MGP={
   hymne:{mg:'hymneC',t:'C : 5 Do3, 3 Mi3, 1 Sol3. G7 : 5 Si2, 2 Fa3, 1 Sol3.'},
   cancan:{mg:'cancanC',t:'À confirmer en cours : C = Do3 (4) + Mi3 (2) ; G7 = Si2 (5) + Fa3 (1).'},
   fontaine:{mg:'fontaine',t:'Rondes sur Sol3 avec le 2 (imprimé) ; Fa♯3 avec le 3 aux mesures 8 et 12.'},
-  tabac:{mg:'tabacC',t:'C = Do3 + Sol3 ; G = Si2 + Sol3. Le pouce reste sur Sol3 (doigts 5 et 1 déduits).'},poney:{mg:'poney',t:'Schéma imprimé : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (les deux pouces sur le Do).'},orientale:{t:MG_TODO},letitbe:{t:MG_TODO},sourire:{t:MG_TODO}
+  tabac:{mg:'tabacC',t:'C = Do3 + Sol3 ; G = Si2 + Sol3. Le pouce reste sur Sol3 (doigts 5 et 1 déduits).'},poney:{mg:'poney',t:'Schéma imprimé : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (les deux pouces sur le Do).'},orientale:{t:MG_TODO},letitbe:{t:MG_TODO},sourire:{mg:'sourire',t:'Une note grave par accord, sur le 1er temps : Em = Mi2, C = Do3, G = Sol2, D = Ré3 (intro de ta feuille).'}
 };
 let MGKB=null,curMg='methode';
 function mgScroll(){const x=MG[curMg];if(!x||!MGKB)return;const ms=x.pos.map(p=>p[1]);MGKB.scrollTo(Math.round((Math.min(...ms)+Math.max(...ms))/2));}
 function selectMg(id){if(!MG[id])return;curMg=id;const x=MG[id];$$('#mg-sel button').forEach(b=>b.classList.toggle('on',b.dataset.g===id));
   MGKB.clear();MGKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
   x.pos.forEach(([f,m])=>{const k=MGKB.keys[m];if(!k)return;k.classList.add('hl');const s=document.createElement('span');s.className='fg';s.textContent=f;k.appendChild(s);});
-  const list=x.pos.slice().sort((a,b)=>b[0]-a[0]).map(([f,m])=>`${f} → ${esc(nm(m))}`).join(' · ');
+  const list=(x.seq?x.pos.slice():x.pos.slice().sort((a,b)=>b[0]-a[0])).map(([f,m])=>`${esc(f)} → ${esc(nm(m))}`).join(' · ');
   $('#mg-info').innerHTML=`<p><b>${esc(x.t)}</b> <span class="tag${x.ok?'':' verif'}">${x.ok===true?'D’après ta feuille':x.ok==='notes'?'Notes de ta feuille · doigts déduits':'À vérifier en cours'}</span></p><p>${list}</p><p class="muted">${esc(x.note)}</p>`;
   mgScroll();}
-function playMg(){const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.03;MG[curMg].pos.forEach(([f,m])=>playNote(m,t,2,.7,bus));}
+function playMg(){const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.03;const x=MG[curMg];x.pos.forEach(([f,m],i)=>playNote(m,t+(x.seq?i*.75:0),x.seq?.9:2,.7,bus));}
 
 /* ---------- Mélodies ---------- */
 const MEL={
@@ -830,7 +831,7 @@ const QBASE=[
   ['fontaineMG','À la claire fontaine : vérifier la main gauche des mesures 8 et 12 (Fa♯ avec rappel ?).'],
   ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?'],
   ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?'],
-  ['mgPos','Main gauche : position de départ (doigt et note) pour Orientale, Let It Be et Il y a ton sourire ?'],
+  ['mgPos','Main gauche : position de départ (doigt et note) pour Orientale et Let It Be ? Et pour Il y a ton sourire, quels doigts pour les basses Mi, Do, Sol, Ré ?'],
   ['mgCancan','Cancan, main gauche : C = Do (4) + Mi (2) et G7 = Si (5) + Fa (1), c’est bien ça ?']
 ];
 function renderQ(){const items=QBASE.map(q=>({id:q[0],t:q[1],base:true,done:!!S.questions.done[q[0]]})).concat(S.questions.items);
@@ -890,7 +891,7 @@ function init(){
   snapshot('auto');
   KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey});
   MINI=makeKeyboard($('#kb-mini'),36,84,{small:true});
-  MGKB=makeKeyboard($('#kb-mg'),43,72,{});
+  MGKB=makeKeyboard($('#kb-mg'),40,72,{});
   $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
   $('#mg-sel').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)selectMg(b.dataset.g);});$('#mg-play').onclick=playMg;
   $('#chord-chips').innerHTML=CHORD_LIST.map(c=>`<button class="chip${c===curChord?' on':''}" data-c="${c}">${c}</button>`).join('');

@@ -19,6 +19,7 @@ const EXPECTED = {
   'Tabac : accord C': [['Do3', '5'], ['Sol3', '1']],
   'Tabac : accord G': [['Si2', '5'], ['Sol3', '1']],
   'Poney : pouces sur le Do': [['Sol3', '4'], ['La3', '3'], ['Si3', '2'], ['Do4', '1']],
+  'Sourire : basses Em C G D': [['Mi2', 'Em'], ['Sol2', 'G'], ['Do3', 'C'], ['Ré3', 'D']],
   'Cancan : C': [['Do3', '4'], ['Mi3', '2']],
   'Cancan : G7': [['Si2', '5'], ['Fa3', '1']],
 };
@@ -60,7 +61,7 @@ test('M3. depuis le répertoire, « Main gauche » ouvre la bonne position, cart
 
 test('M4. morceaux sans position sûre : « à confirmer », questions ajoutées', async ({ page }) => {
   await page.goto('./#morceaux');
-  for (const title of ['Orientale', 'Let It Be', 'Il y a ton sourire']) {
+  for (const title of ['Orientale', 'Let It Be']) {
     const card = page.locator('article.piece', { hasText: title });
     await expect(card, title).toContainText('À confirmer en cours');
     await expect(card.locator('button[data-act="mg"]'), title).toHaveCount(0);
@@ -123,4 +124,20 @@ test('M8. Le Petit Poney : position du schéma imprimé, accessible depuis le r�
   await expect(page.locator('#mg-info')).toContainText('D’après ta feuille');
   await expect(page.locator('#mg-info')).toContainText('4 → Sol3 · 3 → La3 · 2 → Si3 · 1 → Do4');
   await expect(page.locator('#mg-info')).toContainText('barré au crayon');
+});
+
+test('M9. Il y a ton sourire : une basse par accord, nom de l’accord sur la touche', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('./#morceaux');
+  const card = page.locator('article.piece', { hasText: 'Il y a ton sourire' });
+  await expect(card).toContainText('Em = Mi2, C = Do3, G = Sol2, D = Ré3');
+  await expect(card).not.toContainText('À confirmer en cours');
+  await card.locator('button[data-act="mg"]').click();
+  await expect(page.locator('#mg-sel button.on')).toHaveText('Sourire : basses Em C G D');
+  await expect(page.locator('#mg-info')).toContainText('Em → Mi2 · C → Do3 · G → Sol2 · D → Ré3');
+  await expect(page.locator('#mg-info')).toContainText('Notes de ta feuille · doigts déduits');
+  await page.locator('#mg-play').click();
+  await expect(page.locator('#kb-mg .key[aria-label="Mi2"]')).toHaveCount(1);   // clavier élargi jusqu'au Mi2
+  expect(errors).toEqual([]);
 });
