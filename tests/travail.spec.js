@@ -9,7 +9,7 @@ const keys = (page, cls) => page.$$eval(`#kb-wk .key.${cls}`, ks => Object.fromE
 test('T1. données : chaque mesure fait juste 4 temps aux deux mains, nombre de mesures attendu', async ({ page }) => {
   await page.goto('./#seance');
   // @ts-ignore
-  const r = await page.evaluate(() => Object.fromEntries(Object.keys(WORK).map(id => {
+  const r = await page.evaluate(() => Object.fromEntries(Object.keys(WORK).filter(id => !WORK[id].ex).map(id => {
     // @ts-ignore
     const bars = workBars(id), bpb = WORK[id].bpb, sum = evs => evs.reduce((a, e) => a + e[1], 0);
     // @ts-ignore

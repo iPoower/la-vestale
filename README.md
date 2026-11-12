@@ -1,6 +1,6 @@
 # La Vestale
 
-Studio de travail au piano, en application web installable (PWA) : séance guidée, clavier et accords, oreille, lecture de notes, métronome, morceaux et journal.
+Studio de travail au piano, en application web installable (PWA) : séance guidée, clavier et accords, oreille, lecture de notes, métronome, morceaux, exercices de main gauche et journal.
 
 - Un seul fichier `index.html` en HTML, CSS et JavaScript pur, sans bibliothèque ni dépendance.
 - Fonctionne hors ligne dès le premier lancement : le service worker (`sw.js`) met en cache l'app, les icônes et les polices.
@@ -23,7 +23,7 @@ npx playwright install chromium webkit   # si les navigateurs ne sont pas déjà
 npm test
 ```
 
-Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et les icônes, le service worker et son cache, les polices locales, le rechargement hors ligne, le cycle séance → Export → Import, et la navigation dans les 7 onglets. `tests/regressions.spec.js` contient un test par bug corrigé.
+Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et les icônes, le service worker et son cache, les polices locales, le rechargement hors ligne, le cycle séance → Export → Import, et la navigation dans les 8 onglets. `tests/regressions.spec.js` contient un test par bug corrigé.
 
 ## Mise à jour
 
@@ -35,6 +35,7 @@ Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous S
 
 ## Sources et licences des morceaux
 
+- Exercices de main gauche (onglet « Main gauche ») : écrits pour l’app.
 - Hymne à la joie, À la claire fontaine, J’ai du bon tabac, Au clair de la lune, Frère Jacques : airs du domaine public ; accompagnements de main gauche écrits pour l’app.
 - Bach, Menuet en la mineur BWV Anh. 120 : domaine public, notes d’après l’édition du Mutopia Project (Bach-Gesellschaft, 1894).
 - Alkan, Préludes op. 31 n° 8 « La chanson de la folle au bord de la mer » : notes d’après l’édition du Mutopia Project, licence Creative Commons Attribution-ShareAlike 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Les données de cette pièce dans `index.html` (constante `WORK.alkan8`) sont une adaptation partagée sous la même licence.
