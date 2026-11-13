@@ -21,6 +21,8 @@ test('G2. « Travailler » ouvre l’exercice en main gauche seule, avec les doi
   await expect(page.locator('#wk-hands button.on')).toHaveText('Main gauche');
   const lit = await page.$$eval('#kb-wk .key.hl2', ks => Object.fromEntries(ks.map(k => [k.getAttribute('aria-label'), (k.querySelector('.fg') || {}).textContent])));
   expect(lit).toEqual({ Do3: '5', Mi3: '3', Sol3: '1' });
+  // La page défile jusqu'à la carte (programmé à 120 ms) : attendre qu'elle soit immobile avant de cliquer.
+  await expect.poll(async () => { const y1 = await page.evaluate(() => window.scrollY); await page.waitForTimeout(80); return y1 === await page.evaluate(() => window.scrollY) && y1 > 0; }).toBe(true);
   await page.locator('#wk-next').click();
   await expect(page.locator('#wk-info')).toContainText('Do3 + Fa3 + La3 · doigts 5-2-1');
 });

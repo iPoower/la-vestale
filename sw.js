@@ -1,5 +1,5 @@
 // La Vestale : fonctionne hors ligne. Changer VERSION à chaque mise à jour.
-const VERSION = 'la-vestale-v21';
+const VERSION = 'la-vestale-v22';
 const FONTS = ['atkinson-hyperlegible-latin-400', 'atkinson-hyperlegible-latin-700', 'cormorant-garamond-latin-500', 'cormorant-garamond-latin-600',
   'cormorant-garamond-latin-700', 'noto-music-latin-400', 'noto-music-clefs-400'].map(f => './fonts/' + f + '.woff2');
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png', ...FONTS];

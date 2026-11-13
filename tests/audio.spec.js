@@ -74,6 +74,9 @@ test('A4. contexte suspendu : relancé au toucher, le son revient', async ({ pag
   expect(await level(page)).toBeGreaterThan(0.02);
 });
 
+// iOS rend le son muet après l'arrière-plan : la protection ne s'applique qu'à l'iPhone et à l'iPad.
+test.describe('iPhone', () => {
+  test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
 test('A5. après un passage en arrière-plan, un contexte neuf joue au toucher suivant', async ({ page }) => {
   await page.goto('./#clavier');
   await page.locator('#mg-play').click();
@@ -88,6 +91,7 @@ test('A5. après un passage en arrière-plan, un contexte neuf joue au toucher s
   await page.waitForTimeout(120);
   expect(await ctxId(page)).not.toBe(first);
   expect(await level(page)).toBeGreaterThan(0.02);
+});
 });
 
 test('A6. le métronome s’arrête proprement si le contexte doit être recréé', async ({ page }) => {

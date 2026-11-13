@@ -579,6 +579,8 @@ const saveQ=()=>put('etat/questions',S.questions);
 
 /* ---------- Son ---------- */
 let AC=null,MASTER=null,AC_STALE=false;
+// iPhone, iPod et iPad (iPadOS se présente comme un Mac tactile).
+const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 /* Moteur audio robuste pour iPhone : l'iPhone peut laisser le contexte « suspended », le passer en « interrupted »
    (notification, arrière-plan, écran verrouillé) ou le fermer. À chaque toucher, on le relance ; s'il ne repart pas,
    ou après un passage en arrière-plan, on en recrée un neuf au toucher suivant. */
@@ -614,7 +616,7 @@ function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=d
   // opts.fit : toute l'étendue tient dans la largeur (positions en %), sans défilement.
   let nW=0;for(let m=lo;m<=hi;m++)if(!isBlack(m))nW++;
   let compact=false;
-  if(opts.fit==='auto'||opts.fit==='always'){const avail=(el.clientWidth||Math.min(window.innerWidth,760)-66)-16;const wide=avail/nW>=26;compact=opts.fit==='always'&&!wide;opts=Object.assign({},opts,{fit:wide||opts.fit==='always'});if(opts.fit)inner.className+=' fit'+(compact?' compact':'');}
+  if(opts.fit==='auto'||opts.fit==='always'){const avail=(el.clientWidth||Math.min(window.innerWidth,760)-66)-16;const wide=avail/nW>=(opts.small?20:26);compact=opts.fit==='always'&&!wide;opts=Object.assign({},opts,{fit:wide||opts.fit==='always'});if(opts.fit)inner.className+=' fit'+(compact?' compact':'');}
   const U=opts.fit?'%':'px',W=opts.fit?100/nW:(opts.small?24:40);let x=0;const keys={};
   for(let m=lo;m<=hi;m++)if(!isBlack(m)){const k=document.createElement('button');k.className='key white'+(m===60?' c4':'');k.style.left=x+U;k.style.width=W+U;k.dataset.m=m;k.innerHTML='<span class="kl"></span>';inner.appendChild(k);keys[m]=k;x+=W;}
   for(let m=lo;m<=hi;m++)if(isBlack(m)){const lw=keys[m-1];if(!lw)continue;const k=document.createElement('button');k.className='key black';k.style.left=(parseFloat(lw.style.left)+W*.69)+U;k.style.width=(W*.62)+U;k.dataset.m=m;inner.appendChild(k);keys[m]=k;}
@@ -1169,6 +1171,8 @@ function trAnswer(btn){if(!TR.cur||TR.done)return;TR.done=true;const ok=btn.data
   $('#tr-fb').textContent=ok?`Juste : ${TR.cur.q} = ${TR.cur.good}`:`Non : ${TR.cur.q} = ${TR.cur.good}`;$('#tr-fb').className='fb '+(ok?'ok':'ko');
   if(ok)setTimeout(()=>{if(TR.done)trNew();},800);}
 
+function progStop(){stopBus();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));if(FKB)FKB.clear();}
+
 /* ---------- Dates ---------- */
 const pad=n=>String(n).padStart(2,'0');
 const dkey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -1307,7 +1311,7 @@ function init(){
   loadLocal();
   snapshot('auto');
   KB=makeKeyboard($('#kb-main'),48,84,{onKey:onMainKey,fit:'auto'});
-  MINI=makeKeyboard($('#kb-mini'),36,84,{small:true});
+  MINI=makeKeyboard($('#kb-mini'),36,84,{small:true,fit:'auto'});
   MGKB=makeKeyboard($('#kb-mg'),40,72,{fit:'auto'});
   mineSync();$('#wk-piece').innerHTML=Object.entries(WORK).map(([k,w])=>`<option value="${k}">${esc(w.t)}</option>`).join('');wkSelect('hymne');
   renderMine();$('#my-new').onclick=myNew;$('#my-done').onclick=()=>{MY.id=null;$('#my-ed').classList.add('hidden');mySave();renderMine();$('#my-card').scrollIntoView();};
@@ -1346,10 +1350,10 @@ function init(){
   $('#inv').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curInv=+b.dataset.i;$$('#inv button').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#with-bass').addEventListener('change',renderChordInfo);
   $('#play-block').onclick=()=>playChord(curChord,curInv,false);$('#play-arp').onclick=()=>playChord(curChord,curInv,true);
-  $('#prog-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curProg=b.dataset.p;$$('#prog-sel button').forEach(x=>x.classList.toggle('on',x===b));renderProg();});
+  $('#prog-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.p!==curProg)progStop();curProg=b.dataset.p;$$('#prog-sel button').forEach(x=>x.classList.toggle('on',x===b));renderProg();});
   $('#prog-pat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;progPat=b.dataset.p;$$('#prog-pat button').forEach(x=>x.classList.toggle('on',x===b));});
   $('#prog-bpm').addEventListener('input',e=>$('#prog-bpm-v').textContent=e.target.value);
-  $('#prog-play').onclick=playProg;$('#prog-stop').onclick=()=>{stopBus();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));if(FKB)FKB.clear();};
+  $('#prog-play').onclick=playProg;$('#prog-stop').onclick=progStop;
   $('#mel-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;stopBus();curMel=b.dataset.m;$$('#mel-sel button').forEach(x=>x.classList.toggle('on',x===b));renderMel();});
   $('#mel-bpm').addEventListener('input',e=>$('#mel-bpm-v').textContent=e.target.value);
   $('#mel-play').onclick=playMel;$('#mel-step').onclick=stepMel;$('#mel-stop').onclick=()=>{stopBus();stepIdx=-1;KB.clear();$('#mel-next').textContent='';};
@@ -1411,7 +1415,7 @@ function init(){
   window.addEventListener('hashchange',route);route();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick&&RUN.iv&&tick();});
   // Au retour d'arrière-plan, l'iPhone peut rendre le contexte muet tout en le disant actif : on en recrée un au prochain toucher.
-  document.addEventListener('visibilitychange',()=>{if(document.hidden&&AC&&!MT.on)AC_STALE=true;});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&AC&&!MT.on&&IOS)AC_STALE=true;});
   window.addEventListener('pageshow',e=>{if(e.persisted&&AC)AC_STALE=true;});
   updateBackupChip();
   if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
