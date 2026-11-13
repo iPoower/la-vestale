@@ -81,7 +81,7 @@ test('M5. repères de la clé de fa, exercice C ↔ G7 et noms anglais', async (
   await card.locator('summary', { hasText: 'Exercice de 5 minutes' }).click();
   await expect(card).toContainText('Dix allers-retours lents');
   await pick(page, 'Hymne : accord C');
-  await page.locator('#lbl-en').check();
+  await page.locator('#noms button[data-n="en"]').click();
   await expect(page.locator('#mg-info')).toContainText('5 → C3 · 3 → E3 · 1 → G3');
   await expect(page.locator('#kb-mg .fg')).toHaveCount(3);
 });

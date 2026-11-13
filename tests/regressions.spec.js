@@ -215,7 +215,7 @@ test('R9. lecture : passer en noms anglais garde la question déjà répondue ve
   await expect(page.locator('#lec-ans button:disabled')).toHaveCount(7);
   const marks = await page.locator('#lec-ans button.ok, #lec-ans button.ko').count();
   await page.locator('#tabs a[data-v="clavier"]').click();
-  await page.locator('#lbl-en').check();
+  await page.locator('#noms button[data-n="en"]').click();
   await page.locator('#tabs a[data-v="lecture"]').click();
   await expect(page.locator('#lec-ans button').first()).toHaveText('C');
   await expect(page.locator('#lec-ans button:disabled')).toHaveCount(7);
