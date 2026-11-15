@@ -304,7 +304,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
   <div class="card">
     <div class="row between"><h2>Séance guidée</h2>
-      <div class="seg" id="fmt"><button data-f="std" class="on">35 min</button><button data-f="court">15 min</button></div></div>
+      <div class="seg" id="fmt"><button data-f="jour" class="on">Du jour · 30 min</button><button data-f="std">35 min</button><button data-f="court">15 min</button></div></div>
+    <p class="small muted" id="jour-why"></p>
     <ol class="blocks" id="blocks"></ol>
     <div class="timer"><span id="t-label" class="muted">Prêt quand tu l’es</span><b id="t-clock">00:00</b></div>
     <div class="row">
@@ -661,7 +662,9 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
 function cleanCoach(o){const out={};if(!isObj(o))return out;Object.keys(o).slice(0,80).forEach(id=>{const c=o[id];if(!/^[a-z0-9]{1,24}$/.test(id)||!isObj(c))return;const b={},cc={};
   if(isObj(c.b))Object.keys(c.b).slice(0,400).forEach(k=>{const i=intIn(k,0,999),r=c.b[k];if(i==null||!Array.isArray(r))return;b[i]=[0,1,2,3].map(j=>intIn(r[j],0,1e6)||0);});
   if(isObj(c.c))Object.keys(c.c).slice(0,80).forEach(k=>{if(/^\d{1,3}>(\d{1,3}|x)$/.test(k)){const n=intIn(c.c[k],0,1e6);if(n)cc[k]=n;}});out[id]={b,c:cc};
-  const d={};if(isObj(c.d))Object.keys(c.d).slice(0,400).forEach(k=>{const i=intIn(k,0,999);if(i!=null&&c.d[k]===1)d[i]=1;});if(Object.keys(d).length)out[id].d=d;});return out;}
+  const d={};if(isObj(c.d))Object.keys(c.d).slice(0,400).forEach(k=>{const i=intIn(k,0,999);if(i!=null&&c.d[k]===1)d[i]=1;});if(Object.keys(d).length)out[id].d=d;
+  const r={};if(isObj(c.r))Object.keys(c.r).slice(0,400).forEach(k=>{const i=intIn(k,0,999),x=c.r[k];if(i==null||!Array.isArray(x))return;const lv=intIn(x[0],1,5),du=intIn(x[1],0,1e6),la=intIn(x[2],0,1e6);if(lv&&du!=null&&la!=null)r[i]=[lv,du,la];});if(Object.keys(r).length)out[id].r=r;
+  const tt=intIn(c.t,0,9e12);if(tt)out[id].t=tt;});return out;}
 /* Mes partitions : [note MIDI ou null (silence), durée, doigt (0 = aucun), liée à la suivante (0/1)] par événement. */
 const MY_DUR=[[4,'ronde'],[3,'blanche pointée'],[2,'blanche'],[1.5,'noire pointée'],[1,'noire'],[.75,'croche pointée'],[.5,'croche'],[.25,'double croche']];
 const MY_MAX=30,MY_BARS=200,MY_EV=64;
@@ -1429,9 +1432,10 @@ function ecSeq(){const b=workBars(WK.id)[WK.bar];return b[WK.hands==='lh'?'lh':'
 function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
   $('#ec-msg').textContent=x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`;}
 function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
-function ecNextBar(){if(EC.mode==='play'&&EC.seq&&EC.seq.length){const clean=!EC.bErr;coachBar(clean);
-    if(coachOn()&&!clean){EC.tries++;const n=EC.bErr;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}).`,'ko');ecPrep();return;}
-    if(coachOn()&&EC.tries)ecFb(`Mesure ${WK.bar+1} propre après ${EC.tries+1} essais. Bravo !`,'ok');}
+function ecNextBar(){if(EC.mode==='play'&&EC.seq&&EC.seq.length){const clean=!EC.bErr,sr=coachBar(clean);
+    const srm=sr==='ko'?' Révision ratée : elle revient demain.':sr&&sr.startsWith('ok:')?` Révision réussie : elle revient dans ${sr.slice(3)} jours.`:'';
+    if(coachOn()&&!clean){EC.tries++;const n=EC.bErr;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}).`+srm,'ko');ecPrep();return;}
+    if(coachOn()&&EC.tries)ecFb(`Mesure ${WK.bar+1} propre après ${EC.tries+1} essais. Bravo !`+srm,'ok');else if(srm)ecFb(`Mesure ${WK.bar+1} propre.`+srm,sr==='ko'?'ko':'ok');}
   if(WK.bar>=workBars(WK.id).length-1){ecStop(`Morceau terminé : ${EC.ok} juste${EC.ok>1?'s':''}, ${EC.ko} à revoir.`);return;}wkGo(WK.bar+1);}
 function ecAdvance(){EC.i++;if(EC.i>=EC.seq.length)ecNextBar();else ecShow();}
 function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);setTimeout(()=>k.classList.remove(cls),600);}}
@@ -1483,12 +1487,24 @@ function ecStop(msg){EC.tok++;if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.
 /* ---------- Coach : une partition, jusqu'à la réussite ---------- */
 const inCoach=()=>location.hash==='#coach';
 const coachOn=()=>EC.on&&EC.mode==='play'&&inCoach()&&$('#co-redo').checked;
-function coachRec(){const id=WK.id;S.coach=S.coach||{};const c=S.coach[id]=S.coach[id]||{b:{},c:{}};c.b[WK.bar]=c.b[WK.bar]||[0,0,0,0];return c;}
+function coachRec(){const id=WK.id;S.coach=S.coach||{};const c=S.coach[id]=S.coach[id]||{b:{},c:{}};c.b[WK.bar]=c.b[WK.bar]||[0,0,0,0];c.t=Date.now();return c;}
+// Jour local (numéro), pour la révision espacée.
+const dayN=(d=new Date())=>Math.floor((d.getTime()-d.getTimezoneOffset()*6e4)/864e5);
+const SR_GAP=[0,1,3,7,14,30];
+// r[mesure] = [niveau, jour où elle revient, dernier jour compté]. Seul le premier passage du jour compte.
+function srUpdate(clean){const c=coachRec(),day=dayN(),r=c.r=c.r||{},x=r[WK.bar];
+  if(x&&x[2]===day)return null;
+  if(!x){if(!clean)return null;r[WK.bar]=[1,day+1,day];return 'new';}
+  if(x[1]>day)return null;                                    // pas encore à réviser : rejouée en plus
+  if(clean){const lv=Math.min(5,x[0]+1);r[WK.bar]=[lv,day+SR_GAP[lv],day];return 'ok:'+SR_GAP[lv];}
+  r[WK.bar]=[1,day+1,day];return 'ko';}
+function dueBars(){const day=dayN(),out=[];Object.entries(S.coach||{}).forEach(([id,c])=>{if(!WORK[id]||!c.r)return;const n=workBars(id).length;
+  Object.entries(c.r).forEach(([b,x])=>{if(x[1]<=day&&+b<n)out.push({id,b:+b,due:x[1]});});});return out.sort((p,q)=>p.due-q.due||p.id.localeCompare(q.id)||p.b-q.b);}
 function coachSave(){saveLocal();renderCoach();}   // tout de suite : rien de perdu si l'app est fermée
 // Une faute par tentative de note ou d'accord ; chaque note manquante ou confondue est retenue.
 function coachErr(pairs){const c=coachRec();c.b[WK.bar][0]++;EC.bErr=(EC.bErr||0)+1;
   pairs.forEach(([w,g])=>{const k=w+'>'+(g==null?'x':g);c.c[k]=(c.c[k]||0)+1;EC.same[w]=(EC.same[w]||0)+1;});coachSave();}
-function coachBar(clean){const r=coachRec().b[WK.bar];r[2]++;if(clean)r[1]++;coachSave();}
+function coachBar(clean){const r=coachRec().b[WK.bar];r[2]++;if(clean)r[1]++;const sr=srUpdate(clean);coachSave();return sr;}
 // Hésitation : plus de 4 s entre l'affichage d'une note et la bonne réponse.
 function ecHes(){if(EC.shownAt&&performance.now()-EC.shownAt>4000){coachRec().b[WK.bar][3]++;coachSave();}}
 // Conseil immédiat, selon l'écart entre la note jouée et la note attendue.
@@ -1506,6 +1522,7 @@ function renderCoach(){const el=$('#co-tips');if(!el||!WORK[WK.id])return;const 
   const bars=Object.entries(c.b).map(([b,r])=>({b:+b,err:r[0],clean:r[1],tries:r[2],hes:r[3]})).filter(x=>x.err||x.hes).sort((p,q)=>(q.err+q.hes)-(p.err+p.hes)||p.b-q.b).slice(0,3);
   const conf=Object.entries(c.c).sort((p,q)=>q[1]-p[1]).slice(0,3),all=Object.values(c.b),tot=all.reduce((s,r)=>s+r[2],0),cl=all.reduce((s,r)=>s+r[1],0);
   let h=`<p class="small"><b>${esc(WORK[WK.id].t)}</b> : ${cl} mesure${cl>1?'s':''} propre${cl>1?'s':''} sur ${tot} passage${tot>1?'s':''}.</p>`;
+  const due=dueBars().filter(x=>x.id===WK.id);if(due.length)h+=`<h3>À réviser aujourd’hui</h3><p class="small">Révision espacée : rejoue-les une fois, propres du premier coup.</p><div class="row">`+due.slice(0,6).map(x=>`<button class="btn" data-cob="${x.b}">Mesure ${x.b+1}</button>`).join('')+'</div>';
   if(bars.length)h+='<h3>Mesures difficiles</h3><ul class="small co-list">'+bars.map(x=>`<li><b>Mesure ${x.b+1}</b> : ${x.err} faute${x.err>1?'s':''} en ${x.tries} passage${x.tries>1?'s':''}${x.hes?`, ${x.hes} hésitation${x.hes>1?'s':''}`:''}. `+
     `${x.hes>x.err?'Tu hésites : travaille-la mains séparées, en boucle, plus lentement.':'Isole-la : une mesure en boucle, lentement, puis rejoue-la ici.'}<br><button class="btn ghost" data-cob="${x.b}">Travailler la mesure ${x.b+1}</button></li>`).join('')+'</ul>';
   else h+='<p class="small">Aucune mesure difficile pour l’instant. Continue !</p>';
@@ -1621,6 +1638,24 @@ function dcDone(){const clean=!DC.err,bars=workBars(WK.id),last=WK.bar>=bars.len
   else{$('#dc-play').hidden=true;$('#dc-q').textContent='';dcFb(`Mesure lue avec ${DC.err} erreur${DC.err>1?'s':''} : relis-la une fois pour la fixer.`,'ko');}
   renderDc();}
 
+/* ---------- Séance du jour (30 min) ---------- */
+// Morceau en cours : le dernier travaillé au Coach (sinon celui ouvert).
+function coachFocus(){let best=null,bt=0;Object.entries(S.coach||{}).forEach(([id,c])=>{if(WORK[id]&&(c.t||0)>bt){bt=c.t;best=id;}});return best||WK.id;}
+function hardBars(id,skip){const c=S.coach&&S.coach[id];if(!c)return [];const n=workBars(id).length;
+  return Object.entries(c.b).map(([b,r])=>({b:+b,sc:r[0]+r[3]-2*r[1]})).filter(x=>x.sc>0&&x.b<n&&!skip.has(x.b)).sort((p,q)=>q.sc-p.sc||p.b-q.b).slice(0,3).map(x=>x.b);}
+const listBars=bs=>bs.length>1?'mesures '+bs.slice(0,-1).map(b=>b+1).join(', ')+' et '+(bs[bs.length-1]+1):'mesure '+(bs[0]+1);
+function dayPlan(){const id=coachFocus(),w=WORK[id],n=workBars(id).length,day=dayN(),mgk=Object.keys(MG),mg=mgk[((day%mgk.length)+mgk.length)%mgk.length];
+  const due=dueBars().slice(0,4),dueHere=new Set(due.filter(x=>x.id===id).map(x=>x.b)),hard=hardBars(id,dueHere);
+  const d=(S.coach&&S.coach[id]&&S.coach[id].d)||{};let nx=null;for(let b=0;b<n;b++)if(!d[b]){nx=b;break;}
+  const out=[['Échauffement main gauche',4,`« ${MG[mg].t} » en boucle, lentement, la main souple.`,'#gauche','mg:'+mg]];let spare=0;
+  if(due.length){const by={};due.forEach(x=>{(by[x.id]=by[x.id]||[]).push(x.b);});
+    out.push(['Révision espacée',5,Object.entries(by).map(([k,bs])=>`${WORK[k].t} : ${listBars(bs.sort((p,q)=>p-q))}`).join(' · ')+'. Une fois chacune, propre du premier coup.','#coach',`bar:${due[0].id}:${due[0].b}`]);}else spare+=5;
+  if(hard.length)out.push(['Mesures difficiles',6,`${w.t} : ${listBars(hard)}, au Coach jusqu’à ce qu’${hard.length>1?'elles soient propres':'elle soit propre'}.`,'#coach',`bar:${id}:${hard[0]}`]);else spare+=6;
+  if(nx!==null)out.push(['Déchiffrer 2 mesures',6,`${w.t} : ${listBars([nx,nx+1].filter(b=>b<n))}. Nomme les notes, trouve les touches.`,'#coach',`dc:${id}:${nx}`]);else spare+=6;
+  out.push([nx!==null?'Jouer ce que tu as lu':'Enchaîner',5+spare,nx!==null?`${w.t} à partir de la mesure ${nx+1}, avec « Écoute-moi », jusqu’à propre.`:`${w.t} en entier, avec « Écoute-moi », sans t’arrêter.`,'#coach',`bar:${id}:${nx!==null?nx:0}`]);
+  out.push(['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille'],['Pour le plaisir',2,'Un morceau que tu connais, en entier, sans t’arrêter.','#morceaux']);
+  return out;}
+
 /* ---------- Astuces ---------- */
 const TIPS=[
   ['Méthode','Dix minutes chaque jour valent mieux qu’une heure le dimanche : la mémoire des doigts se construit pendant le sommeil.'],
@@ -1655,6 +1690,7 @@ const TIPS=[
   ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Méthode','Révision espacée : une mesure propre revient le lendemain, puis à 3 jours, à 7 jours, à 14 et à 30. Rejoue-la propre du premier coup : c’est ce qui l’ancre dans la mémoire.'],
   ['Méthode','Avant de jouer, déchiffre : Coach › « 1. Déchiffrer ». Nomme chaque note, trouve-la sur le clavier, puis joue 2 à 4 mesures. Lire et jouer en même temps, c’est deux difficultés à la fois.'],
   ['Méthode','Onglet Coach : joue avec « Écoute-moi » ; chaque mesure fautive se rejoue jusqu’à ce qu’elle soit propre, et l’app te montre où tu bloques.'],
   ['Sur iPhone','Séance › « Écoute-moi » : pose le téléphone sur le pupitre, dans une pièce calme. L’app vérifie tes notes sans rien enregistrer.'],
@@ -1801,15 +1837,17 @@ const PLAN={
 };
 function today(){return PLAN[new Date().getDay()];}
 function renderToday(){const d=new Date(),p=today();$('#today-date').textContent=`${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;$('#today-title').textContent=p.t;$('#today-desc').textContent=p.d;
-  $('#today-actions').innerHTML=p.go.map(g=>`<a class="btn" style="text-decoration:none" href="${g[1]}" data-extra="${g[2]||''}">${esc(g[0])}</a>`).join('');
+  $('#today-actions').innerHTML=`<a class="btn primary" style="text-decoration:none" href="#seance" data-extra="jour">Ma séance du jour · 30 min</a>`+p.go.map(g=>`<a class="btn" style="text-decoration:none" href="${g[1]}" data-extra="${g[2]||''}">${esc(g[0])}</a>`).join('');
   const w=weekMinutes();$('#k-week').textContent=w;$('#k-week-bar').style.width=Math.min(100,w/180*100)+'%';$('#k-streak').textContent=streak();$('#k-total').textContent=S.seances.length;}
 
 /* ---------- Séance guidée ---------- */
-let FMT='std';
-function blocks(){const p=today();if(FMT==='court'||p.short)return [['Repères',5,'Do central, Sol4, C et G7','#clavier'],['Un passage',5,p.pass,'#tempo'],['Pour le plaisir',5,'Ton morceau préféré, sans t’arrêter','#morceaux']];
+let FMT='jour',DAYPLAN=null;
+// La séance du jour est composée au démarrage, puis figée tant qu'elle tourne (les blocs ne bougent pas en cours de route).
+function blocks(){if(FMT==='jour'){if(!DAYPLAN||(!RUN.on&&!RUN.acc&&!RUN.idx))DAYPLAN=dayPlan();return DAYPLAN;}const p=today();if(FMT==='court'||p.short)return [['Repères',5,'Do central, Sol4, C et G7','#clavier'],['Un passage',5,p.pass,'#tempo'],['Pour le plaisir',5,'Ton morceau préféré, sans t’arrêter','#morceaux']];
   return [['Repères',5,'Notes, C / G7, une écoute de la grille','#clavier'],['Passage difficile',10,p.pass,'#tempo'],['Deux morceaux',10,'Deux morceaux de ton choix, en entier','#morceaux'],['Jouer librement',10,'Improvise avec C, F, G, Am. Écoute','#clavier']];}
 const RUN={on:false,idx:0,start:0,acc:0,blockStart:0,blockAcc:0,iv:null,total:0};
-function renderBlocks(){const bs=blocks();$('#blocks').innerHTML=bs.map((b,i)=>`<li class="${i===RUN.idx&&(RUN.on||RUN.acc)?'cur':''}${i<RUN.idx?' done':''}"><span class="m">${b[1]}′</span><div><b>${esc(b[0])}</b><div class="small muted">${esc(b[2])}</div></div><a href="${b[3]}">Ouvrir</a></li>`).join('');}
+function renderBlocks(){const bs=blocks();$('#blocks').innerHTML=bs.map((b,i)=>`<li class="${i===RUN.idx&&(RUN.on||RUN.acc)?'cur':''}${i<RUN.idx?' done':''}"><span class="m">${b[1]}′</span><div><b>${esc(b[0])}</b><div class="small muted">${esc(b[2])}</div></div><a href="${b[3]}" data-extra="${esc(b[4]||'')}">Ouvrir</a></li>`).join('');
+  const w=$('#jour-why');if(w)w.textContent=FMT==='jour'?'Composée pour toi chaque jour : révisions dues, mesures où tu bloques, la suite de ton morceau.':'';}
 const fmt=s=>`${pad(Math.floor(s/60))}:${pad(Math.floor(s%60))}`;
 function tick(){const bs=blocks();const now=Date.now();const bEl=RUN.blockAcc+(RUN.on?(now-RUN.blockStart)/1000:0);const lim=bs[RUN.idx][1]*60;const left=Math.max(0,lim-bEl);
   $('#t-clock').textContent=fmt(left);$('#t-label').textContent=`${RUN.idx+1}/${bs.length} · ${bs[RUN.idx][0]}`+(RUN.on?'':' · en pause');
@@ -1910,7 +1948,10 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   if(v==='seance')setTimeout(wkScroll,30);
   if(v==='lecture'&&!lecCur)lecNew();
   window.scrollTo(0,0);}
-function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')applyPreset(v);
+function handleExtra(x){if(!x)return;const [k,v,w]=x.split(':');if(k==='preset')applyPreset(v);
+  if(k==='jour'){if(!RUN.on&&!RUN.acc){FMT='jour';$$('#fmt button').forEach(b=>b.classList.toggle('on',b.dataset.f==='jour'));runReset();}const c=$('#blocks').closest('.card'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);}
+  if((k==='bar'||k==='dc')&&WORK[v]){if(WK.id!==v)wkSelect(v);wkGo(Math.max(0,Math.min(workBars(v).length-1,+w||0)));if(k==='dc')dcStart();
+    setTimeout(()=>{const card=$(k==='dc'?'#dc-card':'#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
   if(k==='wk'&&WORK[v]){wkSelect(v);setTimeout(()=>{const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);wkScroll();},120);}
   if(k==='mg'&&MG[v]){selectMg(v);setTimeout(()=>{const card=$('#mg-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);mgScroll();},120);}
   if((k==='mel'||k==='pas')&&MEL[v]){stopBus();curMel=v;$$('#mel-sel button').forEach(b=>b.classList.toggle('on',b.dataset.m===v));renderMel();
@@ -2028,6 +2069,7 @@ function init(){
   $('#f-feel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;FEEL=+b.dataset.v;$$('#f-feel button').forEach(x=>x.classList.toggle('on',x===b));});
   $('#f-save').onclick=saveLog;$('#f-cancel').onclick=()=>$('#logform').classList.add('hidden');
   $('#today-actions').addEventListener('click',e=>{const a=e.target.closest('a');if(a)setTimeout(()=>handleExtra(a.dataset.extra),50);});
+  $('#blocks').addEventListener('click',e=>{const a=e.target.closest('a[data-extra]');if(a&&a.dataset.extra)setTimeout(()=>handleExtra(a.dataset.extra),50);});
 
   $('#entries').addEventListener('click',async e=>{const b=e.target.closest('button[data-del]');if(!b)return;if(!(await ask('Supprimer cette séance du journal ?')))return;snapshot('suppression');const id=b.dataset.del;S.seances=S.seances.filter(s=>s.id!==id);renderAll();await del('seances/'+id);});
   $('#q-list').addEventListener('change',e=>{const c=e.target.closest('input[data-q]');if(!c)return;const id=c.dataset.q;if(c.dataset.base)S.questions.done[id]=c.checked;else{const it=S.questions.items.find(x=>x.id===id);if(it)it.done=c.checked;}renderQ();saveQ();});
