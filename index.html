@@ -1411,9 +1411,11 @@ function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);se
 function ecFeed(buf,sr,big){const d=detectPitch(buf,sr);
   if(EC.mode==='cal'){if(d.c>=EC_CLEAR&&d.f>370&&d.f<475){EC.cal.push(d.f);if(EC.cal.length>=8){const s=EC.cal.slice().sort((a,b)=>a-b);S.meta=Object.assign({},S.meta,{a4:Math.round((s[3]+s[4])/2*10)/10});saveLocal();ecStop();ecCalMsg();}}return;}
   const x=EC.seq[EC.i];if(!x)return;
-  if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;return;}
-  if(d.rms>EC.low*1.35&&!EC.armed){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.votes=null;EC.cv=0;}      // le niveau remonte : nouvelle attaque
-  EC.low=Math.min(EC.low,d.rms);EC.loud++;
+  if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;EC.prev=d.rms;EC.pk=0;return;}
+  // Le niveau remonte : nouvelle attaque, seulement si le saut est brusque (plus de 2,2 fois la trame d'avant) ou s'il revient
+  // près du pic de la note (60 %). Une corde tenue « respire » (battements) : son niveau remonte doucement, ce n'est pas une frappe.
+  if(!EC.armed&&d.rms>EC.low*1.35&&(d.rms>(EC.prev||0)*2.2||d.rms>(EC.pk||0)*.6)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.votes=null;EC.cv=0;EC.pk=0;}
+  EC.low=Math.min(EC.low,d.rms);EC.loud++;EC.prev=d.rms;EC.pk=Math.max(EC.pk||0,d.rms);
   const m=d.c>=EC_CLEAR&&d.f>0?Math.round(69+12*Math.log2(d.f/a4())):null;
   if(m!==null&&m===EC.sm)EC.n++;else{EC.sm=m;EC.n=m===null?0:1;}
   if(!EC.armed&&m!==null&&EC.last!==null&&m!==EC.last&&EC.n>=2)EC.armed=true;         // la hauteur a changé : nouvelle note
