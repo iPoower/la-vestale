@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#141110">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -94,6 +94,20 @@ textarea{min-height:70px;resize:vertical}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
+/* iPhone : marges de l'encoche et de la barre du bas ; pas de zoom automatique sur les champs (16 px) ni sur double appui ;
+   cibles d'au moins 44 px ; pas de sélection de texte ni de menu sur appui long des touches et boutons. */
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+#mt-chip{bottom:calc(12px + env(safe-area-inset-bottom))}
+.toast{bottom:calc(20px + env(safe-area-inset-bottom))}
+input:not([type=range]):not([type=checkbox]):not([type=file]),select,textarea{font-size:16px;min-height:44px}
+button,a.btn,summary,label,select,#tabs a{touch-action:manipulation}
+.key,.btn,.chip,.seg button,#tabs a,summary,.toggle{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.seg button{min-height:44px}
+.toggle{min-height:44px}
+summary{padding:11px 0}
+a.tipmini{display:block;text-decoration:none;color:inherit}
+.tipmini b{color:var(--laiton)}
 a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .grp{flex-basis:100%;font-size:.78rem;color:var(--muted);font-weight:700;margin:6px 2px 0}
 .grp-h{font-size:1.15rem;color:var(--laiton);margin:12px 4px 0}
@@ -209,6 +223,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <a href="#tempo" data-v="tempo">Tempo</a>
   <a href="#morceaux" data-v="morceaux">Morceaux</a>
   <a href="#gauche" data-v="gauche">Main gauche</a>
+  <a href="#astuces" data-v="astuces">Astuces</a>
   <a href="#journal" data-v="journal">Journal</a>
 </div></nav>
 <main>
@@ -222,6 +237,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <p id="today-desc" class="muted"></p>
     <div class="row" id="today-actions"></div>
   </div>
+  <a class="card tipmini" id="tip-mini" href="#astuces"><span class="small"><b>Astuce du jour</b> · <span id="tip-mini-t"></span></span></a>
   <div class="kpis">
     <div class="kpi"><b id="k-week">0</b><span>min cette semaine · cible 180</span><div class="bar"><i id="k-week-bar"></i></div></div>
     <div class="kpi"><b id="k-streak">0</b><span>jours d’affilée</span></div>
@@ -479,6 +495,29 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     </div>
   </div>
   <div id="pieces" style="display:flex;flex-direction:column;gap:14px"></div>
+</section>
+
+<!-- ASTUCES -->
+<section class="view" id="v-astuces">
+  <div class="card" id="tip-card">
+    <div class="row between"><h2>Astuce du jour</h2><span class="tag" id="tip-cat"></span></div>
+    <p id="tip-text" aria-live="polite" style="font-size:1.05rem"></p>
+    <div class="row"><button class="btn" id="tip-next">Une autre astuce</button></div>
+  </div>
+  <div class="card" id="routine">
+    <h2>Ta routine de 10 minutes</h2>
+    <p class="small muted">Même les jours chargés : trois gestes, dans cet ordre. Dix minutes chaque jour valent mieux qu’une heure le dimanche.</p>
+    <ol class="small">
+      <li><b>2 min · Lire.</b> « Do Ré Mi ⇄ C D E » ou Lecture éclair : vise une série de 20.</li>
+      <li><b>3 min · Main gauche.</b> Un exercice en boucle, à noire = 60.</li>
+      <li><b>5 min · Ton morceau.</b> Deux mesures : mains séparées, puis ensemble, trois fois propre.</li>
+    </ol>
+    <div class="row"><a class="btn" href="#lecture">1 · Lecture</a><a class="btn" href="#gauche">2 · Main gauche</a><a class="btn primary" href="#seance">3 · Séance</a></div>
+  </div>
+  <div class="card">
+    <h2>Toutes les astuces</h2>
+    <div id="tip-list"></div>
+  </div>
 </section>
 
 <!-- JOURNAL -->
@@ -1193,16 +1232,70 @@ function wkStaff(b,offset){const svg=$('#wk-staff');if(!svg)return;const ink='#2
       if(d0<4){const up=(lo+hi)/2<S.mid,sx=up?x+5.2:x-5.2,y1=up?yOfD(hd,lo):yOfD(hd,hi),y2=up?yOfD(hd,hi)-30:yOfD(hd,lo)+30;
         h+=`<line x1="${sx}" x2="${sx}" y1="${y1}" y2="${y2}" stroke="${ink}" stroke-width="1.2"/>`;
         const fl=d0<=.25+1e-9?2:d0<1-1e-9?1:0;for(let k=0;k<fl;k++){const fy=y2+(up?k*6:-k*6);h+=`<path d="M${sx} ${fy} q8 ${up?6:-6} 6 ${up?14:-14}" stroke="${ink}" stroke-width="1.4" fill="none"/>`;}}
-      if(!dense[hd]){const lbl=e[0].map((m,j)=>shortName(m)+(e[4]&&e[4][j]===0?'⁀':'')).join(' ');h+=`<text class="nm" x="${x}" y="${hd==='rh'?16:226}" font-size="8.5" text-anchor="middle" fill="#5a4c3a">${esc(lbl)}</text>`;}
+      if(!dense[hd]){const lbl=e[0].map((m,j)=>shortName(m)+(e[4]&&e[4][j]===0?'⁀':'')).join(' ');h+=`<text class="nm" x="${x}" y="${hd==='rh'?17:228}" font-size="11" text-anchor="middle" fill="#5a4c3a">${esc(lbl)}</text>`;}
       t+=d0;});}
   // comptage : un repère à chaque début de note ou de silence (les deux mains)
   const on=new Set();for(const hd of ['rh','lh']){let t=offset;b[hd].forEach(e=>{on.add(+t.toFixed(4));t+=e[1];});}
-  [...on].sort((a,c)=>a-c).forEach(t=>{const bt=WORK[WK.id].beat||1,u=t/bt,f=+(u%1).toFixed(4),lbl=f===0?String(Math.floor(u+1e-9)+1):f===.5?'et':'·';h+=`<text class="cnt" x="${xOf(t)}" y="244" font-size="10" font-weight="700" text-anchor="middle" fill="#7a5b1f">${lbl}</text>`;});
+  [...on].sort((a,c)=>a-c).forEach(t=>{const bt=WORK[WK.id].beat||1,u=t/bt,f=+(u%1).toFixed(4),lbl=f===0?String(Math.floor(u+1e-9)+1):f===.5?'et':'·';h+=`<text class="cnt" x="${xOf(t)}" y="245" font-size="12.5" font-weight="700" text-anchor="middle" fill="#7a5b1f">${lbl}</text>`;});
   svg.innerHTML=h;
   // Noms des notes : on garde ceux qui tiennent sans chevaucher le précédent sur la même ligne.
   const rows={};svg.querySelectorAll('.nm').forEach(el=>{(rows[el.getAttribute('y')]=rows[el.getAttribute('y')]||[]).push(el);});
   Object.values(rows).forEach(r=>{let right=-1e9;r.sort((a,c)=>+a.getAttribute('x')-+c.getAttribute('x')).forEach(el=>{let b;try{b=el.getBBox();}catch(e){return;}if(!b.width)return;
     if(b.x<right+1)el.remove();else right=b.x+b.width;});});}
+
+/* ---------- Astuces ---------- */
+const TIPS=[
+  ['Méthode','Dix minutes chaque jour valent mieux qu’une heure le dimanche : la mémoire des doigts se construit pendant le sommeil.'],
+  ['Méthode','Travaille plus lentement que tu ne le crois nécessaire : si tu te trompes, le tempo est trop rapide.'],
+  ['Méthode','Un petit bout à la fois : deux mesures propres valent mieux qu’une page approximative.'],
+  ['Méthode','Trois réussites d’affilée avant de monter le tempo de 4 (Tempo › Échelle des 3 réussites).'],
+  ['Méthode','Mains séparées d’abord, puis ensemble, très lentement.'],
+  ['Méthode','Commence par le passage difficile, pas par le début du morceau.'],
+  ['Méthode','Ne répète pas une erreur : arrête-toi, trouve la note fautive, rejoue juste ce geste cinq fois.'],
+  ['Méthode','Termine toujours sur une réussite, même minuscule, puis note ta séance.'],
+  ['Mains et posture','Assieds-toi sur la moitié avant du siège, avant-bras à l’horizontale, coudes un peu devant le corps.'],
+  ['Mains et posture','Doigts arrondis, comme si tu tenais une petite balle ; le pouce joue sur son coin.'],
+  ['Mains et posture','Épaules basses et poignet souple : secoue les mains entre deux passages.'],
+  ['Mains et posture','Le son vient du poids du bras, pas de la force des doigts.'],
+  ['Mains et posture','Douleur ou fourmillement : pause tout de suite. La puissance se construit sans forcer.'],
+  ['Solfège','Trois repères pour démarrer : le Do central (petite ligne entre les deux portées), le Sol de la clé de sol (2e ligne), le Fa de la clé de fa (4e ligne).'],
+  ['Solfège','Lis par distances : d’une ligne à l’interligne voisin, c’est la touche d’à côté ; d’une ligne à la ligne suivante, on saute une touche.'],
+  ['Solfège','Compte à voix haute « 1 et 2 et » avant de jouer, puis en jouant.'],
+  ['Solfège','La = A, puis l’alphabet suit les notes : Si = B, Do = C, Ré = D, Mi = E, Fa = F, Sol = G.'],
+  ['Solfège','Un dièse à la clé vaut pour tout le morceau : en Sol majeur, tous les Fa sont des Fa♯.'],
+  ['Solfège','Avant de jouer une mesure, dis le nom des notes à voix haute, la portée ouverte dans Séance.'],
+  ['Solfège','Deux minutes de Lecture éclair par jour : vise 20 notes sans erreur, puis ajoute les lignes supplémentaires.'],
+  ['Main gauche','Apprends la main gauche en premier : c’est elle qui lâche quand on met les mains ensemble.'],
+  ['Main gauche','Prépare le déplacement : la main part pendant que la note précédente sonne encore.'],
+  ['Main gauche','La basse plus douce que la mélodie : écoute si la main droite chante au-dessus.'],
+  ['Main gauche','Un exercice de l’onglet Main gauche par jour, en boucle, à noire = 60.'],
+  ['Main gauche','Garde le petit doigt arrondi et debout, pas couché sur la touche.'],
+  ['Sur iPhone','Installe l’app : dans Safari, touche Partager, puis « Sur l’écran d’accueil ». Elle s’ouvre en plein écran et marche hors ligne.'],
+  ['Sur iPhone','Pas de son ? Monte le volume avec les boutons de côté, et vérifie que le son ne part pas vers une enceinte ou des écouteurs Bluetooth.'],
+  ['Sur iPhone','Pose le téléphone sur le pupitre : l’écran reste allumé pendant le métronome et les boucles.'],
+  ['Sur iPhone','Active « Ne pas déranger » pendant ta séance : une notification casse la concentration.'],
+  ['Sur iPhone','Exporte une sauvegarde chaque semaine (Journal › Exporter) : tes séances et tes partitions ne vivent que sur ce téléphone.'],
+  ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
+  ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Quand ça bloque','Baisse le tempo de 20 et rejoue : presque tout blocage est un problème de vitesse.'],
+  ['Quand ça bloque','Isole les deux notes où ça casse et fais l’aller-retour dix fois.'],
+  ['Quand ça bloque','Change de main, ou fais une pause de cinq minutes : le cerveau continue de travailler.'],
+  ['Quand ça bloque','Chante la mélodie : si tu peux la chanter, tes doigts la trouveront.'],
+  ['Quand ça bloque','Vérifie le doigté : un doigté qui change à chaque fois ne se mémorise pas. Écris-le au crayon sur ta feuille.'],
+  ['Quand ça bloque','Mets 1 mesure en boucle (Séance › En boucle), puis 2 mesures pour travailler la jonction.'],
+  ['Avant le cours','Note tes questions au fil de la semaine (Séance › Questions pour le cours).'],
+  ['Avant le cours','Le jour du cours, rejoue ce qui a progressé, sans chercher à apprendre du nouveau.'],
+  ['Avant le cours','Montre à ton prof le passage qui bloque, pas celui qui marche.'],
+  ['Avant le cours','Demande les doigtés des nouveaux morceaux et note-les tout de suite.']
+];
+let tipShift=0;
+// Astuce du jour : la même toute la journée, une autre le lendemain.
+const tipIndex=d=>((Math.floor((new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()-new Date(2026,0,1).getTime())/864e5)%TIPS.length)+TIPS.length)%TIPS.length;
+function renderTips(){const i=(tipIndex(new Date())+tipShift)%TIPS.length,[c,x]=TIPS[i];
+  $('#tip-cat').textContent=c;$('#tip-text').textContent=x;
+  const [c0,x0]=TIPS[tipIndex(new Date())];$('#tip-mini-t').textContent=x0;
+  if(!$('#tip-list').children.length){const cats=[...new Set(TIPS.map(z=>z[0]))];
+    $('#tip-list').innerHTML=cats.map(k=>`<details class="small"><summary>${esc(k)}</summary><ul>${TIPS.filter(z=>z[0]===k).map(z=>`<li>${esc(z[1])}</li>`).join('')}</ul></details>`).join('');}}
 
 /* ---------- Rangement des morceaux ---------- */
 // Même ordre partout : Séance, Enchaînements, Répertoire, Tempo.
@@ -1229,7 +1322,7 @@ function wkOptions(){const ids=Object.keys(WORK),opt=k=>`<option value="${k}">${
 
 /* ---------- Mes partitions ---------- */
 // Accompagnements possibles : la main gauche d'un morceau de l'app, mesure par mesure (même mesure à 4, 3 ou 2 temps).
-const MY_ACC=()=>Object.keys(WORK).filter(k=>{const w=WORK[k];return !w.ex&&!w.mine&&!w.pickup&&[2,3,4].includes(w.bpb);});
+const MY_ACC=()=>Object.keys(WORK).filter(k=>{const w=WORK[k];return !w.ex&&!w.mine&&!w.pickup&&[2,3,4].includes(w.bpb)&&workBars(k).some(b=>b.lh.some(e=>e[0]));});
 let MYKB=null;const MY={id:null,bar:0,d:1};
 const myCur=()=>S.mine.find(x=>x.id===MY.id);
 const mySum=b=>b.reduce((a,e)=>a+e[1],0);
@@ -1419,7 +1512,7 @@ async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.a
   saveLocal();toast('Import réussi');}
 
 /* ---------- Navigation ---------- */
-const VIEWS=['seance','clavier','oreille','lecture','tempo','morceaux','gauche','journal'];
+const VIEWS=['seance','clavier','oreille','lecture','tempo','morceaux','gauche','astuces','journal'];
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
@@ -1437,7 +1530,7 @@ function handleExtra(x){if(!x)return;const [k,v]=x.split(':');if(k==='preset')ap
 
 /* ---------- Rendu ---------- */
 let KB;
-function renderAll(){renderMine();renderToday();renderBlocks();renderPieces();renderPath();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();renderSnaps();}
+function renderAll(){renderTips();renderMine();renderToday();renderBlocks();renderPieces();renderPath();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();renderSnaps();}
 
 function init(){
   loadLocal();
@@ -1456,7 +1549,7 @@ function init(){
   $('#my-add').onclick=()=>{const x=myCur();if(!x||x.bars.length>=MY_BARS)return;x.bars.splice(MY.bar+1,0,[]);MY.bar++;mySave();myRender();};
   $('#my-delbar').onclick=()=>{const x=myCur();if(!x)return;if(x.bars[MY.bar].length)x.bars[MY.bar]=[];else if(x.bars.length>1)x.bars.splice(MY.bar,1);mySave();myRender();};
   $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
-  renderEx();
+  renderEx();renderTips();$('#tip-next').onclick=()=>{tipShift++;renderTips();};
   $('#ex-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b){openEx(b.dataset.ex);return;}const l=e.target.closest('button[data-exl]');if(l)playEx(l.dataset.exl);});
   $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)lockSync();});
