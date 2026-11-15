@@ -94,6 +94,7 @@ textarea{min-height:70px;resize:vertical}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
+#bk-last.warn{color:var(--ko)}
 .listen{border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .listen.on{border-color:var(--laiton)}
 .listen p{margin:0}
@@ -328,7 +329,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="row between"><h2>Clavier</h2></div>
     <div class="seg" id="noms" aria-label="Noms des notes"><button data-n="fr" class="on">Do Ré Mi</button><button data-n="en">C D E</button><button data-n="both">Les deux</button></div>
     <div class="kb-wrap" id="kb-main"></div>
-    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. En France, on l’appelle souvent Do3 (La3 = 440 Hz) : l’app suit la notation internationale, une octave au-dessus. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux.</p>
+    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. En France, on l’appelle souvent Do3 (La3 = 440 Hz) : l’app suit la notation internationale, une octave au-dessus. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux. Son : piano Steinway &amp; Sons modèle B (enregistrements de l’University of Iowa).</p>
   </div>
   <div class="card" id="mg-card">
     <h2>Main gauche</h2>
@@ -550,7 +551,10 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
   <div class="card">
     <div class="row between"><h2>Sauvegarde</h2><span class="tag" id="bk-tag">Jamais</span></div>
-    <p class="small muted">Tes données vivent sur ce téléphone. Exporte un fichier de temps en temps (Fichiers ou iCloud Drive) : c’est lui qui te protège si tu changes d’iPhone ou supprimes l’app.</p>
+    <p class="small muted">Tes données vivent sur ce téléphone. Le fichier exporté te protège si tu changes d’iPhone ou supprimes l’app : sur iPhone, touche « Exporter », puis « Enregistrer dans Fichiers » et iCloud Drive.</p>
+    <p class="small" id="bk-last" aria-live="polite"></p>
+    <p class="small muted" style="margin-bottom:4px">Me proposer la sauvegarde :</p>
+    <div class="seg" id="bk-mode" aria-label="Quand proposer la sauvegarde"><button data-b="seance">Après chaque séance</button><button data-b="semaine">Chaque semaine</button><button data-b="jamais">Jamais</button></div>
     <div class="row"><button class="btn primary" id="bk-export">Exporter</button><label class="btn" for="bk-file" style="display:inline-flex;align-items:center">Importer</label><input type="file" id="bk-file" accept="application/json,.json" class="hidden"></div>
     <h3>Copies automatiques</h3>
     <p class="small muted">L’app garde seule une copie par jour et une copie avant chaque suppression, import ou restauration. Elles réparent une erreur, mais restent sur ce téléphone : seul l’export te protège si tu le perds.</p>
@@ -615,7 +619,7 @@ function cleanMine(a){const out=[];(Array.isArray(a)?a:[]).filter(isObj).slice(0
       if((e[0]!==null&&n==null)||!MY_DUR.some(z=>z[0]===d)||sum+d>bpb+1e-9)return null;sum+=d;return [n,d,intIn(e[2],0,5)||0,e[3]?1:0];}).filter(Boolean);});
     const acc=typeof x.acc==='string'&&MY_ACC().includes(x.acc)?x.acc:'';
     out.push({id:x.id,t:str(x.t,60).trim()||'Sans titre',bpb,acc,bars:bars.length?bars:[[]]});});return out;}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter','a4'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter','a4'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(['seance','semaine','jamais'].includes(j.meta.bk))S.meta.bk=j.meta.bk;if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}}
 /* Copies automatiques : 10 au plus, sur ce téléphone, dans une clé séparée. Un échec d'écriture n'empêche jamais l'enregistrement normal. */
 const SNAP='vestale-copies-v1',SNAP_MAX=10;
 const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
@@ -634,10 +638,17 @@ async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value
   if(!(await ask(`Revenir à la copie du ${fmtDate(dkey(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())} (${s.n} séance(s)) ? L’état actuel est d’abord gardé en copie.`)))return;
   snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;saveLocal();mineSync();renderAll();toast('Copie restaurée');}
 /* Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours (ou n'a jamais eu lieu). */
-function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.meta&&S.meta.remindAfter;
-  if(!S.seances.length||(lb&&now-lb<=7*864e5)||(ra&&now<ra))return false;
-  const days=lb?Math.floor((now-lb)/864e5):0;
-  $('#rm-t').textContent=lb?`Ta dernière sauvegarde date de ${days} jours. Un toucher suffit pour la mettre à jour (Fichiers ou iCloud Drive).`:'Tes séances ne sont encore sauvegardées que sur ce téléphone. Un toucher suffit pour en garder une copie (Fichiers ou iCloud Drive).';
+/* Sauvegarde hors du téléphone, selon le réglage du Journal :
+   « Après chaque séance » (par défaut) : le bandeau revient après chaque séance notée qui n'est pas encore sauvegardée ;
+   « Chaque semaine » : seulement si le dernier export date de plus de 7 jours (« Plus tard » reporte de 24 h) ;
+   « Jamais » : aucun bandeau, le témoin du Journal reste visible. Sur iPhone, un toucher ouvre le partage : « Enregistrer dans Fichiers ». */
+function bkMode(){const b=S.meta&&S.meta.bk;return ['seance','semaine','jamais'].includes(b)?b:'seance';}
+function bkUnsaved(){const lb=(S.meta&&S.meta.lastBackup)||0;return S.seances.filter(s=>s.ts>lb).length;}
+function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.meta&&S.meta.remindAfter,mode=bkMode(),n=bkUnsaved();
+  if(!S.seances.length||mode==='jamais'||!n)return false;
+  if(mode==='seance')$('#rm-t').textContent=`Séance notée. ${lb?'Mets-la à l’abri':'Tes séances ne sont encore que sur ce téléphone'} : un toucher pour l’enregistrer dans Fichiers ou iCloud Drive.${n>1?` (${n} séances pas encore sauvegardées.)`:''}`;
+  else{if((lb&&now-lb<=7*864e5)||(ra&&now<ra))return false;const days=lb?Math.floor((now-lb)/864e5):0;
+    $('#rm-t').textContent=lb?`Ta dernière sauvegarde date de ${days} jours. Un toucher suffit pour la mettre à jour (Fichiers ou iCloud Drive).`:'Tes séances ne sont encore sauvegardées que sur ce téléphone. Un toucher suffit pour en garder une copie (Fichiers ou iCloud Drive).';}
   const el=$('#bk-remind'),nav=$('nav');el.classList.remove('hidden');window.scrollTo(0,el.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);return true;}
 function hideRemind(){$('#bk-remind').classList.add('hidden');}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
@@ -663,13 +674,33 @@ function ac(){try{
     if(navigator.audioSession&&!EC_ON&&navigator.audioSession.type!=='playback'){try{navigator.audioSession.type='playback';}catch(e){}}
     if(AC&&(AC_STALE||AC.state==='closed'||AC.state==='interrupted')){const old=AC;AC=null;MASTER=null;BUS=null;AC_STALE=false;if(typeof MT!=='undefined'&&MT.on)mtStop();try{old.close().catch(()=>{});}catch(e){}}
     if(!AC)buildAC();
+    smpLoad(AC);
     if(AC.state!=='running'){const cur=AC;try{cur.resume().catch(()=>{});}catch(e){}setTimeout(()=>{if(cur===AC&&cur.state!=='running')AC_STALE=true;},400);}
     // Déverrouillage iOS : un son vide joué pendant le toucher.
     const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource();s.buffer=b;s.connect(AC.destination);s.start(0);
   }catch(e){}return AC;}
 const hz=m=>440*Math.pow(2,(m-69)/12);
+/* Son de piano : Steinway & Sons modèle B, enregistré note par note par l'University of Iowa Electronic Music Studios
+   (enregistrements libres d'utilisation). Une note sur trois est enregistrée (Do1 à Do8) ; les voisines sont obtenues
+   en variant un peu la vitesse de lecture. Tant que les sons ne sont pas chargés, ou s'ils manquent, le son de synthèse joue. */
+const SMP_NOTES=[24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108];
+const SMP={state:0,buf:{},fail:0};          // state : 0 à charger, 1 en cours, 2 prêt
+// Retire le blanc que le format MP3 ajoute au début, pour que la note parte au toucher.
+function smpTrim(a,b){const x=b.getChannelData(0);let pk=0;for(let i=0;i<x.length;i++){const v=Math.abs(x[i]);if(v>pk)pk=v;}
+  let on=0;while(on<x.length&&Math.abs(x[on])<pk*.02)on++;const st=Math.max(0,on-Math.round(b.sampleRate*.002));if(st<8)return b;
+  const out=a.createBuffer(1,x.length-st,b.sampleRate);out.getChannelData(0).set(x.subarray(st));return out;}
+// Décodage dès l'ouverture (contexte hors ligne, sans attendre un toucher) : la première note est déjà celle du piano.
+function smpLoad(a){if(SMP.state||SMP.fail>=3)return;if(!a){const C=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!C)return;try{a=new C(1,1,44100);}catch(e){return;}}SMP.state=1;
+  Promise.all(SMP_NOTES.map(n=>fetch('samples/p'+n+'.mp3').then(r=>{if(!r.ok)throw new Error('son');return r.arrayBuffer();})
+    .then(ab=>new Promise((res,rej)=>a.decodeAudioData(ab,res,rej))).then(b=>{SMP.buf[n]=smpTrim(a,b);})))
+    .then(()=>{SMP.state=2;}).catch(()=>{SMP.state=0;SMP.fail++;});}
+// Joue l'enregistrement le plus proche de la note ; à la fin de la durée, le son s'éteint comme sous l'étouffoir.
+function smpPlay(a,m,t,dur,vel,dest){try{let n=SMP_NOTES[0];for(const c of SMP_NOTES)if(Math.abs(c-m)<Math.abs(n-m))n=c;const b=SMP.buf[n];if(!b)return false;
+    const s=a.createBufferSource(),g=a.createGain();s.buffer=b;s.playbackRate.value=Math.pow(2,(m-n)/12);
+    g.gain.setValueAtTime(.55*vel,t);g.gain.setTargetAtTime(.0001,t+dur,.14);s.connect(g);g.connect(dest||MASTER);s.start(t);s.stop(t+dur+1.2);return true;}catch(e){return false;}}
 function playNote(m,when,dur,vel,dest){const a=ac();if(!a)return;dur=dur||1.2;vel=vel==null?.8:vel;
   const t=Math.max(when||0,a.currentTime+.005),f=hz(m);
+  if(SMP.state===2&&smpPlay(a,m,t,dur,vel,dest))return;
   const g=a.createGain(),lp=a.createBiquadFilter();lp.type='lowpass';lp.Q.value=.4;
   lp.frequency.setValueAtTime(Math.min(9000,f*9),t);lp.frequency.setTargetAtTime(Math.max(600,f*2.5),t,.35);
   [[1,1,'triangle'],[2,.32,'sine'],[3,.13,'sine'],[4,.05,'sine']].forEach(p=>{const o=a.createOscillator();o.type=p[2];o.frequency.value=f*p[0]*(1+.0003*p[0]*p[0]);const og=a.createGain();og.gain.value=p[1];o.connect(og);og.connect(lp);o.start(t);o.stop(t+dur+1.4);});
@@ -1363,7 +1394,7 @@ const TIPS=[
   ['Sur iPhone','Pas de son ? Monte le volume avec les boutons de côté, et vérifie que le son ne part pas vers une enceinte ou des écouteurs Bluetooth.'],
   ['Sur iPhone','Pose le téléphone sur le pupitre : l’écran reste allumé pendant le métronome et les boucles.'],
   ['Sur iPhone','Active « Ne pas déranger » pendant ta séance : une notification casse la concentration.'],
-  ['Sur iPhone','Exporte une sauvegarde chaque semaine (Journal › Exporter) : tes séances et tes partitions ne vivent que sur ce téléphone.'],
+  ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
   ['Sur iPhone','Séance › « Écoute-moi » : pose le téléphone sur le pupitre, dans une pièce calme. L’app vérifie tes notes sans rien enregistrer.'],
@@ -1581,10 +1612,14 @@ function coachText(){const since=Date.now()-14*864e5;
 Format attendu, 180 mots maximum : Verdict (une phrase) ; Ce qui progresse (2 puces) ; À corriger (2 puces) ; Mes 3 prochaines séances (morceau, passage, tempo de départ) ; À demander à mon prof vendredi (1 ou 2 questions). N’invente rien d’absent des données.
 Données (JSON) : ${JSON.stringify(data)}`;}
 async function coach(){await copy(coachText(),'Copié : colle-le dans Claude');}
-function updateBackupChip(){const lb=S.meta&&S.meta.lastBackup;const el=$('#sync');const tag=$('#bk-tag');
+function updateBackupChip(){renderBackup();const lb=S.meta&&S.meta.lastBackup;const el=$('#sync');const tag=$('#bk-tag');
   if(!lb){el.textContent='à sauvegarder';el.classList.remove('on');if(tag)tag.textContent='Jamais';return;}
   const days=Math.floor((Date.now()-lb)/864e5);const txt=days===0?'sauvegardé aujourd’hui':days===1?'sauvegardé hier':`sauvegardé il y a ${days} j`;
   el.textContent=txt;el.classList.toggle('on',days<8);if(tag)tag.textContent=days===0?'Aujourd’hui':days+' j';}
+function renderBackup(){const el=$('#bk-last');if(!el)return;const lb=S.meta&&S.meta.lastBackup,n=bkUnsaved();
+  const when=!lb?'jamais':(d=>d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`)(Math.floor((Date.now()-lb)/864e5));
+  el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:S.seances.length?' · tout est à l’abri':''}.`;
+  el.classList.toggle('warn',!!n&&(!lb||Date.now()-lb>7*864e5));$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));}
 async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}.json`;
   const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine}},null,1);
   const file=new File([body],name,{type:'application/json'});
@@ -1642,6 +1677,7 @@ function init(){
   $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
   $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ecStop();});
+  smpLoad();
   renderEx();renderTips();$('#tip-next').onclick=()=>{tipShift++;renderTips();};
   $('#ex-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b){openEx(b.dataset.ex);return;}const l=e.target.closest('button[data-exl]');if(l)playEx(l.dataset.exl);});
   $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();});
@@ -1724,6 +1760,7 @@ function init(){
   const addQ=()=>{const t=$('#q-new').value.trim();if(!t)return;S.questions.items.push({id:'u'+Date.now(),t:t.slice(0,240),done:false});$('#q-new').value='';renderQ();saveQ();};
   $('#q-add').onclick=addQ;$('#q-new').addEventListener('keydown',e=>{if(e.key==='Enter')addQ();});
   $('#j-copy').onclick=()=>copy(journalText());
+  $('#bk-mode').addEventListener('click',e=>{const b=e.target.closest('button[data-b]');if(!b)return;S.meta=Object.assign({},S.meta,{bk:b.dataset.b});delete S.meta.remindAfter;saveLocal();renderBackup();if(b.dataset.b==='jamais')hideRemind();});
   $('#coach-go').onclick=coach;$('#bk-export').onclick=exportData;$('#snap-restore').onclick=restoreSnap;$('#rm-go').onclick=exportData;$('#rm-later').onclick=()=>{S.meta=Object.assign({},S.meta,{remindAfter:Date.now()+864e5});saveLocal();hideRemind();};$('#bk-file').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value='';});
 
   let fitW=0;const refit=()=>{const w=Math.min(window.innerWidth,760);if(w===fitW)return;fitW=w;

@@ -9,7 +9,7 @@ Studio de travail au piano, en application web installable (PWA) : séance guid�
 - Copies automatiques sur l'appareil : une par jour et une avant chaque suppression, import ou restauration (10 au plus), restaurables depuis le Journal. Elles réparent une erreur mais ne remplacent pas l'export.
 - Mes partitions (onglet Morceaux) : tu saisis toi-même la main droite d'une feuille que tu possèdes, mesure par mesure, avec en option la main gauche d'un morceau de l'app. Ces partitions restent sur l'appareil (et dans l'export) ; elles ne sont jamais envoyées ni publiées.
 - Écoute au micro (Séance › Écoute-moi) : l'app reconnaît la note jouée au piano (autocorrélation, calcul sur l'appareil) et vérifie la main choisie, note par note ; réglage sur le La du piano pour un instrument désaccordé. Le son du micro n'est ni enregistré ni envoyé.
-- Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours, un bandeau propose de sauvegarder en un toucher (report possible de 24 h).
+- Sauvegarde hors du téléphone (Journal › Sauvegarde) : par défaut, après chaque séance notée et pas encore sauvegardée, un bandeau propose l'export en un toucher (sur iPhone : partage, « Enregistrer dans Fichiers », iCloud Drive). Réglages : après chaque séance, chaque semaine (si le dernier export date de plus de 7 jours, report possible de 24 h) ou jamais. Le Journal indique la date de la dernière sauvegarde et le nombre de séances pas encore sauvegardées.
 
 ## iPhone
 
@@ -38,6 +38,10 @@ Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et 
 ## Licences des polices
 
 Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous SIL Open Font License 1.1 (textes dans `fonts/`). Fichiers issus des paquets Fontsource 5.3.0 (sous-ensemble latin) ; Noto Music est en plus réduite aux deux clés musicales U+1D11E et U+1D122.
+
+## Son du piano
+
+Les notes sont jouées avec des enregistrements d'un piano Steinway & Sons modèle B, réalisés par l'University of Iowa Electronic Music Studios (Musical Instrument Samples, Lawrence Fritts, 2001), mis à disposition « for any projects, without restrictions » (https://theremin.music.uiowa.edu/MIS.html). Le dossier `samples/` contient une note sur trois, du Do1 au Do8, en mono et en MP3 (environ 750 Ko) ; les notes voisines sont obtenues en variant la vitesse de lecture. Les fichiers sont servis par l'app elle-même et mis en cache pour le hors-ligne ; si un son manque, le son de synthèse prend le relais. La Vestale n'est ni affiliée à Steinway & Sons ni approuvée par cette marque.
 
 ## Sources et licences des morceaux
 

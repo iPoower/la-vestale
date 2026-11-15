@@ -133,16 +133,17 @@ test('S6. rappel : jamais sauvegardé → bandeau après la séance, export en u
   await expect(page.locator('#bk-remind')).toBeHidden();
   await expect(page.locator('#sync')).toHaveText('sauvegardé aujourd’hui');
   await noteSeance(page, 'deuxième séance');
-  await expect(page.locator('#bk-remind')).toBeHidden();                 // sauvegarde récente : pas de rappel
+  await expect(page.locator('#bk-remind')).toBeVisible();                // réglage par défaut : après chaque séance
+  await expect(page.locator('#rm-t')).toContainText('Séance notée');
 });
 
 test('S7. rappel : seulement après 7 jours, « Plus tard » reporte de 24 h', async ({ page }) => {
   const t0 = new Date('2026-11-12T18:00:00');
   await page.clock.install({ time: t0 });
-  await seed(page, { seances: [seance('a')], meta: { lastBackup: +t0 - 3 * DAY } });
+  await seed(page, { seances: [seance('a')], meta: { lastBackup: +t0 - 3 * DAY, bk: 'semaine' } });
   await noteSeance(page, 'à 3 jours');
   await expect(page.locator('#bk-remind')).toBeHidden();
-  await seed(page, { seances: [seance('a')], meta: { lastBackup: +t0 - 8 * DAY } });
+  await seed(page, { seances: [seance('a')], meta: { lastBackup: +t0 - 8 * DAY, bk: 'semaine' } });
   await noteSeance(page, 'à 8 jours');
   await expect(page.locator('#bk-remind')).toBeVisible();
   await expect(page.locator('#rm-t')).toContainText('8 jours');
@@ -156,4 +157,45 @@ test('S7. rappel : seulement après 7 jours, « Plus tard » reporte de 24 h', a
   await page.clock.setSystemTime(new Date(+t0 + 25 * 3600e3));
   await noteSeance(page, 'le lendemain');
   await expect(page.locator('#bk-remind')).toBeVisible();
+});
+
+test('S8. après chaque séance (par défaut) : bandeau à chaque séance non sauvegardée, témoin dans le Journal', async ({ page }) => {
+  await page.goto('./#journal');
+  await expect(page.locator('#bk-mode button.on')).toHaveText('Après chaque séance');
+  await expect(page.locator('#bk-last')).toContainText('jamais');
+  await noteSeance(page, 'une');
+  await expect(page.locator('#rm-t')).toHaveText('Séance notée. Tes séances ne sont encore que sur ce téléphone : un toucher pour l’enregistrer dans Fichiers ou iCloud Drive.');
+  await page.locator('#rm-later').click();
+  await noteSeance(page, 'deux');
+  await expect(page.locator('#rm-t')).toContainText('(2 séances pas encore sauvegardées.)');  // « Plus tard » ne bloque pas la séance suivante
+  await page.locator('#tabs a[data-v="journal"]').click();
+  await expect(page.locator('#bk-last')).toHaveText('Dernière sauvegarde hors du téléphone : jamais · 2 séances pas encore sauvegardées.');
+  await expect(page.locator('#bk-last')).toHaveClass(/warn/);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-export').click()]);
+  expect(download.suggestedFilename()).toMatch(/^la-vestale-\d{4}-\d{2}-\d{2}\.json$/);
+  await expect(page.locator('#bk-last')).toHaveText('Dernière sauvegarde hors du téléphone : aujourd’hui · tout est à l’abri.');
+  await expect(page.locator('#bk-last')).not.toHaveClass(/warn/);
+  await noteSeance(page, 'trois');
+  await expect(page.locator('#bk-remind')).toBeVisible();
+  await expect(page.locator('#rm-t')).toHaveText('Séance notée. Mets-la à l’abri : un toucher pour l’enregistrer dans Fichiers ou iCloud Drive.');
+});
+
+test('S9. réglage « Jamais » puis « Chaque semaine » : gardé après rechargement, comportement respecté', async ({ page }) => {
+  await page.goto('./#journal');
+  await page.locator('#bk-mode button[data-b="jamais"]').click();
+  await page.reload();
+  await expect(page.locator('#bk-mode button.on')).toHaveText('Jamais');
+  await noteSeance(page, 'sans bandeau');
+  await expect(page.locator('#bk-remind')).toBeHidden();
+  await page.locator('#tabs a[data-v="journal"]').click();
+  await expect(page.locator('#bk-last')).toContainText('1 séance pas encore sauvegardée');  // le témoin reste
+  await page.locator('#bk-mode button[data-b="semaine"]').click();
+  await noteSeance(page, 'jamais exporté');
+  await expect(page.locator('#rm-t')).toContainText('que sur ce téléphone');   // chaque semaine : jamais sauvegardé → bandeau
+  // @ts-ignore
+  expect(await page.evaluate(k => JSON.parse(localStorage.getItem(k)).meta.bk, LS)).toBe('semaine');
+  await page.evaluate(k => { const d = JSON.parse(localStorage.getItem(k)); d.meta.bk = '<img src=x onerror=alert(1)>'; localStorage.setItem(k, JSON.stringify(d)); }, LS);
+  await page.reload();
+  await page.locator('#tabs a[data-v="journal"]').click();
+  await expect(page.locator('#bk-mode button.on')).toHaveText('Après chaque séance');   // valeur inconnue : réglage par défaut
 });
