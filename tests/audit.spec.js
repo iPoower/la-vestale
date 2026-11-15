@@ -20,6 +20,7 @@ test('U2. « Mes partitions » : seuls les accompagnements à 2, 3 ou 4 temps sa
   const accs = await page.$$eval('#my-acc option', o => o.map(x => x.value));
   expect(accs).toContain('sourire');
   expect(accs).toContain('hymne');
+  expect(accs).not.toContain('twinkle');                               // main droite seule : rien à accompagner
   expect(accs).not.toContain('bach120');                               // levée d'un temps
   expect(accs).not.toContain('clairlune');                             // 9/8
   await page.locator('#my-title').fill('Essai');

@@ -10,6 +10,10 @@ Studio de travail au piano, en application web installable (PWA) : séance guid�
 - Mes partitions (onglet Morceaux) : tu saisis toi-même la main droite d'une feuille que tu possèdes, mesure par mesure, avec en option la main gauche d'un morceau de l'app. Ces partitions restent sur l'appareil (et dans l'export) ; elles ne sont jamais envoyées ni publiées.
 - Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours, un bandeau propose de sauvegarder en un toucher (report possible de 24 h).
 
+## iPhone
+
+L'app est réglée pour l'iPhone (testée au format iPhone 11 Pro Max, 414 × 896) : marges de l'encoche et de la barre du bas, champs en 16 px (pas de zoom automatique de Safari), cibles tactiles d'au moins 44 px, pas de zoom sur double appui. L'onglet Astuces donne une astuce par jour, une routine de 10 minutes et des conseils par thème.
+
 ## Installer sur iPhone
 
 Ouvrir l'adresse de l'app dans Safari, toucher **Partager**, puis **Sur l'écran d'accueil**.
@@ -24,7 +28,7 @@ npx playwright install chromium webkit   # si les navigateurs ne sont pas déjà
 npm test
 ```
 
-Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et les icônes, le service worker et son cache, les polices locales, le rechargement hors ligne, le cycle séance → Export → Import, et la navigation dans les 8 onglets. `tests/regressions.spec.js` contient un test par bug corrigé.
+Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et les icônes, le service worker et son cache, les polices locales, le rechargement hors ligne, le cycle séance → Export → Import, et la navigation dans les onglets. `tests/regressions.spec.js` contient un test par bug corrigé.
 
 ## Mise à jour
 
