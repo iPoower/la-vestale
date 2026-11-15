@@ -39,6 +39,10 @@ Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et 
 
 Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous SIL Open Font License 1.1 (textes dans `fonts/`). Fichiers issus des paquets Fontsource 5.3.0 (sous-ensemble latin) ; Noto Music est en plus réduite aux deux clés musicales U+1D11E et U+1D122.
 
+## Coach
+
+L'onglet Coach reprend « Travailler un morceau » avec l'écoute au micro : chaque mesure jouée avec une faute se rejoue jusqu'à ce qu'elle soit propre, un conseil s'affiche à chaque erreur (demi-ton, note voisine, octave, doigté, accord incomplet), et l'app retient, par morceau, les mesures difficiles, les hésitations (plus de 4 s) et les confusions fréquentes. Ce suivi reste sur l'appareil et dans l'export.
+
 ## Écoute réaliste
 
 Dans Clavier › Enchaînements, une partition entière se joue par défaut au tempo de la partition (valeur indicative), avec les nuances de l'édition Mutopia quand elle en a (Burgmüller op. 100 n° 1 et 2, Liszt), la pédale de l'édition (Liszt) ou une pédale automatique, levée à chaque mesure et à chaque nouvelle basse (Debussy, Alkan : approximation), les reprises et 1re / 2e fins (Burgmüller) et un ralenti final. Décocher « Écoute réaliste » revient à la lecture métronomique.
