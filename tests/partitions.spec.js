@@ -112,5 +112,5 @@ test('P6. le fichier exporté contient les partitions ; l’import les restaure 
   await page.locator('#dlg-ok').click();
   await page.goto('./#morceaux');
   await expect(page.locator('#my-list')).toContainText('Voyage');
-  await expect(page.locator('#wk-piece option', { hasText: 'Ma partition · Voyage' })).toHaveCount(1);
+  await expect(page.locator('#wk-piece optgroup[label="Mes partitions"] option', { hasText: 'Voyage' })).toHaveCount(1);
 });
