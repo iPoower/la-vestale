@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(PIANO); });
 const start = async page => {
   await page.goto('./#coach');
   await page.evaluate(() => { /* @ts-ignore */ window.__fakeMic(); });
-  await page.locator('#wk-hands button[data-h="rh"]').click();
+  await page.locator('#dc-hands button[data-h="rh"]').click();
   await page.locator('#ec-go').click();
   await expect(page.locator('#ec-go')).toHaveText('Arrêter l’écoute');
   // @ts-ignore
@@ -139,7 +139,7 @@ test('C5. suivi gardé après rechargement, exporté, importé, nettoyé ; « Ef
 test('C6. accord incomplet dans le Coach : note manquante retenue, geste conseillé', async ({ page }) => {
   await page.goto('./#coach');
   await page.evaluate(() => { /* @ts-ignore */ window.__fakeMic(); });
-  await page.locator('#wk-hands button[data-h="lh"]').click();
+  await page.locator('#dc-hands button[data-h="lh"]').click();
   await page.locator('#ec-go').click();
   // @ts-ignore
   await page.evaluate(() => clearInterval(EC.iv));

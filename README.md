@@ -43,6 +43,10 @@ Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous S
 
 L'onglet Coach reprend « Travailler un morceau » avec l'écoute au micro : chaque mesure jouée avec une faute se rejoue jusqu'à ce qu'elle soit propre, un conseil s'affiche à chaque erreur (demi-ton, note voisine, octave, doigté, accord incomplet), et l'app retient, par morceau, les mesures difficiles, les hésitations (plus de 4 s) et les confusions fréquentes. Ce suivi reste sur l'appareil et dans l'export.
 
+### Déchiffrer avant de jouer
+
+Dans le Coach, l'étape « 1. Déchiffrer » donne la carte d'identité du morceau (tonalité et armure, mesure et comptage, tempo, étendue de chaque main, position de départ, mesures identiques, pièges repérés : grands sauts, altérations hors armure, passages chargés, mesures où l'on a déjà bloqué), puis guide la lecture d'une mesure note par note : nommer la note sur la portée, la trouver sur le clavier, l'écouter. Une mesure lue sans erreur est retenue ; après 2 à 4 mesures, l'app propose de les jouer avec « Écoute-moi ».
+
 ## Écoute réaliste
 
 Dans Clavier › Enchaînements, une partition entière se joue par défaut au tempo de la partition (valeur indicative), avec les nuances de l'édition Mutopia quand elle en a (Burgmüller op. 100 n° 1 et 2, Liszt), la pédale de l'édition (Liszt) ou une pédale automatique, levée à chaque mesure et à chaque nouvelle basse (Debussy, Alkan : approximation), les reprises et 1re / 2e fins (Burgmüller) et un ralenti final. Décocher « Écoute réaliste » revient à la lecture métronomique.
