@@ -94,6 +94,7 @@ textarea{min-height:70px;resize:vertical}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
+.co-list li{margin-bottom:10px}
 #bk-last.warn{color:var(--ko)}
 .listen{border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .listen.on{border-color:var(--laiton)}
@@ -224,6 +225,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 </header>
 <nav aria-label="Sections"><div class="in" id="tabs">
   <a href="#seance" data-v="seance">Séance</a>
+  <a href="#coach" data-v="coach">Coach</a>
   <a href="#clavier" data-v="clavier">Clavier</a>
   <a href="#oreille" data-v="oreille">Oreille</a>
   <a href="#lecture" data-v="lecture">Lecture</a>
@@ -250,6 +252,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="kpi"><b id="k-streak">0</b><span>jours d’affilée</span></div>
     <div class="kpi"><b id="k-total">0</b><span>séances notées</span></div>
   </div>
+  <div id="wk-home" hidden></div>
   <div class="card" id="wk-card">
     <div class="row between"><h2>Travailler un morceau</h2><span class="tag" id="wk-pos">Mesure 1</span></div>
     <select id="wk-piece" aria-label="Morceau à travailler"></select>
@@ -516,6 +519,20 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div id="pieces" style="display:flex;flex-direction:column;gap:14px"></div>
 </section>
 
+<!-- COACH -->
+<section class="view" id="v-coach">
+  <div class="card">
+    <h2>Coach : une partition, jusqu’à la réussite</h2>
+    <p class="small muted">Choisis ton morceau et ta main, touche « Écoute-moi » et joue sur ton piano. L’app suit chaque note, te dit quand tu te trompes, te fait rejouer la mesure jusqu’à ce qu’elle soit propre, et note où tu bloques.</p>
+    <label class="toggle"><input type="checkbox" id="co-redo" checked> Rejouer la mesure jusqu’à ce qu’elle soit sans faute</label>
+  </div>
+  <div id="co-slot"></div>
+  <div class="card" id="co-panel">
+    <div class="row between"><h2>Où tu bloques</h2><button class="btn ghost" id="co-reset">Effacer</button></div>
+    <div id="co-tips" aria-live="polite"></div>
+  </div>
+</section>
+
 <!-- ASTUCES -->
 <section class="view" id="v-astuces">
   <div class="card" id="tip-card">
@@ -596,7 +613,7 @@ const keyName=(m,oct)=>NOMS==='both'?nm1(FR,m,oct)+'\n'+nm1(EN,m,oct):nm(m,oct);
 const isBlack=m=>[1,3,6,8,10].includes(((m%12)+12)%12);
 
 /* ---------- Données ---------- */
-const S={seances:[],rep:{},stats:{lecture:{},oreille:{}},questions:{done:{},items:[]},mine:[],meta:{}};
+const S={seances:[],rep:{},stats:{lecture:{},oreille:{}},questions:{done:{},items:[]},mine:[],coach:{},meta:{}};
 const LS='vestale-studio-v1';
 /* Nettoyage des données (chargement et import) : seules des valeurs attendues entrent dans l'app. */
 const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);
@@ -612,7 +629,11 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
   const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
   const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
   return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
-    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{})},questions:{done,items},mine};}
+    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{})},questions:{done,items},mine,coach:cleanCoach(d.coach)};}
+// Coach : par morceau, b = {mesure: [fautes, passages propres, passages, hésitations]}, c = {« attendue>jouée »: nombre} (x = note absente d'un accord).
+function cleanCoach(o){const out={};if(!isObj(o))return out;Object.keys(o).slice(0,80).forEach(id=>{const c=o[id];if(!/^[a-z0-9]{1,24}$/.test(id)||!isObj(c))return;const b={},cc={};
+  if(isObj(c.b))Object.keys(c.b).slice(0,400).forEach(k=>{const i=intIn(k,0,999),r=c.b[k];if(i==null||!Array.isArray(r))return;b[i]=[0,1,2,3].map(j=>intIn(r[j],0,1e6)||0);});
+  if(isObj(c.c))Object.keys(c.c).slice(0,80).forEach(k=>{if(/^\d{1,3}>(\d{1,3}|x)$/.test(k)){const n=intIn(c.c[k],0,1e6);if(n)cc[k]=n;}});out[id]={b,c:cc};});return out;}
 /* Mes partitions : [note MIDI ou null (silence), durée, doigt (0 = aucun), liée à la suivante (0/1)] par événement. */
 const MY_DUR=[[4,'ronde'],[3,'blanche pointée'],[2,'blanche'],[1.5,'noire pointée'],[1,'noire'],[.75,'croche pointée'],[.5,'croche'],[.25,'double croche']];
 const MY_MAX=30,MY_BARS=200,MY_EV=64;
@@ -627,7 +648,7 @@ const SNAP='vestale-copies-v1',SNAP_MAX=10;
 const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
 function loadSnaps(){try{const a=JSON.parse(localStorage.getItem(SNAP)||'[]');return Array.isArray(a)?a.filter(s=>isObj(s)&&Number.isFinite(+s.ts)&&isObj(s.data)&&Object.prototype.hasOwnProperty.call(SNAP_WHY,s.why)):[];}catch(e){return [];}}
 function saveSnaps(a){for(let n=a.length;n>0;n=Math.floor(n/2)){try{localStorage.setItem(SNAP,JSON.stringify(a.slice(0,n)));return true;}catch(e){}}return false;}
-function snapData(){return {seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine};}
+function snapData(){return {seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach};}
 function snapshot(why){try{const list=loadSnaps(),data=snapData(),json=JSON.stringify(data);
     if(!S.seances.length&&!Object.keys(S.rep).length&&!Object.keys(S.stats.lecture).length&&!Object.keys(S.stats.oreille).length&&!Object.keys(S.questions.done).length&&!S.questions.items.length&&!S.mine.length)return false;
     if(why==='auto'&&list.some(s=>dkey(new Date(+s.ts))===dkey(new Date())))return false;
@@ -638,7 +659,7 @@ function renderSnaps(){const el=$('#snap-sel');if(!el)return;const list=loadSnap
   $('#snap-restore').disabled=!list.length;}
 async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value];if(!s)return;const d=new Date(+s.ts);
   if(!(await ask(`Revenir à la copie du ${fmtDate(dkey(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())} (${s.n} séance(s)) ? L’état actuel est d’abord gardé en copie.`)))return;
-  snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;saveLocal();mineSync();renderAll();toast('Copie restaurée');}
+  snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;if(Object.prototype.hasOwnProperty.call(s.data,'coach'))S.coach=c.coach;saveLocal();mineSync();renderAll();toast('Copie restaurée');}
 /* Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours (ou n'a jamais eu lieu). */
 /* Sauvegarde hors du téléphone, selon le réglage du Journal :
    « Après chaque séance » (par défaut) : le bandeau revient après chaque séance notée qui n'est pas encore sauvegardée ;
@@ -997,7 +1018,7 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
   $('#wk-info').innerHTML=h;wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
-  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();}
+  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach())renderCoach();}
 function wkGo(bar){stopBus();WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
@@ -1377,10 +1398,13 @@ function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));$('#ec-cal-
 // Notes attendues dans la mesure en cours, pour la main choisie (les notes liées, déjà tenues, ne sont pas rejouées).
 function ecSeq(){const b=workBars(WK.id)[WK.bar];return b[WK.hands==='lh'?'lh':'rh'].map(e=>{if(!e[0])return null;const keep=e[0].map((m,j)=>j).filter(j=>!(e[4]&&e[4][j]===0));
     return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null}:null;}).filter(Boolean);}
-function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
+function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
   $('#ec-msg').textContent=x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`;}
-function ecPrep(){EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
-function ecNextBar(){if(WK.bar>=workBars(WK.id).length-1){ecStop(`Morceau terminé : ${EC.ok} juste${EC.ok>1?'s':''}, ${EC.ko} à revoir.`);return;}wkGo(WK.bar+1);}
+function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
+function ecNextBar(){if(EC.mode==='play'&&EC.seq&&EC.seq.length){const clean=!EC.bErr;coachBar(clean);
+    if(coachOn()&&!clean){EC.tries++;const n=EC.bErr;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}).`,'ko');ecPrep();return;}
+    if(coachOn()&&EC.tries)ecFb(`Mesure ${WK.bar+1} propre après ${EC.tries+1} essais. Bravo !`,'ok');}
+  if(WK.bar>=workBars(WK.id).length-1){ecStop(`Morceau terminé : ${EC.ok} juste${EC.ok>1?'s':''}, ${EC.ko} à revoir.`);return;}wkGo(WK.bar+1);}
 function ecAdvance(){EC.i++;if(EC.i>=EC.seq.length)ecNextBar();else ecShow();}
 function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);setTimeout(()=>k.classList.remove(cls),600);}}
 // Traite une trame : attend une attaque, puis trois trames de suite sur la même note avant de juger.
@@ -1397,13 +1421,13 @@ function ecFeed(buf,sr,big){const d=detectPitch(buf,sr);
   // Accord : trois trames après l'attaque, chaque note doit être entendue au moins deux fois.
   if(x.ms.length>1){if(EC.loud<2)return;const pres=chordCheck(big||buf,sr,x.ms);EC.votes=EC.votes||x.ms.map(()=>0);pres.forEach((v,k)=>{if(v)EC.votes[k]++;});
     if(++EC.cv<3)return;const miss=x.ms.filter((m,k)=>EC.votes[k]<2);EC.armed=false;EC.last=null;EC.low=d.rms;EC.votes=null;EC.cv=0;
-    if(!miss.length){EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + '),'ok');ecScore();ecAdvance();}
-    else{EC.ko++;miss.forEach(m=>ecFlash(m,'ko'));ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`,'ko');ecScore();}return;}
+    if(!miss.length){ecHes();EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + '),'ok');ecScore();ecAdvance();}
+    else{EC.ko++;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+(inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':''),'ko');ecScore();}return;}
   if(EC.n<3)return;
   const want=x.ms[0];EC.armed=false;EC.last=m;EC.low=d.rms;
-  if(m===want){EC.ok++;ecFlash(want,'ok');ecFb('Juste : '+wkNm(want),'ok');ecScore();ecAdvance();}
+  if(m===want){ecHes();EC.ok++;ecFlash(want,'ok');ecFb('Juste : '+wkNm(want),'ok');ecScore();ecAdvance();}
   else if((m-want)%12===0)ecFb(`Bonne note, mais je l’entends ${m>want?'plus haut':'plus bas'} (${wkNm(m)}). Vérifie l’octave, ou touche « Passer la note ».`,'');
-  else{EC.ko++;ecFlash(m,'ko');ecFb(`J’entends ${wkNm(m)}, j’attends ${wkNm(want)}.`,'ko');ecScore();}}
+  else{EC.ko++;ecFlash(m,'ko');coachErr([[want,m]]);ecFb(`J’entends ${wkNm(m)}, j’attends ${wkNm(want)}.`+(inCoach()?' '+ecTip(want,m,x):''),'ko');ecScore();}}
 async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices;
   if(!md||!md.getUserMedia){ecFb('Micro indisponible dans ce navigateur.','ko');return;}
   wkStop();const a=ac();if(!a)return;
@@ -1425,6 +1449,38 @@ function ecStop(msg){EC.tok++;if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.
   EC.on=false;EC_ON=false;EC.mode='';try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   awake('ec',false);wkClear();$('#ec-box').classList.remove('on');$('#kb-wk').classList.remove('ecoute');$('#ec-go').textContent='Écoute-moi';$('#ec-cal-go').textContent='Écouter mon La';$('#ec-skip').classList.add('hidden');
   $('#ec-msg').textContent='Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.';ecCalMsg();ecFb(msg||'','');}
+
+/* ---------- Coach : une partition, jusqu'à la réussite ---------- */
+const inCoach=()=>location.hash==='#coach';
+const coachOn=()=>EC.on&&EC.mode==='play'&&inCoach()&&$('#co-redo').checked;
+function coachRec(){const id=WK.id;S.coach=S.coach||{};const c=S.coach[id]=S.coach[id]||{b:{},c:{}};c.b[WK.bar]=c.b[WK.bar]||[0,0,0,0];return c;}
+function coachSave(){saveLocal();renderCoach();}   // tout de suite : rien de perdu si l'app est fermée
+// Une faute par tentative de note ou d'accord ; chaque note manquante ou confondue est retenue.
+function coachErr(pairs){const c=coachRec();c.b[WK.bar][0]++;EC.bErr=(EC.bErr||0)+1;
+  pairs.forEach(([w,g])=>{const k=w+'>'+(g==null?'x':g);c.c[k]=(c.c[k]||0)+1;EC.same[w]=(EC.same[w]||0)+1;});coachSave();}
+function coachBar(clean){const r=coachRec().b[WK.bar];r[2]++;if(clean)r[1]++;coachSave();}
+// Hésitation : plus de 4 s entre l'affichage d'une note et la bonne réponse.
+function ecHes(){if(EC.shownAt&&performance.now()-EC.shownAt>4000){coachRec().b[WK.bar][3]++;coachSave();}}
+// Conseil immédiat, selon l'écart entre la note jouée et la note attendue.
+function ecTip(want,got,x){const d=Math.abs(got-want),fg=x&&x.fg&&x.fg[0];
+  if((EC.same[want]||0)>=3)return 'Isole ce passage : joue la note d’avant et celle-ci, lentement, cinq fois.';
+  if(d===1)return 'Un demi-ton à côté : regarde le ♯ ou le ♭, à la clé ou devant la note.';
+  if(d===2)return 'La note voisine : ligne ou interligne ? Relis-la sur la portée.';
+  return `Vérifie la position de ta main${fg?` : doigt ${fg} sur ${wkNm(want)}`:''}.`;}
+function confTip(k,n){const [w,g]=k.split('>'),want=+w,nw=wkNm(want);
+  if(g==='x')return `Dans les accords, il te manque souvent ${nw} (${n} fois) : pose tous les doigts ensemble avant d’appuyer.`;
+  const got=+g,d=Math.abs(got-want),why=d===1?'un demi-ton à côté : regarde le ♯ ou le ♭, à la clé ou devant la note':d===2?'la note voisine : ligne ou interligne, relis la portée':d%12===0?'bonne note, mauvaise octave : regarde où est ta main':'vérifie le doigté et la position de la main';
+  return `${wkNm(got)} au lieu de ${nw} (${n} fois) : ${why}.`;}
+function renderCoach(){const el=$('#co-tips');if(!el||!WORK[WK.id])return;const c=S.coach&&S.coach[WK.id];
+  if(!c||!Object.keys(c.b).length){el.innerHTML=`<p class="small muted">${esc(WORK[WK.id].t)} : joue avec « Écoute-moi ». Tes mesures difficiles et tes confusions apparaîtront ici, avec des conseils.</p>`;return;}
+  const bars=Object.entries(c.b).map(([b,r])=>({b:+b,err:r[0],clean:r[1],tries:r[2],hes:r[3]})).filter(x=>x.err||x.hes).sort((p,q)=>(q.err+q.hes)-(p.err+p.hes)||p.b-q.b).slice(0,3);
+  const conf=Object.entries(c.c).sort((p,q)=>q[1]-p[1]).slice(0,3),all=Object.values(c.b),tot=all.reduce((s,r)=>s+r[2],0),cl=all.reduce((s,r)=>s+r[1],0);
+  let h=`<p class="small"><b>${esc(WORK[WK.id].t)}</b> : ${cl} mesure${cl>1?'s':''} propre${cl>1?'s':''} sur ${tot} passage${tot>1?'s':''}.</p>`;
+  if(bars.length)h+='<h3>Mesures difficiles</h3><ul class="small co-list">'+bars.map(x=>`<li><b>Mesure ${x.b+1}</b> : ${x.err} faute${x.err>1?'s':''} en ${x.tries} passage${x.tries>1?'s':''}${x.hes?`, ${x.hes} hésitation${x.hes>1?'s':''}`:''}. `+
+    `${x.hes>x.err?'Tu hésites : travaille-la mains séparées, en boucle, plus lentement.':'Isole-la : une mesure en boucle, lentement, puis rejoue-la ici.'}<br><button class="btn ghost" data-cob="${x.b}">Travailler la mesure ${x.b+1}</button></li>`).join('')+'</ul>';
+  else h+='<p class="small">Aucune mesure difficile pour l’instant. Continue !</p>';
+  if(conf.length)h+='<h3>Confusions fréquentes</h3><ul class="small">'+conf.map(([k,n])=>`<li>${esc(confTip(k,n))}</li>`).join('')+'</ul>';
+  el.innerHTML=h;}
 
 /* ---------- Astuces ---------- */
 const TIPS=[
@@ -1460,6 +1516,7 @@ const TIPS=[
   ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Méthode','Onglet Coach : joue avec « Écoute-moi » ; chaque mesure fautive se rejoue jusqu’à ce qu’elle soit propre, et l’app te montre où tu bloques.'],
   ['Sur iPhone','Séance › « Écoute-moi » : pose le téléphone sur le pupitre, dans une pièce calme. L’app vérifie tes notes sans rien enregistrer.'],
   ['Quand ça bloque','Baisse le tempo de 20 et rejoue : presque tout blocage est un problème de vitesse.'],
   ['Quand ça bloque','Isole les deux notes où ça casse et fais l’aller-retour dix fois.'],
@@ -1684,7 +1741,7 @@ function renderBackup(){const el=$('#bk-last');if(!el)return;const lb=S.meta&&S.
   el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:S.seances.length?' · tout est à l’abri':''}.`;
   el.classList.toggle('warn',!!n&&(!lb||Date.now()-lb>7*864e5));$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));}
 async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}.json`;
-  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine}},null,1);
+  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach}},null,1);
   const file=new File([body],name,{type:'application/json'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
@@ -1695,16 +1752,19 @@ async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.a
   if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Les séances sont fusionnées, le reste est remplacé.`)))return;
   snapshot('import');const before=JSON.stringify(S);
   try{const all={};[...S.seances,...d.seances].forEach(s=>{all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
-    if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;if(Object.keys(j.data).includes('mine'))S.mine=d.mine;
+    if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;if(Object.keys(j.data).includes('mine'))S.mine=d.mine;if(Object.keys(j.data).includes('coach'))S.coach=d.coach;
     mineSync();renderAll();}catch(e){Object.assign(S,JSON.parse(before));renderAll();toast('Fichier non reconnu');return;}
   saveLocal();toast('Import réussi');}
 
 /* ---------- Navigation ---------- */
-const VIEWS=['seance','clavier','oreille','lecture','tempo','morceaux','gauche','astuces','journal'];
+const VIEWS=['seance','coach','clavier','oreille','lecture','tempo','morceaux','gauche','astuces','journal'];
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
-  mtChip();if(v!=='seance')ecStop();
+  mtChip();if(v!=='seance'&&v!=='coach')ecStop();
+  // Une seule carte « Travailler un morceau » : elle passe dans le Coach, puis revient dans Séance.
+  if(v==='coach'&&$('#wk-card').parentNode!==$('#co-slot')){$('#co-slot').appendChild($('#wk-card'));renderCoach();setTimeout(wkScroll,30);}
+  if(v==='seance'&&$('#wk-card').previousElementSibling!==$('#wk-home'))$('#wk-home').after($('#wk-card'));
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
   if(v==='seance')setTimeout(wkScroll,30);
   if(v==='lecture'&&!lecCur)lecNew();
@@ -1741,6 +1801,8 @@ function init(){
   $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ecStop();});
   smpLoad();
+  $('#co-tips').addEventListener('click',e=>{const b=e.target.closest('button[data-cob]');if(!b)return;wkGo(+b.dataset.cob);const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);});
+  $('#co-reset').onclick=async()=>{if(!(await ask(`Effacer le suivi de « ${WORK[WK.id].t} » ?`)))return;if(S.coach)delete S.coach[WK.id];saveLocal();renderCoach();};
   renderEx();renderTips();$('#tip-next').onclick=()=>{tipShift++;renderTips();};
   $('#ex-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b){openEx(b.dataset.ex);return;}const l=e.target.closest('button[data-exl]');if(l)playEx(l.dataset.exl);});
   $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();});
