@@ -103,10 +103,13 @@ test('ST6. accords du vrai Steinway : justes reconnus, fausses notes repérées'
         for (let i = 0; i < n; i++) { const p = st + i * rate, k = Math.floor(p), f = p - k; out[i] += (x[k] || 0) * (1 - f) + (x[k + 1] || 0) * f; } }
       return { buf: out, sr }; };
     const good = [[48, 52, 55], [47, 53, 55], [50, 54], [64, 67, 71], [64, 67, 72], [36, 48], [48, 52, 55, 60], [55, 59, 62, 67]];
-    const bad = [[[48, 52, 55], [48, 51, 55], [52]], [[48, 52, 55], [48, 55], [52]], [[64, 67, 71], [64, 68, 71], [67]], [[47, 53, 55], [48, 52, 55], [47, 53]], [[64, 67, 72], [64], [67, 72]], [[50, 54], [48, 53], [50, 54]]];
+    const bad = [[[48, 52, 55], [48, 51, 55], [52]], [[48, 52, 55], [48, 55], [52]], [[64, 67, 71], [64, 68, 71], [67]], [[47, 53, 55], [48, 52, 55], [47, 53]], [[64, 67, 72], [64], [67, 72]], [[50, 54], [48, 53], [50, 54]],
+      [[47, 53, 55], [47, 55], [53]], [[64, 67, 71], [64, 71], [67]], [[48, 52, 55, 60], [48, 55, 60], [52]]];   // tierce oubliée : piège des harmoniques communes
     const refused = [], unseen = [];
     for (const ch of good) for (const t0 of [0.12, 0.3, 0.6]) { const { buf, sr } = mix(ch, t0); const p = chordCheck(buf, sr, ch); if (!p.every(Boolean)) refused.push(`${ch}@${t0}`); }
     for (const [want, play, miss] of bad) for (const t0 of [0.12, 0.3, 0.6]) { const { buf, sr } = mix(play, t0); const p = chordCheck(buf, sr, want), found = want.filter((m, k) => !p[k]); if (!miss.every(m => found.includes(m))) unseen.push(`${want}/${play}@${t0}`); }
+    // Do + Sol joués fort sans le Mi, à plusieurs instants : le Mi ne doit jamais être cru présent
+    for (const t0 of [0.08, 0.12, 0.2, 0.3, 0.45, 0.6, 0.9]) { const { buf, sr } = mix([48, 55], t0); if (chordCheck(buf, sr, [48, 52, 55])[1]) unseen.push(`Do+Sol@${t0}`); }
     return { refused, unseen }; });
   expect(r.unseen).toEqual([]);                                                  // aucune fausse note ratée
   expect(r.refused).toEqual([]);                                                 // aucun accord juste refusé

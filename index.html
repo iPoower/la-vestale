@@ -1355,12 +1355,19 @@ function fftMag(x){let n=1;while(n*2<=x.length)n*=2;const re=new Float64Array(n)
     for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const a=i+k,b=a+len/2,xr=re[b]*cr-im[b]*ci,xi=re[b]*ci+im[b]*cr;
       re[b]=re[a]-xr;im[b]=im[a]-xi;re[a]+=xr;im[a]+=xi;const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr;}}}
   const mag=new Float64Array(n/2);for(let i=0;i<n/2;i++)mag[i]=Math.hypot(re[i],im[i]);return {mag,n};}
-// Saillance d'une note : pics du spectre à ses six premières harmoniques (corde légèrement inharmonique), pondérés.
-function salience(sp,sr,m){const f0=a4()*Math.pow(2,(m-69)/12);let s=0;
-  for(let h=1;h<=6;h++){const f=h*f0*Math.sqrt(1+.0004*h*h);if(f>sr/2.4)break;const b=f*sp.n/sr,lo=Math.max(0,Math.floor(b-1)),hi=Math.min(sp.mag.length-1,Math.ceil(b+1));
+// Saillance d'une note : pics du spectre à ses harmoniques choisies (corde légèrement inharmonique), pondérés.
+const hzOf=m=>a4()*Math.pow(2,(m-69)/12),hInh=(m,h)=>h*hzOf(m)*Math.sqrt(1+.0004*h*h);
+function salience(sp,sr,m,hs){const f0=hzOf(m);let s=0;
+  for(const h of hs){const f=h*f0*Math.sqrt(1+.0004*h*h);if(f>sr/2.4)continue;const b=f*sp.n/sr,lo=Math.max(0,Math.floor(b-1)),hi=Math.min(sp.mag.length-1,Math.ceil(b+1));
     let mx=0;for(let i=lo;i<=hi;i++)if(sp.mag[i]>mx)mx=sp.mag[i];s+=mx/Math.sqrt(h);}return s;}
 // Pour chaque note attendue : présente si elle ressort nettement de ses deux voisines à un demi-ton.
-function chordCheck(buf,sr,notes){const sp=fftMag(buf);return notes.map(m=>salience(sp,sr,m)>1.5*Math.max(salience(sp,sr,m-1),salience(sp,sr,m+1)));}
+// On écarte les harmoniques partagées avec une autre note de l'accord (ex. : 4e harmonique de Mi3 ≈ 5e de Do3),
+// sinon Do + Sol joués sans Mi feraient croire que le Mi est là. S'il en reste moins de deux, on les garde toutes
+// (note doublée à l'octave : vérification indulgente).
+function chordCheck(buf,sr,notes){const sp=fftMag(buf);
+  return notes.map(m=>{const all=[1,2,3,4,5,6].filter(h=>hInh(m,h)<=sr/2.4);
+    const un=all.filter(h=>!notes.some(o=>o!==m&&[1,2,3,4,5,6,7,8].some(k=>Math.abs(h*hzOf(m)-k*hzOf(o))/(h*hzOf(m))<.012)));
+    const hs=un.length>=2?un:all;return salience(sp,sr,m,hs)>1.4*Math.max(salience(sp,sr,m-1,hs),salience(sp,sr,m+1,hs));});}
 const EC={on:false,tok:0,mode:'',stream:null,src:null,an:null,buf:null,big:null,votes:null,cv:0,iv:0,seq:[],i:0,sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]};
 // Nom d'une note dans le morceau en cours (bémols si le morceau en demande).
 function wkNm(m){const fl=WORK[WK.id].flats;return (fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m);}
