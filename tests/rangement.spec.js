@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 test('R1. Séance : morceaux rangés par groupes, titres harmonisés, exercices et partitions à part', async ({ page }) => {
   await page.goto('./#seance');
   const groups = await page.$$eval('#wk-piece optgroup', gs => gs.map(g => g.getAttribute('label')));
-  expect(groups).toEqual(['Premiers morceaux', 'Chansons du cours', 'Classiques', 'Objectif Alkan', 'Exercices de main gauche']);
+  expect(groups).toEqual(['Niveau 1 · Débutant', 'Niveau 2 · Facile', 'Niveau 3 · Intermédiaire', 'Niveau 4 · Avancé', 'Niveau 5 · Objectif', 'Exercices de main gauche']);
   const opts = await page.$$eval('#wk-piece option', os => os.map(o => o.textContent));
   expect(opts.slice(0, 7)).toEqual(['Hymne à la joie', 'À la claire fontaine', 'J’ai du bon tabac', 'Au clair de la lune', 'Frère Jacques', 'Ah ! vous dirai-je maman', 'Good King Wenceslas']);
   expect(opts).toContain('Bébé s’endort — Chrétien');
@@ -18,11 +18,11 @@ test('R2. Enchaînements, Répertoire et Tempo suivent le même rangement', asyn
   expect(await page.$$eval('#prog-sel .grp', s => s.map(x => x.textContent))).toEqual(['Grilles d’accords', 'Partitions complètes']);
   expect(await page.locator('#prog-sel button', { hasText: '· partition' }).count()).toBe(0);
   await page.goto('./#morceaux');
-  expect(await page.$$eval('#pieces .grp-h', s => s.map(x => x.textContent))).toEqual(['Premiers morceaux', 'Méthode du cours', 'Chansons du cours', 'Classiques', 'Objectif Alkan', 'À écouter']);
-  await expect(page.locator('#pieces article.piece')).toHaveCount(24);
+  expect(await page.$$eval('#pieces .grp-h', s => s.map(x => x.textContent))).toEqual(['Niveau 1 · Débutant', 'Niveau 2 · Facile', 'Niveau 3 · Intermédiaire', 'Niveau 4 · Avancé', 'Niveau 5 · Objectif']);
+  await expect(page.locator('#pieces article.piece')).toHaveCount(31);
   await page.goto('./#tempo');
   expect(await page.$$eval('#mt-preset > option', o => o.map(x => x.value))).toEqual(['libre']);
-  expect(await page.$$eval('#mt-preset optgroup', g => g.length)).toBe(6);
+  expect(await page.$$eval('#mt-preset optgroup', g => g.length)).toBe(5);
 });
 
 test('R3. portée : notes de la mesure, noms, comptage « 1 2 3 4 » ; liaisons et altérations visibles', async ({ page }) => {
