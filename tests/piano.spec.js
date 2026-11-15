@@ -114,3 +114,25 @@ test('ST6. accords du vrai Steinway : justes reconnus, fausses notes repérées'
   expect(r.unseen).toEqual([]);                                                  // aucune fausse note ratée
   expect(r.refused).toEqual([]);                                                 // aucun accord juste refusé
 });
+
+test('ST7. vrai Steinway, notes tenues qui « respirent » : aucune fausse faute, aucune note comptée deux fois', async ({ page }) => {
+  await page.goto('./#coach');
+  // @ts-ignore
+  await expect.poll(() => page.evaluate(() => SMP.state), { timeout: 15000 }).toBe(2);
+  await page.evaluate(() => { MediaDevices.prototype.getUserMedia = async () => ac().createMediaStreamDestination().stream; });
+  await page.locator('#wk-hands button[data-h="rh"]').click();
+  await page.locator('#ec-go').click();
+  await expect(page.locator('#ec-go')).toHaveText('Arrêter l’écoute');
+  // @ts-ignore
+  const r = await page.evaluate(() => { clearInterval(EC.iv);
+    // Chaque note : l'enregistrement tenu 0,7 s puis étouffé, lu par trames de 70 ms comme le micro (fenêtre de 16 384 échantillons).
+    const feed = (m, hold) => { let s = SMP_NOTES[0]; for (const c of SMP_NOTES) if (Math.abs(c - m) < Math.abs(s - m)) s = c;
+      const b = SMP.buf[s], x = b.getChannelData(0), sr = b.sampleRate, rate = Math.pow(2, (m - s) / 12), n = 16384, end = Math.round(hold * sr);
+      for (let t = 0.07; t < hold + 0.6; t += 0.07) { const e = Math.round(t * sr), out = new Float32Array(n);
+        for (let i = 0; i < n; i++) { const j = e - n + i; if (j < 0 || j >= end) continue; const p = j * rate, k = Math.floor(p), f = p - k; out[i] = 0.6 * ((x[k] || 0) * (1 - f) + (x[k + 1] || 0) * f); }
+        ecFeed(out.subarray(n - 4096), sr, out); } };
+    const out = [];
+    for (const [hold, notes] of [[0.7, [76, 76, 77, 79]], [1.2, [79, 77, 76, 74]]]) { for (const m of notes) feed(m, hold); out.push([EC.ok, EC.ko, document.querySelector('#wk-pos').textContent]); }
+    return out; });
+  expect(r).toEqual([[4, 0, 'Mesure 2/16'], [8, 0, 'Mesure 3/16']]);            // Mi Mi Fa Sol, puis Sol Fa Mi Ré
+});
