@@ -8,6 +8,7 @@ Studio de travail au piano, en application web installable (PWA) : séance guid�
 - Les données restent sur l'appareil (`localStorage`). Le bouton « Exporter » du Journal produit une sauvegarde JSON, et « Importer » la restaure.
 - Copies automatiques sur l'appareil : une par jour et une avant chaque suppression, import ou restauration (10 au plus), restaurables depuis le Journal. Elles réparent une erreur mais ne remplacent pas l'export.
 - Mes partitions (onglet Morceaux) : tu saisis toi-même la main droite d'une feuille que tu possèdes, mesure par mesure, avec en option la main gauche d'un morceau de l'app. Ces partitions restent sur l'appareil (et dans l'export) ; elles ne sont jamais envoyées ni publiées.
+- Écoute au micro (Séance › Écoute-moi) : l'app reconnaît la note jouée au piano (autocorrélation, calcul sur l'appareil) et vérifie la main choisie, note par note ; réglage sur le La du piano pour un instrument désaccordé. Le son du micro n'est ni enregistré ni envoyé.
 - Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours, un bandeau propose de sauvegarder en un toucher (report possible de 24 h).
 
 ## iPhone
