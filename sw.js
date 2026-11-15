@@ -1,8 +1,10 @@
 // La Vestale : fonctionne hors ligne. Changer VERSION à chaque mise à jour.
-const VERSION = 'la-vestale-v28';
+const VERSION = 'la-vestale-v29';
 const FONTS = ['atkinson-hyperlegible-latin-400', 'atkinson-hyperlegible-latin-700', 'cormorant-garamond-latin-500', 'cormorant-garamond-latin-600',
   'cormorant-garamond-latin-700', 'noto-music-latin-400', 'noto-music-clefs-400'].map(f => './fonts/' + f + '.woff2');
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png', ...FONTS];
+// Sons de piano (Steinway & Sons modèle B, University of Iowa Electronic Music Studios) : une note sur trois, Do1 à Do8.
+const SAMPLES = Array.from({ length: 29 }, (_, i) => './samples/p' + (24 + 3 * i) + '.mp3');
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png', ...FONTS, ...SAMPLES];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });

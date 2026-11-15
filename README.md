@@ -39,6 +39,10 @@ Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et 
 
 Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous SIL Open Font License 1.1 (textes dans `fonts/`). Fichiers issus des paquets Fontsource 5.3.0 (sous-ensemble latin) ; Noto Music est en plus réduite aux deux clés musicales U+1D11E et U+1D122.
 
+## Son du piano
+
+Les notes sont jouées avec des enregistrements d'un piano Steinway & Sons modèle B, réalisés par l'University of Iowa Electronic Music Studios (Musical Instrument Samples, Lawrence Fritts, 2001), mis à disposition « for any projects, without restrictions » (https://theremin.music.uiowa.edu/MIS.html). Le dossier `samples/` contient une note sur trois, du Do1 au Do8, en mono et en MP3 (environ 750 Ko) ; les notes voisines sont obtenues en variant la vitesse de lecture. Les fichiers sont servis par l'app elle-même et mis en cache pour le hors-ligne ; si un son manque, le son de synthèse prend le relais. La Vestale n'est ni affiliée à Steinway & Sons ni approuvée par cette marque.
+
 ## Sources et licences des morceaux
 
 - Exercices de main gauche (onglet « Main gauche ») : écrits pour l’app.

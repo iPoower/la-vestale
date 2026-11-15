@@ -328,7 +328,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="row between"><h2>Clavier</h2></div>
     <div class="seg" id="noms" aria-label="Noms des notes"><button data-n="fr" class="on">Do Ré Mi</button><button data-n="en">C D E</button><button data-n="both">Les deux</button></div>
     <div class="kb-wrap" id="kb-main"></div>
-    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. En France, on l’appelle souvent Do3 (La3 = 440 Hz) : l’app suit la notation internationale, une octave au-dessus. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux.</p>
+    <p class="hint">Do4 = Do central : le Do du milieu, en face de toi, juste à gauche du groupe de deux touches noires. En France, on l’appelle souvent Do3 (La3 = 440 Hz) : l’app suit la notation internationale, une octave au-dessus. Pas de son ? Monte le volume ; sur un iPhone ancien (avant iOS 17), coupe aussi le mode silencieux. Son : piano Steinway &amp; Sons modèle B (enregistrements de l’University of Iowa).</p>
   </div>
   <div class="card" id="mg-card">
     <h2>Main gauche</h2>
@@ -663,13 +663,33 @@ function ac(){try{
     if(navigator.audioSession&&!EC_ON&&navigator.audioSession.type!=='playback'){try{navigator.audioSession.type='playback';}catch(e){}}
     if(AC&&(AC_STALE||AC.state==='closed'||AC.state==='interrupted')){const old=AC;AC=null;MASTER=null;BUS=null;AC_STALE=false;if(typeof MT!=='undefined'&&MT.on)mtStop();try{old.close().catch(()=>{});}catch(e){}}
     if(!AC)buildAC();
+    smpLoad(AC);
     if(AC.state!=='running'){const cur=AC;try{cur.resume().catch(()=>{});}catch(e){}setTimeout(()=>{if(cur===AC&&cur.state!=='running')AC_STALE=true;},400);}
     // Déverrouillage iOS : un son vide joué pendant le toucher.
     const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource();s.buffer=b;s.connect(AC.destination);s.start(0);
   }catch(e){}return AC;}
 const hz=m=>440*Math.pow(2,(m-69)/12);
+/* Son de piano : Steinway & Sons modèle B, enregistré note par note par l'University of Iowa Electronic Music Studios
+   (enregistrements libres d'utilisation). Une note sur trois est enregistrée (Do1 à Do8) ; les voisines sont obtenues
+   en variant un peu la vitesse de lecture. Tant que les sons ne sont pas chargés, ou s'ils manquent, le son de synthèse joue. */
+const SMP_NOTES=[24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108];
+const SMP={state:0,buf:{},fail:0};          // state : 0 à charger, 1 en cours, 2 prêt
+// Retire le blanc que le format MP3 ajoute au début, pour que la note parte au toucher.
+function smpTrim(a,b){const x=b.getChannelData(0);let pk=0;for(let i=0;i<x.length;i++){const v=Math.abs(x[i]);if(v>pk)pk=v;}
+  let on=0;while(on<x.length&&Math.abs(x[on])<pk*.02)on++;const st=Math.max(0,on-Math.round(b.sampleRate*.002));if(st<8)return b;
+  const out=a.createBuffer(1,x.length-st,b.sampleRate);out.getChannelData(0).set(x.subarray(st));return out;}
+// Décodage dès l'ouverture (contexte hors ligne, sans attendre un toucher) : la première note est déjà celle du piano.
+function smpLoad(a){if(SMP.state||SMP.fail>=3)return;if(!a){const C=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!C)return;try{a=new C(1,1,44100);}catch(e){return;}}SMP.state=1;
+  Promise.all(SMP_NOTES.map(n=>fetch('samples/p'+n+'.mp3').then(r=>{if(!r.ok)throw new Error('son');return r.arrayBuffer();})
+    .then(ab=>new Promise((res,rej)=>a.decodeAudioData(ab,res,rej))).then(b=>{SMP.buf[n]=smpTrim(a,b);})))
+    .then(()=>{SMP.state=2;}).catch(()=>{SMP.state=0;SMP.fail++;});}
+// Joue l'enregistrement le plus proche de la note ; à la fin de la durée, le son s'éteint comme sous l'étouffoir.
+function smpPlay(a,m,t,dur,vel,dest){try{let n=SMP_NOTES[0];for(const c of SMP_NOTES)if(Math.abs(c-m)<Math.abs(n-m))n=c;const b=SMP.buf[n];if(!b)return false;
+    const s=a.createBufferSource(),g=a.createGain();s.buffer=b;s.playbackRate.value=Math.pow(2,(m-n)/12);
+    g.gain.setValueAtTime(.55*vel,t);g.gain.setTargetAtTime(.0001,t+dur,.14);s.connect(g);g.connect(dest||MASTER);s.start(t);s.stop(t+dur+1.2);return true;}catch(e){return false;}}
 function playNote(m,when,dur,vel,dest){const a=ac();if(!a)return;dur=dur||1.2;vel=vel==null?.8:vel;
   const t=Math.max(when||0,a.currentTime+.005),f=hz(m);
+  if(SMP.state===2&&smpPlay(a,m,t,dur,vel,dest))return;
   const g=a.createGain(),lp=a.createBiquadFilter();lp.type='lowpass';lp.Q.value=.4;
   lp.frequency.setValueAtTime(Math.min(9000,f*9),t);lp.frequency.setTargetAtTime(Math.max(600,f*2.5),t,.35);
   [[1,1,'triangle'],[2,.32,'sine'],[3,.13,'sine'],[4,.05,'sine']].forEach(p=>{const o=a.createOscillator();o.type=p[2];o.frequency.value=f*p[0]*(1+.0003*p[0]*p[0]);const og=a.createGain();og.gain.value=p[1];o.connect(og);og.connect(lp);o.start(t);o.stop(t+dur+1.4);});
@@ -1642,6 +1662,7 @@ function init(){
   $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
   $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ecStop();});
+  smpLoad();
   renderEx();renderTips();$('#tip-next').onclick=()=>{tipShift++;renderTips();};
   $('#ex-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b){openEx(b.dataset.ex);return;}const l=e.target.closest('button[data-exl]');if(l)playEx(l.dataset.exl);});
   $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();});
