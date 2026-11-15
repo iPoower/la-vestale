@@ -127,7 +127,7 @@ test('C5. suivi gardé après rechargement, exporté, importé, nettoyé ; « Ef
   await page.locator('#bk-file').setInputFiles({ name: 'sauvegarde.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(j)) });
   await page.locator('#dlg-ok').click();
   // @ts-ignore
-  await expect.poll(() => page.evaluate(() => JSON.stringify(S.coach))).toBe(JSON.stringify({ hymne: { b: { 0: [1, 0, 0, 2] }, c: { '79>72': 1 } } }));
+  await expect.poll(() => page.evaluate(() => JSON.stringify(S.coach, (k, v) => k === 't' ? undefined : v))).toBe(JSON.stringify({ hymne: { b: { 0: [1, 0, 0, 2] }, c: { '79>72': 1 } } }));
   await page.goto('./#coach');
   await page.locator('#co-reset').click();
   await page.locator('#dlg-ok').click();
