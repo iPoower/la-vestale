@@ -364,7 +364,9 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="kb-wrap" id="kb-full" aria-label="Clavier complet"></div>
     <p class="small muted">Clavier complet : <b style="color:var(--laiton)">doré</b> = main droite, <b style="color:var(--feutre)">vert</b> = main gauche. Les touches s’allument pendant l’écoute.</p>
     <div class="seg" id="prog-pat"><button data-p="bloc" class="on">Accords tenus</button><button data-p="croches">Croches arpégées</button></div>
-    <label class="field">Tempo : noire = <b id="prog-bpm-v">60</b><input type="range" id="prog-bpm" min="40" max="110" value="60"></label>
+    <label class="field">Tempo : noire = <b id="prog-bpm-v">60</b><input type="range" id="prog-bpm" min="40" max="160" value="60"></label>
+    <div class="row"><label class="toggle"><input type="checkbox" id="prog-real" checked> Écoute réaliste</label><button class="btn ghost" id="prog-tempo">Tempo de la partition</button></div>
+    <p class="small muted" id="prog-real-info"></p>
     <div class="row"><button class="btn primary" id="prog-play">Écouter</button><button class="btn" id="prog-stop">Stop</button></div>
     <p class="small muted">Modèle sonore pour l’oreille. Pour les doigtés et la disposition exacte, ta feuille fait foi.</p>
   </div>
@@ -788,19 +790,40 @@ function renderProg(){const id=progPiece();
   if(id){const bars=workBars(id);$('#prog-src').textContent=`${WORK[id].t} : toute la partition, deux mains (${bars.length} mesures). ${WORK[id].src}`;
     $('#prog-seq').innerHTML=bars.map((b,i)=>`<span data-i="${i}">${i+1} · ${esc(b.lh.filter(e=>e[3]).map(e=>LHSHORT[e[3]]).join('/'))}</span>`).join('');}
   else{const p=PROG[curProg];$('#prog-src').textContent=p.src;$('#prog-seq').innerHTML=p.s.map((x,i)=>`<span data-i="${i}">${esc(x[0])}</span>`).join('');}
-  $$('#prog-pat button').forEach(b=>b.disabled=!!id);buildFull();}
-function playPiece(id){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#prog-bpm').value;const bars=workBars(id);const t0=a.currentTime+.1;const bpb=WORK[id].bpb;
+  $$('#prog-pat button').forEach(b=>b.disabled=!!id);buildFull();progRealInfo();}
+function progTempo(){const id=progPiece(),x=id&&REAL[id];if(!x)return;$('#prog-bpm').value=x.tempo;$('#prog-bpm-v').textContent=x.tempo;}
+function progRealInfo(){const id=progPiece(),x=id&&REAL[id],el=$('#prog-real-info');$('#prog-real').closest('.row').classList.toggle('hidden',!id);if(!id){el.textContent='';return;}
+  if(!realOn()){el.textContent='Lecture métronomique : tempo constant, mêmes volumes, sans pédale ni reprise. Idéale pour suivre note à note.';return;}
+  const parts=[`tempo de la partition : noire ≈ ${x?x.tempo:'—'}`];if(x&&x.vel)parts.push('nuances de l’édition');else parts.push('appui sur le 1er temps');
+  if(x&&x.ped)parts.push('pédale de l’édition');else if(x&&x.autoPed)parts.push('pédale automatique (approximation)');if(x&&x.rep)parts.push('reprises et 1re / 2e fins');parts.push('ralenti final');
+  el.textContent='Écoute réaliste : '+parts.join(', ')+'. Ce n’est pas une interprétation : écoute aussi un vrai pianiste.';}
+function playPiece(id){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#prog-bpm').value;const bars=workBars(id);const t0=a.currentTime+.1;
+  const w=WORK[id],bpb=w.bpb,x=REAL[id]||{},real=realOn();
   FKB.clear();
-  const startOf=i=>WORK[id].pickup&&i>0?(WORK[id].pickup+(i-1)*bpb):i*bpb;
+  const len=i=>i===0&&w.pickup?w.pickup:bpb;
+  const order=playOrder(id,bars.length),starts=[];let total=0;order.forEach(i=>{starts.push(total);total+=len(i);});
+  // Ralenti final : les deux dernières mesures jouées ralentissent jusqu'à 70 % du tempo.
+  const R=real?Math.max(0,total-2*bpb):total,RL=total-R;
+  const sec=b=>b<=R||!RL?b*spb:R*spb-spb*(RL/.3)*Math.log(1-.3*Math.min(b-R,RL)/RL);
+  // Pédale : celle de l'édition (Liszt) ou automatique, changée à chaque mesure et à chaque nouvelle note de basse.
+  let changes=null;
+  if(real&&x.autoPed){changes=[];let bass=null;order.forEach((i,k)=>{changes.push(starts[k]);let lb=starts[k];
+      bars[i].lh.forEach(e=>{if(e[0]){const att=e[0].filter((m,j)=>!(e[4]&&e[4][j]===0));if(att.length){const lo=Math.min(...att);if(lo!==bass){bass=lo;changes.push(lb);}}}lb+=e[1];});});
+    changes=[...new Set(changes)].sort((p,q)=>p-q);changes.push(total);}
+  const release=eb=>{if(!real)return eb;if(changes){const c=changes.find(v=>v>=eb-1e-9);return c==null?eb:Math.max(eb,Math.min(c,eb+6));}
+    if(x.ped){const pd=x.ped.find(([u,v])=>eb>u+1e-9&&eb<=v+1e-9);return pd?pd[1]:eb;}return eb;};
+  const now=i=>()=>$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));
   // Programmation par tranches : les mesures des 4 prochaines secondes, puis la suite 2 s avant qu'elle ne commence.
-  // Un long morceau (Clair de lune : près de 1 500 notes) ne crée plus des milliers de sons d'un coup.
-  let next=0;const one=i=>{const b=bars[i],tb=t0+startOf(i)*spb;at(tb-a.currentTime,()=>{$$('#prog-seq span').forEach(s=>s.classList.toggle('now',+s.dataset.i===i));});
-    [['rh','hl',.75],['lh','hl2',.6]].forEach(([hd,cls,vel])=>{let t=tb;b[hd].forEach(e=>{const ms=e[0];if(ms)ms.forEach((m,j)=>{const L=e[4]?e[4][j]:e[1];if(L>0)playNote(m,t,L*spb*.92,vel,bus);});
-      at(t-a.currentTime,()=>{FKB.clear(cls);if(ms)FKB.mark(ms,cls);});t+=e[1]*spb;});});};
-  const chunk=()=>{if(BUS!==bus)return;const horizon=a.currentTime+4;while(next<bars.length&&t0+startOf(next)*spb<horizon)one(next++);
-    if(next<bars.length)at(t0+startOf(next)*spb-a.currentTime-2,chunk);};
+  let next=0;const one=k=>{const i=order[k],b=bars[i],B=starts[k],vb=real&&x.vel?x.vel[i]:null;at(t0+sec(B)-a.currentTime,now(i));
+    [['rh','hl',.75,0],['lh','hl2',.6,1]].forEach(([hd,cls,vel0,hi])=>{let lb=0;b[hd].forEach((e,ei)=>{const ms=e[0],sb=B+lb;
+      if(ms)ms.forEach((m,j)=>{const L=e[4]?e[4][j]:e[1];if(!(L>0))return;let v=vel0;
+        if(real){const mv=vb&&vb[hi]&&vb[hi][ei];if(mv)v=(.3+.7*mv/127)*(hi?.82:1);else if(lb<1e-9)v*=1.12;}   // nuance de l'édition, sinon appui sur le 1er temps
+        const eb=sb+L,rel=release(eb);playNote(m,t0+sec(sb),Math.max(.05,(sec(rel)-sec(sb))*(rel>eb+1e-9?1:.92)),v,bus);});
+      at(t0+sec(sb)-a.currentTime,()=>{FKB.clear(cls);if(ms)FKB.mark(ms,cls);});lb+=e[1];});});};
+  const chunk=()=>{if(BUS!==bus)return;const horizon=a.currentTime+4;while(next<order.length&&t0+sec(starts[next])<horizon)one(next++);
+    if(next<order.length)at(t0+sec(starts[next])-a.currentTime-2,chunk);};
   chunk();
-  at(t0+startOf(bars.length)*spb-a.currentTime+.2,()=>{FKB.clear();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
+  at(t0+sec(total)-a.currentTime+.2,()=>{FKB.clear();$$('#prog-seq span').forEach(s=>s.classList.remove('now'));});}
 function playProg(){const id=progPiece();if(id)return playPiece(id);const a=ac();if(!a)return;const bus=newBus();const bpm=+$('#prog-bpm').value,spb=60/bpm;let t=a.currentTime+.08;const t0=t;
   PROG[curProg].s.forEach((x,i)=>{const [name,beats]=x;const v=voicing(name,0),c=CH[name],dur=beats*spb;
     playNote(c.b,t,dur*.98,.75,bus);
@@ -1290,6 +1313,21 @@ function wkStaff(b,offset){const svg=$('#wk-staff');if(!svg)return;const ink='#2
   Object.values(rows).forEach(r=>{let right=-1e9;r.sort((a,c)=>+a.getAttribute('x')-+c.getAttribute('x')).forEach(el=>{let b;try{b=el.getBBox();}catch(e){return;}if(!b.width)return;
     if(b.x<right+1)el.remove();else right=b.x+b.width;});});}
 
+/* ---------- Écoute réaliste (Enchaînements) ---------- */
+// Tempo de référence (noire = …, indicatif, d'après l'indication de la partition), nuances et pédale des éditions Mutopia
+// quand elles existent, pédale automatique (approximation) pour les pièces qui en ont besoin, ordre de jeu avec reprises.
+const REAL={hymne:{tempo:100},fontaine:{tempo:96},tabac:{tempo:104},clair:{tempo:92},frere:{tempo:100},twinkle:{tempo:96},wenceslas:{tempo:100},
+  sourire:{tempo:80},bebe:{tempo:72},bach120:{tempo:100},bach846:{tempo:66},schumann1:{tempo:72},alkan311:{tempo:54},
+  candeur:{tempo:108,rep:'1-8,1-8,9-16,9-15,17-23',vel:[[[69,69,69,69,69,69,69,69],[90]],[[69,60,50,41,41,41,41,41],[90]],[[41,41,41,41,41,41,41,41],[90]],[[41,41,41,41,41,41,41,41],[0]],[[41,41,41,41,41,41,41,41],[90]],[[41,41,41,41,41,41,41,41],[90]],[[41,50,60,69,69,69,69,69],[90]],[[69,69,69,69,69,0],[90,0]],[[69,69,69,69,69,69,69,69],[90,90,90,90,90,90,90,90]],[[69],[90,90,90,90,90,90,90,90]],[[69,69,69,69,69,69,69,69],[90,90,90,90,90,90,90,90]],[[69],[90,90,90,90,90,90,90,90]],[[69,90,90,90,69,90,90,90],[90,90]],[[127,117,107,98,98,98,98,98],[90]],[[69,69,69,69,69,69,69,69],[90,90]],[[69,0],[90,90,90,90,90,0]],[[69,69,69,69,69,69,69,69],[90,0]],[[69,60,50,41,41,31,22,12],[90,90]],[[12,12,12,12,12,12,12,12],[90]],[[12,12,12,12,12,12,12,12],[90,90]],[[12,0],[90,0,90,90,90,90]],[[69,0],[90,90,90,90,90]],[[62],[90]]]},
+  arabesqueb:{tempo:132,rep:'1-10,3-9,11-27,12-26,28-33',vel:[[[0],[69,69]],[[0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[0,90,90,90],[69,69]],[[90,0,90],[69,69]],[[0,90,90,90],[69,69]],[[90,0,127],[69,0,69]],[[127,127,0],[69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,69]],[[95,95,95,95],[69,69,69,69]],[[95,95],[69,69,69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[0,69,69,69],[69,69]],[[69,69],[69,69]],[[0,69,69,69],[69,69]],[[69],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[95,95,95,95,95,0],[69,69,69,69,69,0]],[[127],[69]]]},
+  liszt3:{tempo:56,vel:[[[0],[90,90,90,90,90,90,90,90,90,90,90,90]],[[0],[90,90,90,90,90,90,90,90,90,90,90,90]],[[0,90],[90,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90,90],[0,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90],[0,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90],[0,90,90,90,90,90,90,90,90,90,90,90]],[[90,0,90],[0,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90,90],[90,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90],[0,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90],[90,90,90,90,90,90,90,90,90,90,90,90]],[[90,0,90],[0,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90,90],[90,90,90,90,90,90,90,90,90,90,90,90]],[[90,90,90,90],[90,90,90,90,90,90,90,90,90,90,90,90]],[[90,97,104,111,118,118,118],[0]],[[118,118,118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118,118,118,118,118,118,118,118,118],[0]],[[118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,0],[90,90,90,90,90,90,90,90,90,90,90,90]],[[0,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,0,118,118,118,118,118,118,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,0,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118,118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,0,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,0,118],[0,90,90,90,90,90,90,90,90,90,90,90]],[[118,0,118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,118,118,118,118,118,118,118],[90,90,90,90,90,90,90,90,90,90,90,90]],[[118,121,124,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127],[90,90,90,90,90,90,0]],[[127,0,127],[90,90,0,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127,127],[0,90,90,90,90,90,90,90,90,90,90,90]],[[127,0,127],[0,90,90,90,90,90,90,90,90,90,90,90]],[[127,0,127,127,127,127],[90,90,0,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127],[90,90,0,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127,127,127,127,127],[90,90,0,90,90,90,90,90,90,0,90,90,90,90]],[[127,127,127,127],[90,90,0,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,0],[90,90,90,90,90,90,90,90,90,90,90,90]],[[0,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127,127],[0,90,90,90,0,90,0]],[[127,127,127,127],[0,90,90,90,90,90,0]],[[127,0],[0,90,90,90,90,90,90,90,90,90,90,90]],[[0,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127,127,127,127,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,0,127],[0,90,90,90,90,90,90,90,90,90,90,0]],[[127,127,127,127,127,127,127,127],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,0,127],[0,90,90,90,90,90,90,90,90,90,90,90]],[[127,0,127,127,127],[90,90,90,90,0,90,90,90,90,90,90,90]],[[127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127],[0]],[[127,0,53,53,53],[90,90,90,90,90,90,90,90,90,90,90,90]],[[127,127,127,127,127,127,127,127],[0,90,90,90,90,90,0,90,90,90,90,90]],[[127,127,127,127,127,127,127,127],[0]],[[127,127,127,127],[0]],[[0,127,0],[0]]],ped:[[0.0,12.0],[12.0,16.0],[20.0,28.0],[28.0,34.0],[34.0,36.0],[44.0,48.0],[48.0,52.0],[64.0,66.0],[66.0,68.0],[68.0,76.0],[76.0,80.0],[84.0,88.0],[88.0,92.0],[92.0,98.0],[98.0,100.0],[108.0,112.0],[112.0,116.0],[120.0,124.0],[124.0,128.0],[128.0,132.0],[132.0,136.0],[136.0,140.0],[140.0,144.0],[144.0,148.0],[152.0,160.0],[160.0,164.0],[164.0,168.0],[176.0,178.0],[180.0,184.0],[184.0,192.0],[192.0,196.0],[200.0,208.0],[208.0,216.0],[216.0,224.0]]},
+  clairlune:{tempo:60,autoPed:true},alkan8:{tempo:81,autoPed:true}};
+REAL.alkan311.autoPed=true;
+function realOn(){const c=$('#prog-real');return !c||c.checked;}
+// Ordre des mesures jouées (indices) : reprises et 1re / 2e fins quand la partition en a.
+function playOrder(id,n){const r=REAL[id]&&REAL[id].rep;if(!r||!realOn())return [...Array(n).keys()];const out=[];
+  r.split(',').forEach(s=>{const [a,b]=s.split('-').map(Number);for(let i=a;i<=(b||a);i++)if(i>=1&&i<=n)out.push(i-1);});return out;}
+
 /* ---------- Écoute au micro : l'app vérifie les notes jouées au piano ---------- */
 // Tout est calculé sur l'appareil : le son du micro n'est ni enregistré ni envoyé.
 const EC_MIN=.008,EC_CLEAR=.8;
@@ -1704,9 +1742,10 @@ function init(){
   $('#inv').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curInv=+b.dataset.i;$$('#inv button').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#with-bass').addEventListener('change',renderChordInfo);
   $('#play-block').onclick=()=>playChord(curChord,curInv,false);$('#play-arp').onclick=()=>playChord(curChord,curInv,true);
-  $('#prog-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.p!==curProg)progStop();curProg=b.dataset.p;$$('#prog-sel button').forEach(x=>x.classList.toggle('on',x===b));renderProg();});
+  $('#prog-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.p!==curProg)progStop();curProg=b.dataset.p;if(realOn()&&b.dataset.p.startsWith('w:'))progTempo();$$('#prog-sel button').forEach(x=>x.classList.toggle('on',x===b));renderProg();});
   $('#prog-pat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;progPat=b.dataset.p;$$('#prog-pat button').forEach(x=>x.classList.toggle('on',x===b));});
   $('#prog-bpm').addEventListener('input',e=>$('#prog-bpm-v').textContent=e.target.value);
+  $('#prog-tempo').onclick=()=>{progStop();progTempo();};$('#prog-real').addEventListener('change',()=>{progStop();progRealInfo();});
   $('#prog-play').onclick=playProg;$('#prog-stop').onclick=progStop;
   $('#mel-sel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;stopBus();curMel=b.dataset.m;$$('#mel-sel button').forEach(x=>x.classList.toggle('on',x===b));renderMel();});
   $('#mel-bpm').addEventListener('input',e=>$('#mel-bpm-v').textContent=e.target.value);
