@@ -89,3 +89,25 @@ test('ST5. hors ligne : les 29 enregistrements sont dans le cache de la version 
     return (await c.keys()).filter(r => /\/samples\/p\d+\.mp3$/.test(r.url)).length; });
   expect(n).toBe(29);
 });
+
+test('ST6. accords du vrai Steinway : justes reconnus, fausses notes repérées', async ({ page }) => {
+  await page.goto('./#seance');
+  // @ts-ignore
+  await expect.poll(() => page.evaluate(() => SMP.state), { timeout: 15000 }).toBe(2);
+  // @ts-ignore
+  const r = await page.evaluate(() => {
+    // Accord joué à partir des enregistrements (variation de vitesse, comme l'app), fenêtre de 16 384 échantillons.
+    const mix = (ms, t0) => { const n = 16384; let sr = 44100; const out = new Float32Array(n);
+      for (const m of ms) { let s = SMP_NOTES[0]; for (const c of SMP_NOTES) if (Math.abs(c - m) < Math.abs(s - m)) s = c;
+        const b = SMP.buf[s], x = b.getChannelData(0), rate = Math.pow(2, (m - s) / 12), st = Math.round(t0 * b.sampleRate); sr = b.sampleRate;
+        for (let i = 0; i < n; i++) { const p = st + i * rate, k = Math.floor(p), f = p - k; out[i] += (x[k] || 0) * (1 - f) + (x[k + 1] || 0) * f; } }
+      return { buf: out, sr }; };
+    const good = [[48, 52, 55], [47, 53, 55], [50, 54], [64, 67, 71], [64, 67, 72], [36, 48], [48, 52, 55, 60], [55, 59, 62, 67]];
+    const bad = [[[48, 52, 55], [48, 51, 55], [52]], [[48, 52, 55], [48, 55], [52]], [[64, 67, 71], [64, 68, 71], [67]], [[47, 53, 55], [48, 52, 55], [47, 53]], [[64, 67, 72], [64], [67, 72]], [[50, 54], [48, 53], [50, 54]]];
+    const refused = [], unseen = [];
+    for (const ch of good) for (const t0 of [0.12, 0.3, 0.6]) { const { buf, sr } = mix(ch, t0); const p = chordCheck(buf, sr, ch); if (!p.every(Boolean)) refused.push(`${ch}@${t0}`); }
+    for (const [want, play, miss] of bad) for (const t0 of [0.12, 0.3, 0.6]) { const { buf, sr } = mix(play, t0); const p = chordCheck(buf, sr, want), found = want.filter((m, k) => !p[k]); if (!miss.every(m => found.includes(m))) unseen.push(`${want}/${play}@${t0}`); }
+    return { refused, unseen }; });
+  expect(r.unseen).toEqual([]);                                                  // aucune fausse note ratée
+  expect(r.refused).toEqual([]);                                                 // aucun accord juste refusé
+});
