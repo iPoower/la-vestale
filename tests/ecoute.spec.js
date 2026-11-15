@@ -14,8 +14,9 @@ const PIANO = () => {
     for (let i = 0; i < n; i++) out[i] += noise * rnd() * 2; return out; };
   // Une note jouée : cinq trames de 70 ms en 70 ms, qui s'éteignent peu à peu (plusieurs notes = un accord).
   // @ts-ignore
-  window.__play = (ms, o = {}) => { for (const t0 of [0.02, 0.09, 0.16, 0.23, 0.30]) { const bufs = [].concat(ms).map(m => window.__piano(m, { ...o, t0 })); const sum = new Float32Array(4096);
-    bufs.forEach(b => b.forEach((v, i) => { sum[i] += v; })); ecFeed(sum, o.sr || 48000); } };
+  // (trames de 16 384 échantillons, comme le micro de l'app : la hauteur se lit sur les 4 096 dernières)
+  window.__play = (ms, o = {}) => { for (const t0 of [0.02, 0.09, 0.16, 0.23, 0.30]) { const bufs = [].concat(ms).map(m => window.__piano(m, { ...o, t0, n: 16384 })); const sum = new Float32Array(16384);
+    bufs.forEach(b => b.forEach((v, i) => { sum[i] += v; })); ecFeed(sum.subarray(16384 - 4096), o.sr || 48000, sum); } };
   // Micro simulé : un flux silencieux issu du contexte audio de l'app.
   // @ts-ignore
   // (posé sur le prototype : WebKit recrée l'objet navigator.mediaDevices, une propriété posée dessus se perd)
@@ -122,7 +123,30 @@ test('E4. main gauche : un accord est entendu sans être vérifié ; fin du morc
   // @ts-ignore
   await page.evaluate(() => window.__play([48, 52, 55]));
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 2/16');
-  await expect(page.locator('#ec-fb')).toHaveText('Accord entendu (non vérifié).');
+  await expect(page.locator('#ec-fb')).toHaveText('Accord juste : Do3 + Mi3 + Sol3');
+});
+
+test('E9. accord faux : la note manquante est nommée, l’accord n’avance pas tant qu’il n’est pas juste', async ({ page }) => {
+  await page.goto('./#seance');
+  await page.evaluate(() => { /* @ts-ignore */ window.__fakeMic(); });
+  await page.locator('#wk-hands button[data-h="lh"]').click();
+  await page.locator('#ec-go').click();
+  // @ts-ignore
+  await page.evaluate(() => clearInterval(EC.iv));
+  await expect(page.locator('#ec-msg')).toHaveText('Joue l’accord : Do3 + Mi3 + Sol3');
+  // @ts-ignore
+  await page.evaluate(() => window.__play([48, 51, 55]));                         // Do mineur au lieu de Do majeur
+  await expect(page.locator('#ec-fb')).toHaveText('Il manque Mi3. Rejoue l’accord.');
+  await expect(page.locator('#kb-wk .key.ko')).toHaveAttribute('aria-label', 'Mi3');
+  await expect(page.locator('#wk-pos')).toHaveText('Mesure 1/16');
+  // @ts-ignore
+  await page.evaluate(() => window.__play([48, 55]));                             // Do + Sol seuls
+  await expect(page.locator('#ec-fb')).toHaveText('Il manque Mi3. Rejoue l’accord.');
+  await expect(page.locator('#ec-score')).toHaveText('Justes 0 À revoir 2');
+  // @ts-ignore
+  await page.evaluate(() => window.__play([48, 52, 55]));
+  await expect(page.locator('#ec-fb')).toHaveText('Accord juste : Do3 + Mi3 + Sol3');
+  await expect(page.locator('#wk-pos')).toHaveText('Mesure 2/16');
 });
 
 test('E5. micro refusé ou absent : message clair, rien ne casse', async ({ page }) => {
