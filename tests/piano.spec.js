@@ -120,7 +120,7 @@ test('ST7. vrai Steinway, notes tenues qui « respirent » : aucune fausse faute
   // @ts-ignore
   await expect.poll(() => page.evaluate(() => SMP.state), { timeout: 15000 }).toBe(2);
   await page.evaluate(() => { MediaDevices.prototype.getUserMedia = async () => ac().createMediaStreamDestination().stream; });
-  await page.locator('#wk-hands button[data-h="rh"]').click();
+  await page.locator('#dc-hands button[data-h="rh"]').click();
   await page.locator('#ec-go').click();
   await expect(page.locator('#ec-go')).toHaveText('Arrêter l’écoute');
   // @ts-ignore

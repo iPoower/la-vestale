@@ -95,6 +95,18 @@ textarea{min-height:70px;resize:vertical}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
 .co-list li{margin-bottom:10px}
+#co-slot #wk-piece,#co-slot #wk-hands,#co-slot #wk-src,#co-slot #wk-pdf{display:none}
+#dc-card select,#dc-card .seg{margin-bottom:10px}
+.dc-bar{margin:12px 0 6px;gap:8px}
+.dc-names{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 10px}
+.dc-names button{min-height:44px;padding:6px 2px;border-radius:10px;border:1px solid var(--ligne);background:transparent;color:inherit;font-weight:700;font-size:.95rem;cursor:pointer;touch-action:manipulation}
+.dc-names button:disabled{opacity:.35}
+.dc-after{flex-wrap:wrap;gap:8px}
+#dc-card [hidden]{display:none!important}
+#dc-id ul{margin:6px 0;padding-left:18px} #dc-id li{margin-bottom:6px}
+.nh.cur{stroke:#b4432c;stroke-width:2.4px}.nh.cur:not([fill="none"]){fill:#b4432c}
+.nh.done{stroke:#4f7a3a}.nh.done:not([fill="none"]){fill:#4f7a3a}
+#kb-dc .key.ok{background:linear-gradient(180deg,#cfe8c2,#86b872)!important}
 #bk-last.warn{color:var(--ko)}
 .listen{border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .listen.on{border-color:var(--laiton)}
@@ -523,8 +535,23 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 <section class="view" id="v-coach">
   <div class="card">
     <h2>Coach : une partition, jusqu’à la réussite</h2>
-    <p class="small muted">Choisis ton morceau et ta main, touche « Écoute-moi » et joue sur ton piano. L’app suit chaque note, te dit quand tu te trompes, te fait rejouer la mesure jusqu’à ce qu’elle soit propre, et note où tu bloques.</p>
+    <p class="small muted"><b>1. Déchiffre</b> une mesure : les notes, les touches, les doigts, sans jouer. <b>2. Joue-la</b> sur ton piano avec « Écoute-moi » : l’app suit chaque note, te dit quand tu te trompes, te fait rejouer la mesure jusqu’à ce qu’elle soit propre, et note où tu bloques. Avance par 2 à 4 mesures.</p>
     <label class="toggle"><input type="checkbox" id="co-redo" checked> Rejouer la mesure jusqu’à ce qu’elle soit sans faute</label>
+  </div>
+  <div class="card" id="dc-card">
+    <div class="row between"><h2>1. Déchiffrer</h2><span class="tag" id="dc-prog"></span></div>
+    <select id="dc-piece" aria-label="Morceau à déchiffrer"></select>
+    <div class="seg" id="dc-hands"><button data-h="rh">Main droite</button><button data-h="lh">Main gauche</button><button data-h="both">Deux mains</button></div>
+    <details id="dc-id-box" open><summary>Carte d’identité du morceau</summary><div class="small" id="dc-id"></div></details>
+    <div class="row between dc-bar"><b id="dc-pos"></b><button class="btn primary" id="dc-go">Déchiffrer</button></div>
+    <div id="dc-live" hidden>
+      <svg class="staff wkstaff" id="dc-staff" viewBox="0 0 360 250" role="img" aria-label="La mesure à déchiffrer"></svg>
+      <p id="dc-q" aria-live="polite"></p>
+      <div class="dc-names" id="dc-names"></div>
+      <div class="kb-wrap" id="kb-dc"></div>
+      <p class="fb" id="dc-fb" aria-live="polite"></p>
+      <div class="row dc-after" id="dc-after" hidden><button class="btn" id="dc-listen">Écouter la mesure</button><button class="btn ghost" id="dc-again">Relire</button><button class="btn" id="dc-next">Mesure suivante</button><button class="btn primary" id="dc-play">Jouer</button></div>
+    </div>
   </div>
   <div id="co-slot"></div>
   <div class="card" id="co-panel">
@@ -633,7 +660,8 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
 // Coach : par morceau, b = {mesure: [fautes, passages propres, passages, hésitations]}, c = {« attendue>jouée »: nombre} (x = note absente d'un accord).
 function cleanCoach(o){const out={};if(!isObj(o))return out;Object.keys(o).slice(0,80).forEach(id=>{const c=o[id];if(!/^[a-z0-9]{1,24}$/.test(id)||!isObj(c))return;const b={},cc={};
   if(isObj(c.b))Object.keys(c.b).slice(0,400).forEach(k=>{const i=intIn(k,0,999),r=c.b[k];if(i==null||!Array.isArray(r))return;b[i]=[0,1,2,3].map(j=>intIn(r[j],0,1e6)||0);});
-  if(isObj(c.c))Object.keys(c.c).slice(0,80).forEach(k=>{if(/^\d{1,3}>(\d{1,3}|x)$/.test(k)){const n=intIn(c.c[k],0,1e6);if(n)cc[k]=n;}});out[id]={b,c:cc};});return out;}
+  if(isObj(c.c))Object.keys(c.c).slice(0,80).forEach(k=>{if(/^\d{1,3}>(\d{1,3}|x)$/.test(k)){const n=intIn(c.c[k],0,1e6);if(n)cc[k]=n;}});out[id]={b,c:cc};
+  const d={};if(isObj(c.d))Object.keys(c.d).slice(0,400).forEach(k=>{const i=intIn(k,0,999);if(i!=null&&c.d[k]===1)d[i]=1;});if(Object.keys(d).length)out[id].d=d;});return out;}
 /* Mes partitions : [note MIDI ou null (silence), durée, doigt (0 = aucun), liée à la suivante (0/1)] par événement. */
 const MY_DUR=[[4,'ronde'],[3,'blanche pointée'],[2,'blanche'],[1.5,'noire pointée'],[1,'noire'],[.75,'croche pointée'],[.5,'croche'],[.25,'double croche']];
 const MY_MAX=30,MY_BARS=200,MY_EV=64;
@@ -1018,7 +1046,7 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
   $('#wk-info').innerHTML=h;wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
-  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach())renderCoach();}
+  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach()){renderCoach();renderDc();}}
 function wkGo(bar){stopBus();WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
@@ -1292,7 +1320,7 @@ const SPB={1:[1,'♭'],3:[2,'♭'],6:[4,'♭'],8:[5,'♭'],10:[6,'♭']};
 function spell(m){const fl=WORK[WK.id]&&WORK[WK.id].flats,pc=m%12,useB=(fl===true||(Array.isArray(fl)&&fl.includes(pc)))&&SPB[pc];const [l,a]=useB?SPB[pc]:SPS[pc];return {d:(Math.floor(m/12)-1)*7+l,a,l};}
 // Nom court sans octave, selon le réglage Do Ré Mi / C D E / les deux.
 function shortName(m){const s=spell(m),F=['Do','Ré','Mi','Fa','Sol','La','Si'],E=['C','D','E','F','G','A','B'];return NOMS==='en'?E[s.l]+s.a:NOMS==='both'?F[s.l]+s.a+'/'+E[s.l]+s.a:F[s.l]+s.a;}
-function wkStaff(b,offset){const svg=$('#wk-staff');if(!svg)return;const ink='#2a221b',X0=58,X1=348,bpb=WORK[WK.id].bpb;let h='';
+function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const ink='#2a221b',X0=58,X1=348,bpb=WORK[WK.id].bpb;let h='';
   const ST={rh:{bot:30,y:90,mid:34},lh:{bot:18,y:190,mid:22}};
   const yOfD=(hd,d)=>ST[hd].y-(d-ST[hd].bot)*5;
   for(const hd of ['rh','lh'])for(let i=0;i<5;i++){const y=ST[hd].y-i*10;h+=`<line x1="6" x2="354" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1"/>`;}
@@ -1305,7 +1333,7 @@ function wkStaff(b,offset){const svg=$('#wk-staff');if(!svg)return;const ink='#2
     const all=b[hd].flatMap(e=>e[0]?e[0].map(m=>spell(m).d):[]);let oct=0;
     if(all.length){const lo=Math.min(...all),hi=Math.max(...all);if(lo<S.bot-6&&hi+7<=S.bot+14)oct=7;else if(hi>S.bot+14&&lo-7>=S.bot-6)oct=-7;}
     if(oct)h+=`<text class="oct" x="18" y="${oct>0?S.y+16:S.y-46}" font-size="10" font-style="italic" font-weight="700" fill="${ink}">${oct>0?'8vb':'8va'}</text>`;
-    b[hd].forEach(e=>{const x=xOf(t),d0=e[1];
+    b[hd].forEach((e,ei)=>{const x=xOf(t),d0=e[1];
       if(!e[0]){// silence : forme simple selon la durée
         const yc=S.y-20;if(d0>=4)h+=`<rect class="rest" x="${x-6}" y="${S.y-30}" width="12" height="5" fill="${ink}"/>`;
         else if(d0>=2)h+=`<rect class="rest" x="${x-6}" y="${S.y-25}" width="12" height="5" fill="${ink}"/>`;
@@ -1317,13 +1345,13 @@ function wkStaff(b,offset){const svg=$('#wk-staff');if(!svg)return;const ink='#2
       for(let L=S.bot-2;L>=lo;L-=2){const y=yOfD(hd,L);h+=`<line x1="${x-10}" x2="${x+10}" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1"/>`;}
       for(let L=S.bot+10;L<=hi;L+=2){const y=yOfD(hd,L);h+=`<line x1="${x-10}" x2="${x+10}" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1"/>`;}
       sp.forEach((s,j)=>{const y=yOfD(hd,s.d);const col=e[4]&&e[4][j]===0?'#8a7d6b':ink;
-        h+=`<ellipse class="nh" cx="${x}" cy="${y}" rx="5.6" ry="4.2" transform="rotate(-20 ${x} ${y})" fill="${open?'none':col}" stroke="${col}" stroke-width="${open?1.6:0}"/>`;
+        h+=`<ellipse class="nh" data-k="${hd}-${ei}-${j}" cx="${x}" cy="${y}" rx="5.6" ry="4.2" transform="rotate(-20 ${x} ${y})" fill="${open?'none':col}" stroke="${col}" stroke-width="${open?1.6:0}"/>`;
         if(s.a)h+=`<text class="acc" x="${x-15}" y="${y+4}" font-size="12" fill="${col}">${s.a}</text>`;
         if([3,1.5,.75].some(v=>Math.abs(v-d0)<1e-9))h+=`<circle cx="${x+9}" cy="${y-1}" r="1.6" fill="${col}"/>`;});
       if(d0<4){const up=(lo+hi)/2<S.mid,sx=up?x+5.2:x-5.2,y1=up?yOfD(hd,lo):yOfD(hd,hi),y2=up?yOfD(hd,hi)-30:yOfD(hd,lo)+30;
         h+=`<line x1="${sx}" x2="${sx}" y1="${y1}" y2="${y2}" stroke="${ink}" stroke-width="1.2"/>`;
         const fl=d0<=.25+1e-9?2:d0<1-1e-9?1:0;for(let k=0;k<fl;k++){const fy=y2+(up?k*6:-k*6);h+=`<path d="M${sx} ${fy} q8 ${up?6:-6} 6 ${up?14:-14}" stroke="${ink}" stroke-width="1.4" fill="none"/>`;}}
-      if(!dense[hd]){const lbl=e[0].map((m,j)=>shortName(m)+(e[4]&&e[4][j]===0?'⁀':'')).join(' ');h+=`<text class="nm" x="${x}" y="${hd==='rh'?17:228}" font-size="11" text-anchor="middle" fill="#5a4c3a">${esc(lbl)}</text>`;}
+      if(!dense[hd]&&!quiz){const lbl=e[0].map((m,j)=>shortName(m)+(e[4]&&e[4][j]===0?'⁀':'')).join(' ');h+=`<text class="nm" x="${x}" y="${hd==='rh'?17:228}" font-size="11" text-anchor="middle" fill="#5a4c3a">${esc(lbl)}</text>`;}
       t+=d0;});}
   // comptage : un repère à chaque début de note ou de silence (les deux mains)
   const on=new Set();for(const hd of ['rh','lh']){let t=offset;b[hd].forEach(e=>{on.add(+t.toFixed(4));t+=e[1];});}
@@ -1484,6 +1512,115 @@ function renderCoach(){const el=$('#co-tips');if(!el||!WORK[WK.id])return;const 
   if(conf.length)h+='<h3>Confusions fréquentes</h3><ul class="small">'+conf.map(([k,n])=>`<li>${esc(confTip(k,n))}</li>`).join('')+'</ul>';
   el.innerHTML=h;}
 
+/* ---------- Coach : déchiffrer avant de jouer ---------- */
+const LETTERS_FR=['Do','Ré','Mi','Fa','Sol','La','Si'],LETTERS_EN=['C','D','E','F','G','A','B'];
+const letterName=l=>NOMS==='en'?LETTERS_EN[l]:NOMS==='both'?LETTERS_FR[l]+'/'+LETTERS_EN[l]:LETTERS_FR[l];
+const SHN=['Do','Do♯','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'],SHE=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+// Armure de chaque tonalité majeure (tonique → nombre et sorte d'altérations) ; ordre des dièses et des bémols.
+const KSIG={0:[0,''],7:[1,'♯'],2:[2,'♯'],9:[3,'♯'],4:[4,'♯'],11:[5,'♯'],6:[6,'♯'],5:[1,'♭'],10:[2,'♭'],3:[3,'♭'],8:[4,'♭'],1:[5,'♭']};
+const SIG_SH=[3,0,4,1,5,2,6],SIG_FL=[6,2,5,1,4,0,3];
+const dcHands=()=>WK.hands==='both'?['rh','lh']:[WK.hands];
+function pcName(pc,flat){const f=(flat?FRB:SHN)[pc],e=(flat?ENB:SHE)[pc];return NOMS==='en'?e:NOMS==='both'?f+' ('+e+')':f;}
+// Tonalité : lue dans la source (« Sol majeur ») ; sinon, la gamme majeure qui couvre le plus de durée de notes.
+function dcKey(id){const w=WORK[id],src=w.src||'',PC={Do:0,'Ré':2,Mi:4,Fa:5,Sol:7,La:9,Si:11};let tonic=0,minor=false;
+  const mm=src.match(/(Do|Ré|Mi|Fa|Sol|La|Si)(♯|♭)? (majeur|mineur)/);
+  if(mm){tonic=(PC[mm[1]]+(mm[2]==='♯'?1:mm[2]==='♭'?11:0))%12;minor=mm[3]==='mineur';}
+  else{const wt=new Array(12).fill(0),bars=workBars(id);bars.forEach(b=>['rh','lh'].forEach(h=>b[h].forEach(e=>e[0]&&e[0].forEach(m=>{wt[m%12]+=e[1];}))));
+    let best=-1;for(const k of [0,7,5,2,10,9,3,4,8,11,1,6]){const s=[0,2,4,5,7,9,11].reduce((a,i)=>a+wt[(k+i)%12],0);if(s>best+1e-9){best=s;tonic=k;}}
+    const lb=bars.length?bars[bars.length-1]:null,last=lb&&(lb.lh.filter(e=>e[0]).pop()||lb.rh.filter(e=>e[0]).pop());   // dernière basse : tonique ?
+    if(last&&Math.min(...last[0])%12===(tonic+9)%12){tonic=(tonic+9)%12;minor=true;}}
+  const maj=minor?(tonic+3)%12:tonic,[n,a]=KSIG[maj],flat=a==='♭'||(maj===6&&!!w.flats);
+  const sig=(flat?SIG_FL:SIG_SH).slice(0,flat&&maj===6?6:n).map(l=>letterName(l)+(flat?'♭':'♯'));
+  return {name:pcName(tonic,flat)+(minor?' mineur':' majeur'),sig,flat,scale:new Set([0,2,4,5,7,9,11].map(i=>(maj+i)%12))};}
+function dcMeter(w){const bt=w.beat||1;
+  if(bt===1.5){const g=Math.round(w.bpb/1.5);return `${Math.round(w.bpb*2)}/8 : ${g} grands temps par mesure (noire pointée), et 3 croches dans chacun : compte « 1-2-3 » par temps.`;}
+  return Number.isInteger(w.bpb)?`${w.bpb}/4 : ${w.bpb} temps par mesure (noire) ; compte ${Array.from({length:w.bpb},(_,i)=>i+1).join('-')}.`:`${String(w.bpb).replace('.',',')} temps par mesure.`;}
+// Mesures identiques (pour la ou les mains choisies) : ce qu'il reste vraiment à apprendre.
+function dcRepeats(bars,hs){const seen={},groups=[];bars.forEach((b,i)=>{const k=JSON.stringify(hs.map(h=>b[h].map(e=>[e[0],e[1]])));if(!/\d/.test(k))return;(seen[k]=seen[k]||[]).push(i);});
+  Object.values(seen).forEach(g=>{if(g.length>1)groups.push(g);});return {groups:groups.sort((p,q)=>p[0]-q[0]),uniq:Object.keys(seen).length};}
+// Pièges : grands sauts, altérations hors armure, mesures chargées, mesures où tu as déjà bloqué.
+function dcTraps(id,bars,key,hs){const w=WORK[id],c=S.coach&&S.coach[id],out=[];
+  bars.forEach((b,i)=>{const why=[];let leap=0,n=0;const acc=new Set();
+    hs.forEach(h=>{let prev=null;b[h].forEach(e=>{if(!e[0])return;n++;e[0].forEach(m=>{if(!key.scale.has(m%12))acc.add(m);});const top=h==='rh'?Math.max(...e[0]):Math.min(...e[0]);if(prev!==null)leap=Math.max(leap,Math.abs(top-prev));prev=top;});});
+    let sc=0;if(leap>=12){why.push('saut d’une octave ou plus');sc+=2;}else if(leap>=8){why.push('grand saut');sc+=2;}
+    if(acc.size){why.push('altération hors armure ('+[...acc].sort((p,q)=>p-q).slice(0,3).map(wkNm).join(', ')+')');sc+=2;}
+    if(n>w.bpb*2+1){why.push(`${n} notes : passage rapide`);sc+=1;}
+    const r=c&&c.b&&c.b[i];if(r&&r[0]){why.push(`tu y as déjà fait ${r[0]} faute${r[0]>1?'s':''}`);sc+=3;}
+    if(sc)out.push({i,why,sc});});
+  return out.sort((p,q)=>q.sc-p.sc||p.i-q.i).slice(0,4);}
+function dcStart1(bars,hs){return hs.map(h=>{const ev=[];for(const b of bars){for(const e of b[h])if(e[0]&&e[2]){ev.push(e);if(ev.length>=3)break;}if(ev.length>=3)break;}
+  return ev.length?`${h==='rh'?'Main droite':'Main gauche'} : `+ev.map(e=>e[0].map((m,j)=>`doigt ${e[2][j]} sur ${wkNm(m)}`).join(' + ')).join(', puis '):'';}).filter(Boolean);}
+let DCID='';
+function renderDcId(){const id=WK.id,w=WORK[id],hs=dcHands(),k=id+'|'+WK.hands+'|'+NOMS+'|'+JSON.stringify((S.coach&&S.coach[id])||{});if(k===DCID)return;DCID=k;
+  const bars=workBars(id),key=dcKey(id),rp=dcRepeats(bars,hs),traps=dcTraps(id,bars,key,hs),all=[];hs.forEach(h=>bars.forEach(b=>b[h].forEach(e=>e[0]&&all.push(...e[0].map(m=>[h,m])))));
+  const rng=hs.map(h=>{const ms=all.filter(x=>x[0]===h).map(x=>x[1]);return ms.length?`${h==='rh'?'main droite':'main gauche'} de ${wkNm(Math.min(...ms))} à ${wkNm(Math.max(...ms))}`:'';}).filter(Boolean).join(' ; ');
+  const tempo=REAL[id]&&REAL[id].tempo;let h='<ul>';
+  h+=`<li><b>Tonalité</b> : ${esc(key.name)} · ${key.sig.length?`armure : ${key.sig.length} ${key.flat?'bémol':'dièse'}${key.sig.length>1?'s':''} (${esc(key.sig.join(', '))}) : ${key.sig.length>1?'ces notes sont':'cette note est'} altérée${key.sig.length>1?'s':''} partout`:'aucune altération à la clé'}.</li>`;
+  h+=`<li><b>Mesure</b> : ${esc(dcMeter(w))}${w.pickup?' Le morceau commence par une levée (anacrouse) : la première mesure est incomplète.':''}</li>`;
+  if(tempo)h+=`<li><b>Tempo</b> : noire = ${tempo}. Pour déchiffrer, commence vers ${Math.round(tempo*.6)} au métronome.</li>`;
+  if(rng)h+=`<li><b>Étendue</b> : ${esc(rng)}.</li>`;
+  const st=dcStart1(bars,hs);if(st.length)h+=`<li><b>Position de départ</b> : ${esc(st.join(' ; '))}.</li>`;
+  h+=`<li><b>Ce qu’il y a vraiment à apprendre</b> : ${bars.length} mesures, dont ${rp.uniq} différentes.${rp.groups.length?' Identiques : '+rp.groups.slice(0,5).map(g=>g.map(i=>i+1).join(' = ')).join(' ; ')+(rp.groups.length>5?'…':'')+'.':''}</li>`;
+  if(traps.length)h+='<li><b>Pièges repérés</b> :<ul>'+traps.map(x=>`<li>Mesure ${x.i+1} : ${esc(x.why.join(', '))}. <button class="btn ghost" data-dcb="${x.i}">Déchiffrer la mesure ${x.i+1}</button></li>`).join('')+'</ul></li>';
+  h+='</ul>';if(w.src)h+=`<p class="muted">${esc(w.src)}</p>`;if(PDF[id])h+=`<p>${pdfLink(id)}</p>`;
+  $('#dc-id').innerHTML=h;}
+const DC={on:false,items:[],k:0,step:'name',err:0,tries:0,bar:-1,id:'',hands:'',from:null,last:null,run:0};
+let DCKB=null;
+function dcItems(){const b=workBars(WK.id)[WK.bar],items=[];
+  dcHands().forEach(h=>{let last=null;b[h].forEach((e,ei)=>{if(!e[0])return;const ms=e[0].map((m,j)=>({m,j})).filter(x=>!(e[4]&&e[4][x.j]===0)).sort((p,q)=>p.m-q.m);
+    if(!ms.length)return;if(ms.length===1&&ms[0].m===last){items[items.length-1].also.push(`${h}-${ei}-${ms[0].j}`);return;}      // même note répétée : déjà lue
+    ms.forEach(x=>items.push({h,ei,j:x.j,m:x.m,f:e[2]&&e[2][x.j],also:[]}));last=ms.length===1?ms[0].m:null;});});
+  return items;}
+function dcStop(){DC.on=false;const l=$('#dc-live');if(l)l.hidden=true;}
+function renderDc(){if(!WORK[WK.id])return;const sel=$('#dc-piece');if(sel.innerHTML!==$('#wk-piece').innerHTML)sel.innerHTML=$('#wk-piece').innerHTML;sel.value=WK.id;
+  $$('#dc-hands button').forEach(x=>x.classList.toggle('on',x.dataset.h===WK.hands));
+  if(DC.on&&(DC.bar!==WK.bar||DC.id!==WK.id||DC.hands!==WK.hands))dcStop();
+  renderDcId();const n=workBars(WK.id).length,d=(S.coach&&S.coach[WK.id]&&S.coach[WK.id].d)||{},read=Object.keys(d).length;
+  $('#dc-prog').textContent=`${read}/${n} lue${read>1?'s':''}`;
+  $('#dc-pos').textContent=`Mesure ${WK.bar+1}/${n}`+(d[WK.bar]?' · déjà lue ✓':'');
+  $('#dc-go').textContent=(d[WK.bar]?'Relire':'Déchiffrer')+` la mesure ${WK.bar+1}`;}
+function dcStart(){stopBus();const items=dcItems();Object.assign(DC,{on:true,items,k:0,err:0,tries:0,step:'name',bar:WK.bar,id:WK.id,hands:WK.hands});
+  $('#dc-live').hidden=false;$('#dc-after').hidden=true;$('#dc-fb').textContent='';$('#dc-fb').className='fb';
+  const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));if(!ms.length)ms.push(60,72);
+  let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
+  DCKB=makeKeyboard($('#kb-dc'),lo,hi,{fit:'always',onKey:dcKeyTap});
+  Object.entries(DCKB.keys).forEach(([m,k])=>{const l=k.querySelector('.kl');if(l&&m%12)l.textContent='';});   // repères : les Do seulement
+  $('#dc-names').innerHTML=LETTERS_FR.map((x,l)=>`<button data-l="${l}">${esc(letterName(l))}</button>`).join('');
+  if(!items.length){$('#dc-q').textContent='Rien à lire pour cette main dans cette mesure : c’est un silence. Compte les temps.';dcDone();return;}
+  dcShow();}
+function dcDraw(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0,$('#dc-staff'),true);
+  DC.items.forEach((x,i)=>[`${x.h}-${x.ei}-${x.j}`,...x.also].forEach(k=>{const el=$(`#dc-staff [data-k="${k}"]`);if(el)el.classList.add(i<DC.k?'done':i===DC.k&&DC.on&&k===`${x.h}-${x.ei}-${x.j}`?'cur':'x');}));}
+function dcShow(){dcDraw();const x=DC.items[DC.k];DCKB.clear();
+  const where=`Note ${DC.k+1}/${DC.items.length} · ${x.h==='rh'?'main droite, clé de sol':'main gauche, clé de fa'}`;
+  $('#dc-q').innerHTML=DC.step==='name'?`${where} : <b>quelle est la note en rouge ?</b>`:`${where} : <b>trouve ${esc(wkNm(x.m))} sur le clavier</b>${x.f?` (doigt ${x.f})`:''}.`;
+  $$('#dc-names button').forEach(bt=>{bt.disabled=DC.step!=='name';});}
+function dcFb(msg,cls){const f=$('#dc-fb');f.textContent=msg;f.className='fb'+(cls?' '+cls:'');}
+function dcClefTip(h){const L=h==='rh'?[[2,4,6,1,3],[3,5,0,2]]:[[4,6,1,3,5],[5,0,2,4]],s=a=>a.map(letterName).join(' ');
+  return h==='rh'?`Clé de sol : lignes de bas en haut ${s(L[0])} ; interlignes ${s(L[1])}.`:`Clé de fa : lignes de bas en haut ${s(L[0])} ; interlignes ${s(L[1])}.`;}
+function dcName(l){if(!DC.on||DC.step!=='name')return;const x=DC.items[DC.k],sp=spell(x.m);
+  if(l===sp.l){const acc=sp.a?` avec un ${sp.a} : ${wkNm(x.m)}. Le ${sp.a} se joue sur la touche juste ${sp.a==='♯'?'à droite':'à gauche'}.`:'.';
+    dcFb(`Oui, c’est ${letterName(sp.l)}${acc}`,'ok');DC.step='key';DC.tries=0;dcShow();return;}
+  DC.err++;DC.tries++;const prev=DC.items[DC.k-1];let tip;
+  if(DC.tries>=3){dcFb(`C’est ${letterName(sp.l)}. ${dcClefTip(x.h)}`,'ko');DC.step='key';DC.tries=0;dcShow();return;}
+  if(DC.tries===1&&prev&&prev.h===x.h){const dd=sp.d-spell(prev.m).d,n=Math.abs(dd);tip=dd===0?`Même hauteur que la note d’avant (${letterName(spell(prev.m).l)}).`:`Compte depuis la note d’avant (${letterName(spell(prev.m).l)}) : ${n} note${n>1?'s':''} plus ${dd>0?'haut':'bas'}.`;}
+  else tip=dcClefTip(x.h);
+  dcFb(`Pas ${letterName(l)}. ${tip}`,'ko');}
+function dcKeyTap(m){if(!DC.on||!DCKB)return;if(DC.step==='name'){dcFb('D’abord, nomme la note avec les boutons.','');return;}
+  const x=DC.items[DC.k];
+  if(m===x.m){DCKB.mark([m],'ok');DC.k++;DC.step='name';DC.tries=0;if(DC.k>=DC.items.length){dcDone();return;}dcFb(`Juste : ${wkNm(m)}.`,'ok');setTimeout(()=>DCKB&&DCKB.clear('ok'),400);dcShow();return;}
+  DC.err++;DCKB.mark([m],'ko');setTimeout(()=>DCKB&&DCKB.clear('ko'),500);
+  const up=x.m>m?'plus haut':'plus bas';
+  dcFb(m%12===x.m%12?`Bonne note, mauvaise octave : ${wkNm(x.m)} est ${up}. Repère-toi avec les Do.`:spell(m).l===spell(x.m).l?`Bonne lettre, mais regarde l’altération : il faut ${wkNm(x.m)}.`:`Tu as touché ${wkNm(m)} : cherche ${wkNm(x.m)}, ${up}.`,'ko');}
+function dcDone(){const clean=!DC.err,bars=workBars(WK.id),last=WK.bar>=bars.length-1;DC.k=DC.items.length;DC.on=false;dcDraw();DC.on=true;
+  $$('#dc-names button').forEach(bt=>{bt.disabled=true;});$('#dc-after').hidden=false;$('#dc-next').hidden=last;
+  if(clean){const c=S.coach[WK.id]=S.coach[WK.id]||{b:{},c:{}};c.d=c.d||{};c.d[WK.bar]=1;saveLocal();
+    if(DC.from===null||DC.last!==WK.bar-1||DC.id!==WK.id){DC.from=WK.bar;DC.run=0;}DC.run++;DC.last=WK.bar;
+    const a=DC.from,z=WK.bar;$('#dc-play').textContent=a<z?`Jouer les mesures ${a+1} à ${z+1}`:`Jouer la mesure ${z+1}`;$('#dc-play').hidden=false;
+    $('#dc-q').textContent='';
+    dcFb(`Mesure ${z+1} déchiffrée sans erreur. `+(DC.run>=4?'Ne lis pas plus loin : joue ces mesures maintenant.':DC.run>=2||last?'Place au piano : joue-les.':'Lis la suivante, puis joue les deux ensemble.'),'ok');}
+  else{$('#dc-play').hidden=true;$('#dc-q').textContent='';dcFb(`Mesure lue avec ${DC.err} erreur${DC.err>1?'s':''} : relis-la une fois pour la fixer.`,'ko');}
+  renderDc();}
+
 /* ---------- Astuces ---------- */
 const TIPS=[
   ['Méthode','Dix minutes chaque jour valent mieux qu’une heure le dimanche : la mémoire des doigts se construit pendant le sommeil.'],
@@ -1518,6 +1655,7 @@ const TIPS=[
   ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Méthode','Avant de jouer, déchiffre : Coach › « 1. Déchiffrer ». Nomme chaque note, trouve-la sur le clavier, puis joue 2 à 4 mesures. Lire et jouer en même temps, c’est deux difficultés à la fois.'],
   ['Méthode','Onglet Coach : joue avec « Écoute-moi » ; chaque mesure fautive se rejoue jusqu’à ce qu’elle soit propre, et l’app te montre où tu bloques.'],
   ['Sur iPhone','Séance › « Écoute-moi » : pose le téléphone sur le pupitre, dans une pièce calme. L’app vérifie tes notes sans rien enregistrer.'],
   ['Quand ça bloque','Baisse le tempo de 20 et rejoue : presque tout blocage est un problème de vitesse.'],
@@ -1766,6 +1904,7 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   mtChip();if(v!=='seance'&&v!=='coach')ecStop();
   // Une seule carte « Travailler un morceau » : elle passe dans le Coach, puis revient dans Séance.
   if(v==='coach'&&$('#wk-card').parentNode!==$('#co-slot')){$('#co-slot').appendChild($('#wk-card'));renderCoach();setTimeout(wkScroll,30);}
+  $('#wk-card h2').textContent=v==='coach'?'2. Jouer':'Travailler un morceau';if(v==='coach')renderDc();else dcStop();
   if(v==='seance'&&$('#wk-card').previousElementSibling!==$('#wk-home'))$('#wk-home').after($('#wk-card'));
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
   if(v==='seance')setTimeout(wkScroll,30);
@@ -1804,6 +1943,13 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ecStop();});
   smpLoad();
   $('#co-tips').addEventListener('click',e=>{const b=e.target.closest('button[data-cob]');if(!b)return;wkGo(+b.dataset.cob);const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);});
+  $('#dc-piece').addEventListener('change',e=>{dcStop();wkSelect(e.target.value);});
+  $('#dc-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();dcStop();renderWork();});
+  $('#dc-go').onclick=dcStart;$('#dc-again').onclick=dcStart;$('#dc-listen').onclick=playWork;
+  $('#dc-next').onclick=()=>{wkGo(WK.bar+1);dcStart();};
+  $('#dc-names').addEventListener('click',e=>{const b=e.target.closest('button[data-l]');if(b)dcName(+b.dataset.l);});
+  $('#dc-id').addEventListener('click',e=>{const b=e.target.closest('button[data-dcb]');if(!b)return;wkGo(+b.dataset.dcb);dcStart();const c=$('#dc-card'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);});
+  $('#dc-play').onclick=()=>{const a=DC.from===null?WK.bar:DC.from;dcStop();DC.from=null;wkGo(a);if(!(EC.on&&EC.mode==='play'))ecStart('play');const c=$('#wk-card'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);};
   $('#co-reset').onclick=async()=>{if(!(await ask(`Effacer le suivi de « ${WORK[WK.id].t} » ?`)))return;if(S.coach)delete S.coach[WK.id];saveLocal();renderCoach();};
   renderEx();renderTips();$('#tip-next').onclick=()=>{tipShift++;renderTips();};
   $('#ex-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b){openEx(b.dataset.ex);return;}const l=e.target.closest('button[data-exl]');if(l)playEx(l.dataset.exl);});
