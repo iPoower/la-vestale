@@ -95,6 +95,10 @@ textarea{min-height:70px;resize:vertical}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
 .co-list li{margin-bottom:10px}
+.ec-beat{display:flex;align-items:center;gap:10px;margin:4px 0 8px;min-height:30px;font-weight:700;color:var(--laiton)}
+.ec-beat i{width:22px;height:22px;border-radius:50%;border:2px solid var(--laiton);opacity:.45;transition:transform .06s}
+.ec-beat i.on{background:var(--laiton);opacity:1;transform:scale(1.25)}
+.ec-beat i.one{border-width:3px}
 #co-slot #wk-piece,#co-slot #wk-hands,#co-slot #wk-src,#co-slot #wk-pdf{display:none}
 #dc-card select,#dc-card .seg{margin-bottom:10px}
 .dc-bar{margin:12px 0 6px;gap:8px}
@@ -275,6 +279,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="small" id="wk-info" aria-live="polite"></div>
     <div class="listen" id="ec-box">
       <div class="row"><button class="btn" id="ec-go">Écoute-moi</button><button class="btn ghost hidden" id="ec-skip">Passer la note</button><span class="score hidden" id="ec-score"></span></div>
+      <label class="toggle"><input type="checkbox" id="ec-rz"><span>Vérifier aussi le rythme : décompte, puis pulsation à l’écran (noire = <b id="ec-rz-bpm">60</b>, réglable plus bas)</span></label>
+      <div class="ec-beat hidden" id="ec-beat" aria-hidden="true"></div>
       <p class="small" id="ec-msg" aria-live="polite">Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.</p>
       <p class="fb" id="ec-fb" aria-live="polite"></p>
       <details class="small" id="ec-cal"><summary>Régler sur mon piano</summary>
@@ -661,7 +667,7 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
 // Coach : par morceau, b = {mesure: [fautes, passages propres, passages, hésitations]}, c = {« attendue>jouée »: nombre} (x = note absente d'un accord).
 function cleanCoach(o){const out={};if(!isObj(o))return out;Object.keys(o).slice(0,80).forEach(id=>{const c=o[id];if(!/^[a-z0-9]{1,24}$/.test(id)||!isObj(c))return;const b={},cc={};
   if(isObj(c.b))Object.keys(c.b).slice(0,400).forEach(k=>{const i=intIn(k,0,999),r=c.b[k];if(i==null||!Array.isArray(r))return;b[i]=[0,1,2,3].map(j=>intIn(r[j],0,1e6)||0);});
-  if(isObj(c.c))Object.keys(c.c).slice(0,80).forEach(k=>{if(/^\d{1,3}>(\d{1,3}|x)$/.test(k)){const n=intIn(c.c[k],0,1e6);if(n)cc[k]=n;}});out[id]={b,c:cc};
+  if(isObj(c.c))Object.keys(c.c).slice(0,80).forEach(k=>{if(/^\d{1,3}>(\d{1,3}|x|t[+-])$/.test(k)){const n=intIn(c.c[k],0,1e6);if(n)cc[k]=n;}});out[id]={b,c:cc};
   const d={};if(isObj(c.d))Object.keys(c.d).slice(0,400).forEach(k=>{const i=intIn(k,0,999);if(i!=null&&c.d[k]===1)d[i]=1;});if(Object.keys(d).length)out[id].d=d;
   const r={};if(isObj(c.r))Object.keys(c.r).slice(0,400).forEach(k=>{const i=intIn(k,0,999),x=c.r[k];if(i==null||!Array.isArray(x))return;const lv=intIn(x[0],1,5),du=intIn(x[1],0,1e6),la=intIn(x[2],0,1e6);if(lv&&du!=null&&la!=null)r[i]=[lv,du,la];});if(Object.keys(r).length)out[id].r=r;
   const tt=intIn(c.t,0,9e12);if(tt)out[id].t=tt;});return out;}
@@ -1427,41 +1433,47 @@ function ecFb(text,cls){const el=$('#ec-fb');el.textContent=text||'';el.classNam
 function ecScore(){$('#ec-score').innerHTML=`Justes <b>${EC.ok}</b> À revoir <b>${EC.ko}</b>`;}
 function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));$('#ec-cal-msg').textContent=f===440?'Réglage actuel : La = 440 Hz (piano accordé).':`Réglage actuel : La = ${String(f).replace('.',',')} Hz, soit ${Math.abs(c)} cents ${c<0?'plus bas':'plus haut'} que 440. Si l’écart dépasse 50 cents, vérifie que tu as bien joué le La.`;}
 // Notes attendues dans la mesure en cours, pour la main choisie (les notes liées, déjà tenues, ne sont pas rejouées).
-function ecSeq(){const b=workBars(WK.id)[WK.bar];return b[WK.hands==='lh'?'lh':'rh'].map(e=>{if(!e[0])return null;const keep=e[0].map((m,j)=>j).filter(j=>!(e[4]&&e[4][j]===0));
-    return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null}:null;}).filter(Boolean);}
+function ecSeq(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];let t=WK.bar===0&&w.pickup?w.bpb-w.pickup:0;
+  return b[WK.hands==='lh'?'lh':'rh'].map(e=>{const at=t;t+=e[1];if(!e[0])return null;const keep=e[0].map((m,j)=>j).filter(j=>!(e[4]&&e[4][j]===0));
+    return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null,at}:null;}).filter(Boolean);}
 function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
-  $('#ec-msg').textContent=x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`;}
-function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
-function ecNextBar(){if(EC.mode==='play'&&EC.seq&&EC.seq.length){const clean=!EC.bErr,sr=coachBar(clean);
+  $('#ec-msg').textContent=(x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`)+(RZ.on?' · '+rzBeat(x.at):'');}
+function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.rzOff=false;EC.rzOk=0;EC.rzN=0;
+  if(RZ.on){if(RZ.adv){RZ.adv=false;rzNext();}else rzStart();}EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
+function ecNextBar(){RZ.adv=true;if(EC.mode==='play'&&EC.seq&&EC.seq.length){const clean=!EC.bErr,sr=coachBar(clean);
     const srm=sr==='ko'?' Révision ratée : elle revient demain.':sr&&sr.startsWith('ok:')?` Révision réussie : elle revient dans ${sr.slice(3)} jours.`:'';
-    if(coachOn()&&!clean){EC.tries++;const n=EC.bErr;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}).`+srm,'ko');ecPrep();return;}
-    if(coachOn()&&EC.tries)ecFb(`Mesure ${WK.bar+1} propre après ${EC.tries+1} essais. Bravo !`+srm,'ok');else if(srm)ecFb(`Mesure ${WK.bar+1} propre.`+srm,sr==='ko'?'ko':'ok');}
+    const rzm=RZ.on&&EC.rzN?` Rythme : ${EC.rzOk}/${EC.rzN} à l’heure.`:'',n=EC.bErr;
+    if(coachOn()&&!clean){EC.tries++;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}).`+rzm+srm,'ko');ecPrep();return;}
+    if(coachOn()&&EC.tries)ecFb(`Mesure ${WK.bar+1} propre après ${EC.tries+1} essais. Bravo !`+rzm+srm,'ok');
+    else if(srm||rzm)ecFb(`Mesure ${WK.bar+1}`+(clean?' propre.':` : ${n} faute${n>1?'s':''}.`)+rzm+srm,clean&&sr!=='ko'?'ok':'ko');}
   if(WK.bar>=workBars(WK.id).length-1){ecStop(`Morceau terminé : ${EC.ok} juste${EC.ok>1?'s':''}, ${EC.ko} à revoir.`);return;}wkGo(WK.bar+1);}
 function ecAdvance(){EC.i++;if(EC.i>=EC.seq.length)ecNextBar();else ecShow();}
 function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);setTimeout(()=>k.classList.remove(cls),600);}}
 // Traite une trame : attend une attaque, puis trois trames de suite sur la même note avant de juger.
-function ecFeed(buf,sr,big){const d=detectPitch(buf,sr);
+function ecFeed(buf,sr,big,tNow){const d=detectPitch(buf,sr),now=tNow!=null?tNow:(AC?AC.currentTime:0);EC.lastNow=now;
+  // Rythme : pendant le décompte, on n'écoute pas (les clics s'entendent dans le micro).
+  if(EC.mode==='play'&&RZ.on&&now<RZ.grid+RZ.lat-Math.min(.25,.5*RZ.bu*RZ.spb)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=0;EC.prev=0;EC.pk=0;EC.onT=null;EC.votes=null;EC.cv=0;return;}
   if(EC.mode==='cal'){if(d.c>=EC_CLEAR&&d.f>370&&d.f<475){EC.cal.push(d.f);if(EC.cal.length>=8){const s=EC.cal.slice().sort((a,b)=>a-b);S.meta=Object.assign({},S.meta,{a4:Math.round((s[3]+s[4])/2*10)/10});saveLocal();ecStop();ecCalMsg();}}return;}
   const x=EC.seq[EC.i];if(!x)return;
-  if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;EC.prev=d.rms;EC.pk=0;return;}
+  if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;EC.prev=d.rms;EC.pk=0;EC.onT=null;return;}
   // Le niveau remonte : nouvelle attaque, seulement si le saut est brusque (plus de 2,2 fois la trame d'avant) ou s'il revient
   // près du pic de la note (60 %). Une corde tenue « respire » (battements) : son niveau remonte doucement, ce n'est pas une frappe.
-  if(!EC.armed&&d.rms>EC.low*1.35&&(d.rms>(EC.prev||0)*2.2||d.rms>(EC.pk||0)*.6)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.votes=null;EC.cv=0;EC.pk=0;}
-  EC.low=Math.min(EC.low,d.rms);EC.loud++;EC.prev=d.rms;EC.pk=Math.max(EC.pk||0,d.rms);
+  if(!EC.armed&&d.rms>EC.low*1.35&&(d.rms>(EC.prev||0)*2.2||d.rms>(EC.pk||0)*.6)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.votes=null;EC.cv=0;EC.pk=0;EC.onT=now;EC.onWide=false;}
+  EC.low=Math.min(EC.low,d.rms);EC.loud++;EC.prev=d.rms;EC.pk=Math.max(EC.pk||0,d.rms);if(EC.armed&&EC.onT==null){EC.onT=now;EC.onWide=false;}
   const m=d.c>=EC_CLEAR&&d.f>0?Math.round(69+12*Math.log2(d.f/a4())):null;
   if(m!==null&&m===EC.sm)EC.n++;else{EC.sm=m;EC.n=m===null?0:1;}
-  if(!EC.armed&&m!==null&&EC.last!==null&&m!==EC.last&&EC.n>=2)EC.armed=true;         // la hauteur a changé : nouvelle note
+  if(!EC.armed&&m!==null&&EC.last!==null&&m!==EC.last&&EC.n>=2){EC.armed=true;EC.onT=now;EC.onWide=true;}         // la hauteur a changé : nouvelle note
   if(!EC.armed)return;
   // Accord : trois trames après l'attaque, chaque note doit être entendue au moins deux fois.
   if(x.ms.length>1){if(EC.loud<2)return;const pres=chordCheck(big||buf,sr,x.ms);EC.votes=EC.votes||x.ms.map(()=>0);pres.forEach((v,k)=>{if(v)EC.votes[k]++;});
     if(++EC.cv<3)return;const miss=x.ms.filter((m,k)=>EC.votes[k]<2);EC.armed=false;EC.last=null;EC.low=d.rms;EC.votes=null;EC.cv=0;
-    if(!miss.length){ecHes();EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + '),'ok');ecScore();ecAdvance();}
-    else{EC.ko++;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+(inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':''),'ko');ecScore();}return;}
+    if(!miss.length){ecHes();EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + ')+rz.msg,rz.cls);ecScore();ecAdvance();}
+    else{EC.ko++;EC.rzOff=true;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+(inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':''),'ko');ecScore();}return;}
   if(EC.n<3)return;
   const want=x.ms[0];EC.armed=false;EC.last=m;EC.low=d.rms;
-  if(m===want){ecHes();EC.ok++;ecFlash(want,'ok');ecFb('Juste : '+wkNm(want),'ok');ecScore();ecAdvance();}
-  else if((m-want)%12===0)ecFb(`Bonne note, mais je l’entends ${m>want?'plus haut':'plus bas'} (${wkNm(m)}). Vérifie l’octave, ou touche « Passer la note ».`,'');
-  else{EC.ko++;ecFlash(m,'ko');coachErr([[want,m]]);ecFb(`J’entends ${wkNm(m)}, j’attends ${wkNm(want)}.`+(inCoach()?' '+ecTip(want,m,x):''),'ko');ecScore();}}
+  if(m===want){ecHes();EC.ok++;ecFlash(want,'ok');const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Juste : '+wkNm(want)+rz.msg,rz.cls);ecScore();ecAdvance();}
+  else if((m-want)%12===0)EC.rzOff=true,ecFb(`Bonne note, mais je l’entends ${m>want?'plus haut':'plus bas'} (${wkNm(m)}). Vérifie l’octave, ou touche « Passer la note ».`,'');
+  else{EC.ko++;EC.rzOff=true;ecFlash(m,'ko');coachErr([[want,m]]);ecFb(`J’entends ${wkNm(m)}, j’attends ${wkNm(want)}.`+(inCoach()?' '+ecTip(want,m,x):''),'ko');ecScore();}}
 async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices;
   if(!md||!md.getUserMedia){ecFb('Micro indisponible dans ce navigateur.','ko');return;}
   wkStop();const a=ac();if(!a)return;
@@ -1471,6 +1483,7 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
     ecFb(e&&e.name==='NotAllowedError'?'Micro refusé. Autorise le micro pour ce site (Réglages › Safari › Micro), puis réessaie.':'Micro indisponible sur cet appareil.','ko');return;}
   if(tok!==EC.tok||document.hidden){try{stream.getTracks().forEach(tr=>tr.stop());}catch(e){}if(tok===EC.tok){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}return;}
   try{if(a.state!=='running')a.resume();}catch(e){}
+  RZ.on=mode==='play'&&$('#ec-rz').checked;RZ.adv=false;
   Object.assign(EC,{on:true,mode,stream,src:a.createMediaStreamSource(stream),an:a.createAnalyser(),buf:new Float32Array(16384),sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]});
   EC.an.fftSize=16384;EC.src.connect(EC.an);awake('ec',true);
   EC.iv=setInterval(()=>{if(!EC.on)return;try{if(a.state!=='running')a.resume();}catch(e){}EC.an.getFloatTimeDomainData(EC.buf);ecFeed(EC.buf.subarray(16384-4096),a.sampleRate,EC.buf);},70);
@@ -1478,11 +1491,43 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
   if(mode==='cal'){$('#ec-cal-msg').textContent='J’écoute… Joue le La4 et laisse-le sonner.';$('#ec-cal-go').textContent='Arrêter';return;}
   $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
   if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();}
-function ecStop(msg){EC.tok++;if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
+function ecStop(msg){EC.tok++;RZ.on=false;$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
   try{EC.stream.getTracks().forEach(tr=>tr.stop());}catch(e){}try{EC.src.disconnect();}catch(e){}
   EC.on=false;EC_ON=false;EC.mode='';try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   awake('ec',false);wkClear();$('#ec-box').classList.remove('on');$('#kb-wk').classList.remove('ecoute');$('#ec-go').textContent='Écoute-moi';$('#ec-cal-go').textContent='Écouter mon La';$('#ec-skip').classList.add('hidden');
   $('#ec-msg').textContent='Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.';ecCalMsg();ecFb(msg||'','');}
+
+/* ---------- Rythme au micro ---------- */
+// t0 : début (heure audio) de la mesure attendue ; grid : début de la première mesure (pour la pulsation) ;
+// spb : durée d'une noire ; bu : unité de temps (1 noire, 1,5 noire pointée) ; lat : latence de sortie (le clic arrive plus tard à l'oreille).
+const RZ={on:false,t0:0,grid:0,spb:.6,bu:1,lat:0,adv:false,raf:0,k:-2};
+const rzBar=()=>WORK[WK.id].bpb*RZ.spb;
+function rzStart(){const a=AC;if(!a)return;const w=WORK[WK.id];RZ.spb=60/(+$('#wk-bpm').value||60);$('#ec-rz-bpm').textContent=$('#wk-bpm').value;RZ.bu=w.beat||1;
+  RZ.lat=Math.min(.08,(a.outputLatency||0)+(a.baseLatency||0));const beats=Math.round(w.bpb/RZ.bu),t=a.currentTime+.15;
+  for(let k=0;k<beats;k++)click(t+k*RZ.bu*RZ.spb,k===0?'acc':'beat');                      // décompte d'une mesure
+  RZ.t0=RZ.grid=t+w.bpb*RZ.spb;EC.lastOn=-1e9;rzLoop();}
+// Mesure suivante (ou la même, rejouée) : à la barre de mesure suivante ; si tu as pris du retard, à celle d'après.
+function rzNext(){const bar=rzBar(),now=EC.lastNow!=null?EC.lastNow:(AC?AC.currentTime:0);RZ.t0+=bar;while(now>RZ.t0+RZ.lat-.1)RZ.t0+=bar;}
+function rzBeat(at){const u=at/RZ.bu,i=Math.floor(u+1e-6),f=u-i;return f<1e-6?`temps ${i+1}`:Math.abs(f-.5)<1e-6?`« et » du ${i+1}`:`juste après le temps ${i+1}`;}
+// Début réel de la note : dans les 340 dernières ms, montée d'énergie avant le pic (blocs de 256 échantillons, ≈ 5 ms).
+function rzOnset(big,sr,now){const onT=EC.onT!=null?EC.onT:now-.1;if(!big||big.length<2048)return onT-.035;const B=256,N=big.length,nb=Math.floor(N/B),env=new Float32Array(nb);
+  for(let k=0;k<nb;k++){let s=0;for(let i=k*B;i<(k+1)*B;i++)s+=big[i]*big[i];env[k]=Math.sqrt(s/B);}
+  const kOf=x=>Math.max(0,Math.min(nb-1,Math.floor(nb-(now-x)*sr/B))),tOf=k=>now-(N-k*B)/sr;
+  const k0=kOf(Math.max((EC.lastOn||-1e9)+.08,onT-(EC.onWide?.3:.16)));let p=k0;for(let k=k0;k<nb;k++)if(env[k]>env[p])p=k;
+  let lo=p;while(lo>k0&&env[lo-1]<=env[lo])lo--;const thr=env[lo]+.5*(env[p]-env[lo]);let o=lo;while(o<p&&env[o]<thr)o++;return tOf(o);}
+// Verdict : à l'heure (± max(0,1 s ; 1/5 de noire)), un peu en avance ou en retard (jusqu'au double), sinon faute de rythme.
+function rzJudge(x,on){if(!RZ.on||EC.rzOff||x.at==null)return {msg:'',cls:'ok'};EC.lastOn=on;EC.rzN++;
+  const dev=on-(RZ.t0+RZ.lat+x.at*RZ.spb),a=Math.abs(dev),tol=Math.max(.1,.2*RZ.spb),late=dev>0;
+  if(a<=tol){EC.rzOk++;return {msg:' · à l’heure',cls:'ok'};}
+  if(a<=2*tol)return {msg:` · un peu ${late?'en retard':'en avance'}`,cls:'ok'};
+  coachErr([[x.ms[0],late?'t+':'t-']]);
+  return {msg:` · mais ${late?'en retard':'en avance'} de ${a.toFixed(2).replace('.',',')} s : ${late?'prépare le doigt pendant la note d’avant.':'attends le temps, compte à voix haute.'}`,cls:'ko'};}
+// Pulsation à l'écran : un rond par temps, le premier plus marqué ; « Décompte » avant la première mesure.
+function rzLoop(){cancelAnimationFrame(RZ.raf);const el=$('#ec-beat');el.classList.remove('hidden');RZ.k=-2;
+  const f=()=>{if(!RZ.on||!EC.on||!AC){el.classList.add('hidden');return;}const beat=RZ.bu*RZ.spb,beats=Math.max(1,Math.round(WORK[WK.id].bpb/RZ.bu)),t=AC.currentTime-RZ.lat-RZ.grid;
+    const cnt=t<0,k=((Math.floor(t/beat)%beats)+beats)%beats,key=(cnt?'c':'')+k+'/'+beats;
+    if(key!==RZ.k){RZ.k=key;el.innerHTML=(cnt?'<span>Décompte</span>':'')+Array.from({length:beats},(_,i)=>`<i class="${i===0?'one ':''}${i===k?'on':''}"></i>`).join('');}
+    RZ.raf=requestAnimationFrame(f);};f();}
 
 /* ---------- Coach : une partition, jusqu'à la réussite ---------- */
 const inCoach=()=>location.hash==='#coach';
@@ -1515,6 +1560,8 @@ function ecTip(want,got,x){const d=Math.abs(got-want),fg=x&&x.fg&&x.fg[0];
   return `Vérifie la position de ta main${fg?` : doigt ${fg} sur ${wkNm(want)}`:''}.`;}
 function confTip(k,n){const [w,g]=k.split('>'),want=+w,nw=wkNm(want);
   if(g==='x')return `Dans les accords, il te manque souvent ${nw} (${n} fois) : pose tous les doigts ensemble avant d’appuyer.`;
+  if(g==='t+')return `${nw} souvent en retard (${n} fois) : prépare le doigt pendant la note d’avant, et compte à voix haute.`;
+  if(g==='t-')return `${nw} souvent en avance (${n} fois) : tu te précipites ; attends le temps, compte « 1 et 2 et ».`;
   const got=+g,d=Math.abs(got-want),why=d===1?'un demi-ton à côté : regarde le ♯ ou le ♭, à la clé ou devant la note':d===2?'la note voisine : ligne ou interligne, relis la portée':d%12===0?'bonne note, mauvaise octave : regarde où est ta main':'vérifie le doigté et la position de la main';
   return `${wkNm(got)} au lieu de ${nw} (${n} fois) : ${why}.`;}
 function renderCoach(){const el=$('#co-tips');if(!el||!WORK[WK.id])return;const c=S.coach&&S.coach[WK.id];
@@ -1526,7 +1573,7 @@ function renderCoach(){const el=$('#co-tips');if(!el||!WORK[WK.id])return;const 
   if(bars.length)h+='<h3>Mesures difficiles</h3><ul class="small co-list">'+bars.map(x=>`<li><b>Mesure ${x.b+1}</b> : ${x.err} faute${x.err>1?'s':''} en ${x.tries} passage${x.tries>1?'s':''}${x.hes?`, ${x.hes} hésitation${x.hes>1?'s':''}`:''}. `+
     `${x.hes>x.err?'Tu hésites : travaille-la mains séparées, en boucle, plus lentement.':'Isole-la : une mesure en boucle, lentement, puis rejoue-la ici.'}<br><button class="btn ghost" data-cob="${x.b}">Travailler la mesure ${x.b+1}</button></li>`).join('')+'</ul>';
   else h+='<p class="small">Aucune mesure difficile pour l’instant. Continue !</p>';
-  if(conf.length)h+='<h3>Confusions fréquentes</h3><ul class="small">'+conf.map(([k,n])=>`<li>${esc(confTip(k,n))}</li>`).join('')+'</ul>';
+  if(conf.length)h+='<h3>Erreurs fréquentes</h3><ul class="small">'+conf.map(([k,n])=>`<li>${esc(confTip(k,n))}</li>`).join('')+'</ul>';
   el.innerHTML=h;}
 
 /* ---------- Coach : déchiffrer avant de jouer ---------- */
@@ -1690,6 +1737,7 @@ const TIPS=[
   ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Méthode','Rythme : coche « Vérifier aussi le rythme » dans le Coach. Un décompte, puis une pulsation à l’écran ; l’app te dit si chaque note arrive à l’heure. Commence lentement : noire = 60.'],
   ['Méthode','Révision espacée : une mesure propre revient le lendemain, puis à 3 jours, à 7 jours, à 14 et à 30. Rejoue-la propre du premier coup : c’est ce qui l’ancre dans la mémoire.'],
   ['Méthode','Avant de jouer, déchiffre : Coach › « 1. Déchiffrer ». Nomme chaque note, trouve-la sur le clavier, puis joue 2 à 4 mesures. Lire et jouer en même temps, c’est deux difficultés à la fois.'],
   ['Méthode','Onglet Coach : joue avec « Écoute-moi » ; chaque mesure fautive se rejoue jusqu’à ce qu’elle soit propre, et l’app te montre où tu bloques.'],
@@ -1998,7 +2046,8 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)lockSync();});
   $('#wk-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();renderWork();});
   $('#wk-prev').onclick=()=>wkGo(WK.bar-1);$('#wk-next').onclick=()=>wkGo(WK.bar+1);$('#wk-play').onclick=playWork;$('#wk-stop').onclick=wkStop;
-  $('#wk-bpm').addEventListener('input',e=>$('#wk-bpm-v').textContent=e.target.value);
+  $('#wk-bpm').addEventListener('input',e=>{$('#wk-bpm-v').textContent=e.target.value;$('#ec-rz-bpm').textContent=e.target.value;});
+  $('#ec-rz').addEventListener('change',e=>{RZ.on=e.target.checked&&EC.on&&EC.mode==='play';if(EC.on&&EC.mode==='play'){RZ.adv=false;ecPrep();}if(!RZ.on)$('#ec-beat').classList.add('hidden');});
   $('#wk-ok').onclick=()=>{WK.okRun++;if(WK.okRun>=3){WK.okRun=3;$('#wk-msg').textContent=WK.bar<workBars(WK.id).length-1?'Trois fois propre : passe à la mesure suivante, puis choisis « 2 mesures » pour les enchaîner.':'Trois fois propre sur la dernière mesure : rejoue tout le morceau, lentement.';}else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre.`;renderWork();};
   $('#wk-ko').onclick=()=>{WK.okRun=0;$('#wk-msg').textContent='Raté : main par main, plus lent, puis les deux mains.';renderWork();};
   $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
