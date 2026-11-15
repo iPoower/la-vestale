@@ -94,6 +94,12 @@ textarea{min-height:70px;resize:vertical}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
+.listen{border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.listen.on{border-color:var(--laiton)}
+.listen p{margin:0}
+/* Pendant l'écoute : la touche attendue ressort nettement ; juste = vert, y compris sur une touche noire. */
+.ecoute .key.next{background:linear-gradient(180deg,#fff,#ffe9a8)!important;box-shadow:inset 0 0 0 3px #b4432c}
+.ecoute .key.ok,.key.black.ok{background:linear-gradient(180deg,#cfe8c2,#86b872)!important}
 /* iPhone : marges de l'encoche et de la barre du bas ; pas de zoom automatique sur les champs (16 px) ni sur double appui ;
    cibles d'au moins 44 px ; pas de sélection de texte ni de menu sur appui long des touches et boutons. */
 body{padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
@@ -251,6 +257,16 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="seg" id="wk-hands"><button data-h="rh">Main droite</button><button data-h="lh">Main gauche</button><button data-h="both" class="on">Deux mains</button></div>
     <div class="kb-wrap" id="kb-wk"></div>
     <div class="small" id="wk-info" aria-live="polite"></div>
+    <div class="listen" id="ec-box">
+      <div class="row"><button class="btn" id="ec-go">Écoute-moi</button><button class="btn ghost hidden" id="ec-skip">Passer la note</button><span class="score hidden" id="ec-score"></span></div>
+      <p class="small" id="ec-msg" aria-live="polite">Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.</p>
+      <p class="fb" id="ec-fb" aria-live="polite"></p>
+      <details class="small" id="ec-cal"><summary>Régler sur mon piano</summary>
+        <p>Un piano ancien est souvent un peu bas. Joue le La au-dessus du Do central (La4) et laisse-le sonner deux secondes : l’app se cale sur ton piano.</p>
+        <div class="row"><button class="btn" id="ec-cal-go">Écouter mon La</button><button class="btn ghost" id="ec-cal-reset">Revenir à 440 Hz</button></div>
+        <p id="ec-cal-msg" aria-live="polite"></p>
+      </details>
+    </div>
     <details id="wk-staff-box" open><summary>Portée et solfège</summary>
       <svg class="staff wkstaff" id="wk-staff" viewBox="0 0 360 250" role="img" aria-label="La mesure sur la portée"></svg>
       <p class="small muted">En haut, clé de sol (main droite) ; en bas, clé de fa (main gauche). Sous la portée : comment compter. Les ♯ et ♭ sont écrits sur chaque note pour t’aider (sur ta feuille, ils sont souvent à la clé).</p>
@@ -599,7 +615,7 @@ function cleanMine(a){const out=[];(Array.isArray(a)?a:[]).filter(isObj).slice(0
       if((e[0]!==null&&n==null)||!MY_DUR.some(z=>z[0]===d)||sum+d>bpb+1e-9)return null;sum+=d;return [n,d,intIn(e[2],0,5)||0,e[3]?1:0];}).filter(Boolean);});
     const acc=typeof x.acc==='string'&&MY_ACC().includes(x.acc)?x.acc:'';
     out.push({id:x.id,t:str(x.t,60).trim()||'Sans titre',bpb,acc,bars:bars.length?bars:[[]]});});return out;}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter','a4'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}}
 /* Copies automatiques : 10 au plus, sur ce téléphone, dans une clé séparée. Un échec d'écriture n'empêche jamais l'enregistrement normal. */
 const SNAP='vestale-copies-v1',SNAP_MAX=10;
 const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
@@ -635,7 +651,7 @@ const saveQ=()=>put('etat/questions',S.questions);
 
 
 /* ---------- Son ---------- */
-let AC=null,MASTER=null,AC_STALE=false;
+let AC=null,MASTER=null,AC_STALE=false,EC_ON=false;
 // iPhone, iPod et iPad (iPadOS se présente comme un Mac tactile).
 const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 /* Moteur audio robuste pour iPhone : l'iPhone peut laisser le contexte « suspended », le passer en « interrupted »
@@ -644,7 +660,7 @@ const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='M
 function buildAC(){const C=window.AudioContext||window.webkitAudioContext;AC=new C();const comp=AC.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;MASTER=AC.createGain();MASTER.gain.value=.9;MASTER.connect(comp);comp.connect(AC.destination);}
 function ac(){try{
     // iOS 17 et plus : son traité comme de la musique (joue aussi en mode silencieux, moins de coupures).
-    if(navigator.audioSession&&navigator.audioSession.type!=='playback'){try{navigator.audioSession.type='playback';}catch(e){}}
+    if(navigator.audioSession&&!EC_ON&&navigator.audioSession.type!=='playback'){try{navigator.audioSession.type='playback';}catch(e){}}
     if(AC&&(AC_STALE||AC.state==='closed'||AC.state==='interrupted')){const old=AC;AC=null;MASTER=null;BUS=null;AC_STALE=false;if(typeof MT!=='undefined'&&MT.on)mtStop();try{old.close().catch(()=>{});}catch(e){}}
     if(!AC)buildAC();
     if(AC.state!=='running'){const cur=AC;try{cur.resume().catch(()=>{});}catch(e){}setTimeout(()=>{if(cur===AC&&cur.state!=='running')AC_STALE=true;},400);}
@@ -927,7 +943,7 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
   $('#wk-info').innerHTML=h;wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
-  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();}
+  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();}
 function wkGo(bar){stopBus();WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
@@ -946,7 +962,7 @@ function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=W
     hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0)playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);});const ms=e[0];at(t-a.currentTime,()=>{wkClear();ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));});}t+=e[1]*spb;});});});
   const end=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
   at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{wkClear();awake('wk',false);});}});}
-function playWork(){const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
+function playWork(){ecStop();const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
   if($('#wk-click').checked){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(start+k*bt*spb,k===0?'acc':'beat',bus);start+=bpb*spb;}   // décompte d'une mesure
   awake('wk',$('#wk-loop').checked);wkSchedule(bus,start);}
 function wkStop(){stopBus();wkClear();awake('wk',false);}
@@ -1243,6 +1259,79 @@ function wkStaff(b,offset){const svg=$('#wk-staff');if(!svg)return;const ink='#2
   Object.values(rows).forEach(r=>{let right=-1e9;r.sort((a,c)=>+a.getAttribute('x')-+c.getAttribute('x')).forEach(el=>{let b;try{b=el.getBBox();}catch(e){return;}if(!b.width)return;
     if(b.x<right+1)el.remove();else right=b.x+b.width;});});}
 
+/* ---------- Écoute au micro : l'app vérifie les notes jouées au piano ---------- */
+// Tout est calculé sur l'appareil : le son du micro n'est ni enregistré ni envoyé.
+const EC_MIN=.008,EC_CLEAR=.8;
+// Hauteur par autocorrélation normalisée (méthode de McLeod) : {f en Hz, c netteté de 0 à 1}, f = 0 si rien de net.
+function nsdfPitch(x,n,sr,maxLag){const nsdf=new Float32Array(maxLag+2);
+  for(let tau=0;tau<=maxLag+1;tau++){let acf=0,m=0;for(let i=0,e=n-tau;i<e;i++){const a=x[i],b=x[i+tau];acf+=a*b;m+=a*a+b*b;}nsdf[tau]=m>0?2*acf/m:0;}
+  let tau=1;while(tau<maxLag&&nsdf[tau]>0)tau++;
+  const peaks=[];let best=-1;
+  while(tau<maxLag){while(tau<maxLag&&nsdf[tau]<=0)tau++;let pk=-1,pv=0;
+    while(tau<maxLag&&nsdf[tau]>0){if(nsdf[tau]>pv&&nsdf[tau]>=nsdf[tau-1]&&nsdf[tau]>=nsdf[tau+1]){pv=nsdf[tau];pk=tau;}tau++;}
+    if(pk>0){const a=nsdf[pk-1],b=nsdf[pk],c=nsdf[pk+1],d=a-2*b+c,sh=d?.5*(a-c)/d:0,h=b-.25*(a-c)*sh;peaks.push([pk+sh,h]);if(h>best)best=h;}}
+  if(best<0)return {f:0,c:0};const pick=peaks.find(q=>q[1]>=.9*best);return {f:sr/pick[0],c:Math.min(1,pick[1])};}
+// Une trame du micro (4096 échantillons) : niveau, hauteur et netteté. Graves : signal réduit de moitié ; aigus : repris à pleine résolution.
+function detectPitch(buf,sr){let n=buf.length,rms=0;for(let i=0;i<n;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/n);if(rms<EC_MIN)return {rms,f:0,c:0};
+  const h=n>>1,x=new Float32Array(h);for(let i=0;i<h;i++)x[i]=(buf[2*i]+buf[2*i+1])/2;
+  let r=nsdfPitch(x,h,sr/2,Math.min(h>>1,Math.floor(sr/2/50)));
+  if(r.f>800){const hi=nsdfPitch(buf,n,sr,Math.floor(sr/700));if(hi.c>=EC_CLEAR)r=hi;}
+  return {rms,f:r.f,c:r.c};}
+const a4=()=>(S.meta&&S.meta.a4)||440;
+const EC={on:false,tok:0,mode:'',stream:null,src:null,an:null,buf:null,iv:0,seq:[],i:0,sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]};
+// Nom d'une note dans le morceau en cours (bémols si le morceau en demande).
+function wkNm(m){const fl=WORK[WK.id].flats;return (fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m);}
+function ecFb(text,cls){const el=$('#ec-fb');el.textContent=text||'';el.className='fb'+(cls?' '+cls:'');}
+function ecScore(){$('#ec-score').innerHTML=`Justes <b>${EC.ok}</b> À revoir <b>${EC.ko}</b>`;}
+function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));$('#ec-cal-msg').textContent=f===440?'Réglage actuel : La = 440 Hz (piano accordé).':`Réglage actuel : La = ${String(f).replace('.',',')} Hz, soit ${Math.abs(c)} cents ${c<0?'plus bas':'plus haut'} que 440. Si l’écart dépasse 50 cents, vérifie que tu as bien joué le La.`;}
+// Notes attendues dans la mesure en cours, pour la main choisie (les notes liées, déjà tenues, ne sont pas rejouées).
+function ecSeq(){const b=workBars(WK.id)[WK.bar];return b[WK.hands==='lh'?'lh':'rh'].map(e=>{if(!e[0])return null;const keep=e[0].map((m,j)=>j).filter(j=>!(e[4]&&e[4][j]===0));
+    return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null}:null;}).filter(Boolean);}
+function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
+  $('#ec-msg').textContent=x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}. Je l’entends, sans vérifier chaque note.`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`;}
+function ecPrep(){EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
+function ecNextBar(){if(WK.bar>=workBars(WK.id).length-1){ecStop(`Morceau terminé : ${EC.ok} juste${EC.ok>1?'s':''}, ${EC.ko} à revoir.`);return;}wkGo(WK.bar+1);}
+function ecAdvance(){EC.i++;if(EC.i>=EC.seq.length)ecNextBar();else ecShow();}
+function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);setTimeout(()=>k.classList.remove(cls),600);}}
+// Traite une trame : attend une attaque, puis trois trames de suite sur la même note avant de juger.
+function ecFeed(buf,sr){const d=detectPitch(buf,sr);
+  if(EC.mode==='cal'){if(d.c>=EC_CLEAR&&d.f>370&&d.f<475){EC.cal.push(d.f);if(EC.cal.length>=8){const s=EC.cal.slice().sort((a,b)=>a-b);S.meta=Object.assign({},S.meta,{a4:Math.round((s[3]+s[4])/2*10)/10});saveLocal();ecStop();ecCalMsg();}}return;}
+  const x=EC.seq[EC.i];if(!x)return;
+  if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;return;}
+  if(d.rms>EC.low*1.35&&!EC.armed){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;}      // le niveau remonte : nouvelle attaque
+  EC.low=Math.min(EC.low,d.rms);EC.loud++;
+  const m=d.c>=EC_CLEAR&&d.f>0?Math.round(69+12*Math.log2(d.f/a4())):null;
+  if(m!==null&&m===EC.sm)EC.n++;else{EC.sm=m;EC.n=m===null?0:1;}
+  if(!EC.armed&&m!==null&&EC.last!==null&&m!==EC.last&&EC.n>=2)EC.armed=true;         // la hauteur a changé : nouvelle note
+  if(!EC.armed)return;
+  if(x.ms.length>1){if(EC.loud>=3){EC.armed=false;EC.last=null;EC.low=d.rms;ecFb('Accord entendu (non vérifié).','');ecAdvance();}return;}
+  if(EC.n<3)return;
+  const want=x.ms[0];EC.armed=false;EC.last=m;EC.low=d.rms;
+  if(m===want){EC.ok++;ecFlash(want,'ok');ecFb('Juste : '+wkNm(want),'ok');ecScore();ecAdvance();}
+  else if((m-want)%12===0)ecFb(`Bonne note, mais je l’entends ${m>want?'plus haut':'plus bas'} (${wkNm(m)}). Vérifie l’octave, ou touche « Passer la note ».`,'');
+  else{EC.ko++;ecFlash(m,'ko');ecFb(`J’entends ${wkNm(m)}, j’attends ${wkNm(want)}.`,'ko');ecScore();}}
+async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices;
+  if(!md||!md.getUserMedia){ecFb('Micro indisponible dans ce navigateur.','ko');return;}
+  wkStop();const a=ac();if(!a)return;
+  EC_ON=true;try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){}
+  let stream;try{stream=await md.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});}
+  catch(e){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e2){}
+    ecFb(e&&e.name==='NotAllowedError'?'Micro refusé. Autorise le micro pour ce site (Réglages › Safari › Micro), puis réessaie.':'Micro indisponible sur cet appareil.','ko');return;}
+  if(tok!==EC.tok||document.hidden){try{stream.getTracks().forEach(tr=>tr.stop());}catch(e){}if(tok===EC.tok){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}return;}
+  try{if(a.state!=='running')a.resume();}catch(e){}
+  Object.assign(EC,{on:true,mode,stream,src:a.createMediaStreamSource(stream),an:a.createAnalyser(),buf:new Float32Array(4096),sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]});
+  EC.an.fftSize=4096;EC.src.connect(EC.an);awake('ec',true);
+  EC.iv=setInterval(()=>{if(!EC.on)return;try{if(a.state!=='running')a.resume();}catch(e){}EC.an.getFloatTimeDomainData(EC.buf);ecFeed(EC.buf,a.sampleRate);},70);
+  $('#ec-box').classList.add('on');$('#kb-wk').classList.toggle('ecoute',mode==='play');ecFb('','');
+  if(mode==='cal'){$('#ec-cal-msg').textContent='J’écoute… Joue le La4 et laisse-le sonner.';$('#ec-cal-go').textContent='Arrêter';return;}
+  $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
+  if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();}
+function ecStop(msg){EC.tok++;if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
+  try{EC.stream.getTracks().forEach(tr=>tr.stop());}catch(e){}try{EC.src.disconnect();}catch(e){}
+  EC.on=false;EC_ON=false;EC.mode='';try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+  awake('ec',false);wkClear();$('#ec-box').classList.remove('on');$('#kb-wk').classList.remove('ecoute');$('#ec-go').textContent='Écoute-moi';$('#ec-cal-go').textContent='Écouter mon La';$('#ec-skip').classList.add('hidden');
+  $('#ec-msg').textContent='Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.';ecCalMsg();ecFb(msg||'','');}
+
 /* ---------- Astuces ---------- */
 const TIPS=[
   ['Méthode','Dix minutes chaque jour valent mieux qu’une heure le dimanche : la mémoire des doigts se construit pendant le sommeil.'],
@@ -1277,6 +1366,7 @@ const TIPS=[
   ['Sur iPhone','Exporte une sauvegarde chaque semaine (Journal › Exporter) : tes séances et tes partitions ne vivent que sur ce téléphone.'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Sur iPhone','Séance › « Écoute-moi » : pose le téléphone sur le pupitre, dans une pièce calme. L’app vérifie tes notes sans rien enregistrer.'],
   ['Quand ça bloque','Baisse le tempo de 20 et rejoue : presque tout blocage est un problème de vitesse.'],
   ['Quand ça bloque','Isole les deux notes où ça casse et fais l’aller-retour dix fois.'],
   ['Quand ça bloque','Change de main, ou fais une pause de cinq minutes : le cerveau continue de travailler.'],
@@ -1516,7 +1606,7 @@ const VIEWS=['seance','clavier','oreille','lecture','tempo','morceaux','gauche',
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
-  mtChip();
+  mtChip();if(v!=='seance')ecStop();
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
   if(v==='seance')setTimeout(wkScroll,30);
   if(v==='lecture'&&!lecCur)lecNew();
@@ -1549,6 +1639,9 @@ function init(){
   $('#my-add').onclick=()=>{const x=myCur();if(!x||x.bars.length>=MY_BARS)return;x.bars.splice(MY.bar+1,0,[]);MY.bar++;mySave();myRender();};
   $('#my-delbar').onclick=()=>{const x=myCur();if(!x)return;if(x.bars[MY.bar].length)x.bars[MY.bar]=[];else if(x.bars.length>1)x.bars.splice(MY.bar,1);mySave();myRender();};
   $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
+  $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
+  $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)ecStop();});
   renderEx();renderTips();$('#tip-next').onclick=()=>{tipShift++;renderTips();};
   $('#ex-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b){openEx(b.dataset.ex);return;}const l=e.target.closest('button[data-exl]');if(l)playEx(l.dataset.exl);});
   $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();});

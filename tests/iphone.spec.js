@@ -41,7 +41,7 @@ test('I3. Astuces : astuce du jour (aussi dans Séance), une autre au toucher, s
   await expect(page.locator('#tip-text')).not.toHaveText(tip || '');
   await expect(page.locator('#tip-list details')).toHaveCount(7);
   await page.locator('#tip-list summary', { hasText: 'Sur iPhone' }).tap();
-  await expect(page.locator('#tip-list details[open] li')).toHaveCount(7);
+  await expect(page.locator('#tip-list details[open] li')).toHaveCount(8);
   await page.locator('#routine a', { hasText: 'Main gauche' }).tap();
   await expect(page.locator('#v-gauche')).toBeVisible();
   await page.goto('./#seance');
@@ -55,7 +55,7 @@ test('I4. l’astuce change chaque jour et reste dans la liste', async ({ page }
   // @ts-ignore
   const r = await page.evaluate(() => { const a = tipIndex(new Date(2026, 10, 15, 8)), b = tipIndex(new Date(2026, 10, 15, 23)), c = tipIndex(new Date(2026, 10, 16, 0)), old = tipIndex(new Date(2020, 0, 1));
     return { same: a === b, next: c === (a + 1) % TIPS.length, n: TIPS.length, inRange: old >= 0 && old < TIPS.length }; });
-  expect(r).toEqual({ same: true, next: true, n: 42, inRange: true });
+  expect(r).toEqual({ same: true, next: true, n: 43, inRange: true });
 });
 
 test('I5. Séance au doigt : mesure suivante, écoute et portée utilisables sur l’iPhone', async ({ page }) => {
