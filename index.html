@@ -95,6 +95,17 @@ textarea{min-height:70px;resize:vertical}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
 .co-list li{margin-bottom:10px}
+.sf-clock{font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:800;color:var(--laiton)}
+.sf-clock.low{color:#e07a62}
+.sf-q{font-size:1.1rem;font-weight:700;text-align:center;margin:8px 0}
+.sf-q.big{font-size:1.6rem}
+#sf-staff[hidden]{display:none}
+.sf-les{border-top:1px solid var(--ligne)}.sf-les summary{display:flex;justify-content:space-between;gap:8px;min-height:44px;align-items:center}
+.sf-les .ok{color:var(--ok)}
+.sf-les p{margin:6px 0}
+#sf-type{margin-bottom:8px}
+.sf-run{border-color:var(--laiton)}
+#v-solfege [hidden]{display:none!important}
 .rec-row{align-items:center;gap:10px;margin:2px 0 6px}
 .rec-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#c0392b;margin-right:8px;vertical-align:middle}
 #rec-go.on{border-color:#c0392b;color:#e07a62}#rec-go.on .rec-dot{animation:recp 1s infinite}
@@ -254,6 +265,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <a href="#clavier" data-v="clavier">Clavier</a>
   <a href="#oreille" data-v="oreille">Oreille</a>
   <a href="#lecture" data-v="lecture">Lecture</a>
+  <a href="#solfege" data-v="solfege">Solfège</a>
   <a href="#tempo" data-v="tempo">Tempo</a>
   <a href="#morceaux" data-v="morceaux">Morceaux</a>
   <a href="#gauche" data-v="gauche">Main gauche</a>
@@ -583,6 +595,44 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
 </section>
 
+<!-- SOLFÈGE -->
+<section class="view" id="v-solfege">
+  <div class="card">
+    <div class="row between"><h2>Solfège</h2><span class="tag" id="sf-tag">0/10 acquises</span></div>
+    <p class="small muted">Un parcours en 10 leçons, des exercices au minuteur et tes records. Cinq minutes par jour suffisent : la régularité fait tout. Les notes s’écrivent selon ton réglage (Do Ré Mi, C D E ou les deux).</p>
+    <p class="small" id="sf-week"></p>
+  </div>
+  <div class="card sf-run" id="sf-run" hidden>
+    <div class="row between"><b id="sf-title"></b><span class="sf-clock" id="sf-clock"></span></div>
+    <p class="small muted" id="sf-prog"></p>
+    <div id="sf-play">
+      <svg class="staff" id="sf-staff" viewBox="0 0 320 150" role="img" aria-label="Portée de l’exercice"></svg>
+      <p class="sf-q" id="sf-q" aria-live="polite"></p>
+      <div class="answers" id="sf-ans"></div>
+      <p class="fb" id="sf-fb" aria-live="polite"></p>
+    </div>
+    <div id="sf-sum" class="small" hidden></div>
+    <div class="row"><button class="btn ghost" id="sf-stop">Arrêter</button><button class="btn primary" id="sf-again" hidden>Recommencer</button></div>
+  </div>
+  <div class="card" id="sf-chrono">
+    <div class="row between"><h2>Chrono</h2><span class="tag" id="sf-rec"></span></div>
+    <p class="small muted">Réponds au plus de questions possible avant la fin du minuteur. Une erreur montre la bonne réponse et son explication.</p>
+    <div class="seg" id="sf-type"></div>
+    <div class="seg" id="sf-dur"><button data-d="1" class="on">1 min</button><button data-d="2">2 min</button><button data-d="5">5 min</button></div>
+    <div class="row"><button class="btn primary big" id="sf-go">Démarrer le chrono</button></div>
+  </div>
+  <div class="card" id="sf-parcours">
+    <h2>Parcours</h2>
+    <p class="small muted">Lis la leçon, puis « S’exercer » : 10 questions. Une leçon est acquise à 9/10.</p>
+    <div id="sf-lessons"></div>
+  </div>
+  <div class="card">
+    <h2>Tes points faibles</h2>
+    <p class="small muted">Ce que tu rates le plus revient plus souvent, jusqu’à ce que ce soit solide.</p>
+    <div id="sf-weak" class="small"></div>
+  </div>
+</section>
+
 <!-- ASTUCES -->
 <section class="view" id="v-astuces">
   <div class="card" id="tip-card">
@@ -663,7 +713,7 @@ const keyName=(m,oct)=>NOMS==='both'?nm1(FR,m,oct)+'\n'+nm1(EN,m,oct):nm(m,oct);
 const isBlack=m=>[1,3,6,8,10].includes(((m%12)+12)%12);
 
 /* ---------- Données ---------- */
-const S={seances:[],rep:{},stats:{lecture:{},oreille:{}},questions:{done:{},items:[]},mine:[],coach:{},meta:{}};
+const S={seances:[],rep:{},stats:{lecture:{},oreille:{}},questions:{done:{},items:[]},mine:[],coach:{},solf:{},meta:{}};
 const LS='vestale-studio-v1';
 /* Nettoyage des données (chargement et import) : seules des valeurs attendues entrent dans l'app. */
 const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);
@@ -679,7 +729,15 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
   const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
   const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
   return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
-    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{})},questions:{done,items},mine,coach:cleanCoach(d.coach)};}
+    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{})},questions:{done,items},mine,coach:cleanCoach(d.coach),solf:cleanSolf(d.solf)};}
+// Solfège : les = meilleur score par leçon (sur 10), best = record par chrono (« type:minutes »), hist = [date, type, secondes, justes, erreurs],
+// w = points faibles (« type:clé » → poids).
+function cleanSolf(o){const out={les:{},best:{},hist:[],w:{}};if(!isObj(o))return out;
+  if(isObj(o.les))Object.keys(o.les).slice(0,40).forEach(k=>{const v=intIn(o.les[k],0,10);if(/^[a-z]{2,12}$/.test(k)&&v!=null)out.les[k]=v;});
+  if(isObj(o.best))Object.keys(o.best).slice(0,80).forEach(k=>{const v=intIn(o.best[k],0,9999);if(/^[a-z]{2,12}:[125]$/.test(k)&&v!=null)out.best[k]=v;});
+  if(Array.isArray(o.hist))o.hist.slice(-400).forEach(h=>{if(!Array.isArray(h))return;const ts=intIn(h[0],0,9e12),sec=intIn(h[2],0,36000),ok=intIn(h[3],0,9999),ko=intIn(h[4],0,9999);
+    if(ts&&typeof h[1]==='string'&&/^[a-z]{2,12}$/.test(h[1])&&sec!=null&&ok!=null&&ko!=null)out.hist.push([ts,h[1],sec,ok,ko]);});
+  if(isObj(o.w))Object.keys(o.w).slice(0,300).forEach(k=>{const v=intIn(o.w[k],1,40);if(/^[a-z]{2,12}:[A-Za-z0-9♯♭.+-]{1,12}$/.test(k)&&v)out.w[k]=v;});return out;}
 // Coach : par morceau, b = {mesure: [fautes, passages propres, passages, hésitations]}, c = {« attendue>jouée »: nombre} (x = note absente d'un accord).
 function cleanCoach(o){const out={};if(!isObj(o))return out;Object.keys(o).slice(0,80).forEach(id=>{const c=o[id];if(!/^[a-z0-9]{1,24}$/.test(id)||!isObj(c))return;const b={},cc={};
   if(isObj(c.b))Object.keys(c.b).slice(0,400).forEach(k=>{const i=intIn(k,0,999),r=c.b[k];if(i==null||!Array.isArray(r))return;b[i]=[0,1,2,3].map(j=>intIn(r[j],0,1e6)||0);});
@@ -701,7 +759,7 @@ const SNAP='vestale-copies-v1',SNAP_MAX=10;
 const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
 function loadSnaps(){try{const a=JSON.parse(localStorage.getItem(SNAP)||'[]');return Array.isArray(a)?a.filter(s=>isObj(s)&&Number.isFinite(+s.ts)&&isObj(s.data)&&Object.prototype.hasOwnProperty.call(SNAP_WHY,s.why)):[];}catch(e){return [];}}
 function saveSnaps(a){for(let n=a.length;n>0;n=Math.floor(n/2)){try{localStorage.setItem(SNAP,JSON.stringify(a.slice(0,n)));return true;}catch(e){}}return false;}
-function snapData(){return {seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach};}
+function snapData(){return {seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf};}
 function snapshot(why){try{const list=loadSnaps(),data=snapData(),json=JSON.stringify(data);
     if(!S.seances.length&&!Object.keys(S.rep).length&&!Object.keys(S.stats.lecture).length&&!Object.keys(S.stats.oreille).length&&!Object.keys(S.questions.done).length&&!S.questions.items.length&&!S.mine.length)return false;
     if(why==='auto'&&list.some(s=>dkey(new Date(+s.ts))===dkey(new Date())))return false;
@@ -712,7 +770,7 @@ function renderSnaps(){const el=$('#snap-sel');if(!el)return;const list=loadSnap
   $('#snap-restore').disabled=!list.length;}
 async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value];if(!s)return;const d=new Date(+s.ts);
   if(!(await ask(`Revenir à la copie du ${fmtDate(dkey(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())} (${s.n} séance(s)) ? L’état actuel est d’abord gardé en copie.`)))return;
-  snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;if(Object.prototype.hasOwnProperty.call(s.data,'coach'))S.coach=c.coach;saveLocal();mineSync();renderAll();toast('Copie restaurée');}
+  snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;if(Object.prototype.hasOwnProperty.call(s.data,'coach'))S.coach=c.coach;if(Object.prototype.hasOwnProperty.call(s.data,'solf'))S.solf=c.solf;saveLocal();mineSync();renderAll();toast('Copie restaurée');}
 /* Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours (ou n'a jamais eu lieu). */
 /* Sauvegarde hors du téléphone, selon le réglage du Journal :
    « Après chaque séance » (par défaut) : le bandeau revient après chaque séance notée qui n'est pas encore sauvegardée ;
@@ -1653,6 +1711,149 @@ function renderCoach(){const el=$('#co-tips');if(!el||!WORK[WK.id])return;const 
   if(conf.length)h+='<h3>Erreurs fréquentes</h3><ul class="small">'+conf.map(([k,n])=>`<li>${esc(confTip(k,n))}</li>`).join('')+'</ul>';
   el.innerHTML=h;}
 
+/* ---------- Solfège : parcours, chrono, points faibles ---------- */
+const SF_TYPES=[['sol','Clé de sol'],['fa','Clé de fa'],['durees','Durées'],['tons','Tons, demi-tons'],['alt','Altérations'],['armure','Tonalités'],['interv','Intervalles'],['accords','Accords'],['termes','Termes'],['mix','Mélange']];
+const SF_LES=[
+  ['sol','La clé de sol','La clé de sol s’enroule autour de la 2e ligne : c’est Sol4 (ton repère, le pouce droit dans À la claire fontaine).|Lignes de bas en haut : <b>Mi Sol Si Ré Fa</b> (« Mi Sol Si Ré Fa »). Interlignes : <b>Fa La Do Mi</b>.|Le Do central (Do4) est sur une petite ligne sous la portée. Une note sur une ligne, la suivante dans l’interligne au-dessus : on lit par marches.'],
+  ['fa','La clé de fa','Les deux points de la clé de fa entourent la 4e ligne : c’est Fa3. La main gauche lit surtout ici.|Lignes de bas en haut : <b>Sol Si Ré Fa La</b>. Interlignes : <b>La Do Mi Sol</b>.|Le Do central (Do4) est sur une petite ligne au-dessus de la portée : le même Do que sous la clé de sol.'],
+  ['durees','Durées et silences','Avec la noire = 1 temps : <b>ronde</b> 4, <b>blanche</b> 2, <b>noire</b> 1, <b>croche</b> ½, <b>double croche</b> ¼.|Le <b>point</b> ajoute la moitié de la valeur : blanche pointée = 3, noire pointée = 1 ½.|Les silences : <b>pause</b> 4 (accrochée sous la 4e ligne), <b>demi-pause</b> 2 (posée sur la 3e), <b>soupir</b> 1, <b>demi-soupir</b> ½, <b>quart de soupir</b> ¼.'],
+  ['tons','Tons et demi-tons','Le <b>demi-ton</b> est le plus petit écart du piano : deux touches voisines, sans touche entre elles.|Le <b>ton</b> = deux demi-tons : une touche entre les deux.|Entre les notes blanches, deux demi-tons seulement : <b>Mi–Fa</b> et <b>Si–Do</b>. La gamme majeure : ton, ton, demi-ton, ton, ton, ton, demi-ton.'],
+  ['alt','Altérations','Le <b>dièse ♯</b> hausse d’un demi-ton, le <b>bémol ♭</b> baisse d’un demi-ton, le <b>bécarre ♮</b> annule.|L’<b>armure</b> (les ♯ ou ♭ après la clé) vaut pour toute la partition, à toutes les octaves.|Une altération écrite devant une note vaut jusqu’à la barre de mesure, pour cette note-là.'],
+  ['armure','Tonalités et armures','Ordre des dièses : <b>Fa Do Sol Ré La Mi Si</b>. Ordre des bémols : l’inverse, <b>Si Mi La Ré Sol Do Fa</b>.|Avec des dièses : le dernier dièse + un demi-ton = la tonalité majeure (Fa♯ → Sol majeur).|Avec des bémols : l’avant-dernier bémol est la tonalité (Si♭ Mi♭ → Si♭ majeur) ; un seul bémol : Fa majeur.|La <b>relative mineure</b> a la même armure, une tierce mineure plus bas (Do majeur → La mineur).'],
+  ['interv','Intervalles','Un intervalle se compte en notes, les deux bouts compris : Do–Mi = Do, Ré, Mi = 3 → <b>tierce</b>.|2 seconde, 3 tierce, 4 quarte, 5 quinte, 6 sixte, 7 septième, 8 octave.|Sur la portée : ligne → ligne voisine = tierce ; ligne → interligne voisin = seconde. Les intervalles impairs restent du même « type » (ligne-ligne ou interligne-interligne).'],
+  ['accords','Accords','Un accord de trois notes empilées en tierces : <b>fondamentale, tierce, quinte</b> (Do–Mi–Sol).|Tierce de 2 tons (Do–Mi) : accord <b>majeur</b>, lumineux. Tierce d’un ton et demi (La–Do) : accord <b>mineur</b>, plus sombre.|En anglais : C = Do majeur, Am = La mineur, G7 = Sol avec septième.'],
+  ['termes','Termes d’interprétation','Tempo : <b>Largo</b> très lent, <b>Adagio</b> lent, <b>Andante</b> allant, <b>Moderato</b>, <b>Allegro</b> rapide, <b>Presto</b> très rapide.|Nuances : <b>pp</b> très doux, <b>p</b> doux, <b>mf</b> moyennement fort, <b>f</b> fort, <b>ff</b> très fort ; <b>crescendo</b> de plus en plus fort.|Jeu : <b>legato</b> lié, <b>staccato</b> détaché, <b>rit.</b> en ralentissant, <b>a tempo</b> au tempo, <b>point d’orgue</b> tenir plus longtemps.'],
+  ['mix','Mélange final','Tout le parcours, au hasard. Vise 9/10 ici : tu as les bases du solfège pour lire tes morceaux.']];
+const SF_DUR=[[4,'ronde',0],[3,'blanche pointée',0],[2,'blanche',0],[1.5,'noire pointée',0],[1,'noire',0],[.75,'croche pointée',0],[.5,'croche',0],[.25,'double croche',0],[4,'pause',1],[2,'demi-pause',1],[1,'soupir',1],[.5,'demi-soupir',1],[.25,'quart de soupir',1]];
+const SF_TERMS=[['Largo','très lent, large'],['Adagio','lent'],['Andante','allant, au pas'],['Moderato','modéré'],['Allegretto','assez rapide'],['Allegro','rapide, joyeux'],['Presto','très rapide'],['pp','très doux'],['p','doux'],['mf','moyennement fort'],['f','fort'],['ff','très fort'],['crescendo','de plus en plus fort'],['decrescendo','de plus en plus doux'],['legato','lié'],['staccato','détaché'],['ritardando','en ralentissant'],['a tempo','reprendre le tempo'],['point d’orgue','tenir plus longtemps'],['dolce','doux, tendre'],['cantabile','chantant'],['Da capo','reprendre au début'],['Fine','fin du morceau']];
+const SF_INT=['Seconde','Tierce','Quarte','Quinte','Sixte','Septième','Octave'];
+const SF_MAJ={'♯':[[0,''],[4,''],[1,''],[5,''],[2,''],[6,''],[3,'♯']],'♭':[[0,''],[3,''],[6,'♭'],[2,'♭'],[5,'♭'],[1,'♭'],[4,'♭']]};
+const SF_MIN={'♯':[[5,''],[2,''],[6,''],[3,'♯'],[0,'♯'],[4,'♯'],[1,'♯']],'♭':[[5,''],[1,''],[4,''],[0,''],[3,''],[6,'♭'],[2,'♭']]};
+const sfL=(l,a)=>letterName(((l%7)+7)%7)+(a||'');
+const sfFrac=v=>({4:'4',3:'3',2:'2',1.5:'1 ½',1:'1',.75:'¾',.5:'½',.25:'¼'})[v];
+const sfRand=n=>Math.floor(Math.random()*n);
+const sfShuffle=a=>{for(let i=a.length-1;i>0;i--){const j=sfRand(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+// Tirage pondéré : ce que tu rates revient plus souvent.
+function sfPick(type,cands){const w=(S.solf&&S.solf.w)||{};let tot=0;const ws=cands.map(c=>{const x=1+2*(w[type+':'+c.k]||0);tot+=x;return x;});
+  let r=Math.random()*tot;for(let i=0;i<cands.length;i++){r-=ws[i];if(r<=0)return cands[i];}return cands[cands.length-1];}
+// Choix : la bonne réponse et des leurres distincts, mélangés.
+function sfChoices(right,pool,n=4){const out=[right];for(const x of sfShuffle(pool.slice()))if(out.length<n&&!out.includes(x))out.push(x);return sfShuffle(out);}
+const sfMidi=(d,a)=>fromDiat(d)+(a==='♯'?1:a==='♭'?-1:0);
+// Générateurs : {k (point faible), q (question), draw (portée), choices, ans, ex (explication), play (notes)}
+const SF_GEN={
+  sol:()=>sfNoteQ('sol',30,[28,40]),
+  fa:()=>sfNoteQ('fa',18,[16,28]),
+  durees:()=>{const c=sfPick('durees',SF_DUR.map((x,i)=>({k:String(i),i})));const [v,name,rest]=SF_DUR[c.i];
+    if(Math.random()<.5){const names=SF_DUR.filter(x=>x[2]===rest).map(x=>x[1]);const ch=sfChoices(name,names);return {k:c.k,q:'Comment s’appelle cette figure ?',draw:{clef:'sol',fig:{v,rest}},choices:ch,ans:ch.indexOf(name),ex:`${name[0].toUpperCase()+name.slice(1)} : ${sfFrac(v)} temps (noire = 1).`};}
+    const vals=[4,3,2,1.5,1,.75,.5,.25].filter(x=>!rest||[4,2,1,.5,.25].includes(x)).map(sfFrac);const ch=sfChoices(sfFrac(v),vals);
+    return {k:c.k,q:'Combien de temps dure-t-elle (noire = 1) ?',draw:{clef:'sol',fig:{v,rest}},choices:ch,ans:ch.indexOf(sfFrac(v)),ex:`C’est ${/^[aeiouh]/.test(name)?'l’':'une '}${name} : ${sfFrac(v)} temps.`};},
+  tons:()=>{let r;for(let g=0;g<40&&!r;g++){const d=28+sfRand(7)+sfRand(2)*7,l=d%7,a1=['','','♯','♭'][sfRand(4)],a2=['','','♯','♭'][sfRand(4)],m1=sfMidi(d,a1),m2=sfMidi(d+1,a2),s=m2-m1;
+      if(s===1||s===2)r={d,a1,a2,s,k:sfL(l,a1)+'-'+sfL(l+1,a2)};}
+    const ch=['Ton','Demi-ton'],ans=r.s===2?0:1;
+    return {k:r.k.replace(/\//g,''),q:'Ton ou demi-ton ?',draw:{clef:'sol',notes:[{d:r.d,a:r.a1},{d:r.d+1,a:r.a2}]},choices:ch,ans,play:[sfMidi(r.d,r.a1),sfMidi(r.d+1,r.a2)],
+      ex:`${sfL(r.d%7,r.a1)} → ${sfL((r.d+1)%7,r.a2)} : ${r.s===1?'deux touches voisines, sans touche entre elles : demi-ton.':'une touche entre les deux : ton.'}`};},
+  alt:()=>{const n=sfRand(5),flat=Math.random()<.5,L=(flat?SIG_FL:SIG_SH).slice(0,n),key={L,flat,acc:{}};L.forEach(l=>{key.acc[l]=flat?'♭':'♯';});
+    const d=30+sfRand(9),l=d%7,inKey=key.acc[l]||'';let wr='';if(Math.random()<.35)wr=inKey?'♮':(Math.random()<.5?'♯':'♭');
+    const real=wr?(wr==='♮'?'':wr):inKey,ch=[sfL(l,'♭'),sfL(l,''),sfL(l,'♯')];
+    const ex=wr==='♮'?`Le bécarre annule l’armure : ${sfL(l,'')} naturel.`:wr?`Le ${wr} écrit devant la note s’applique : ${sfL(l,wr)}.`:inKey?`${sfL(l,inKey)} est à la clé : il vaut partout.`:`Rien à la clé pour ${sfL(l,'')} : note naturelle.`;
+    return {k:(wr?'w':inKey?'k':'n')+(flat?'b':'s'),q:'Quelle note joues-tu ?',draw:{clef:'sol',key,notes:[{d,a:wr}]},choices:ch,ans:['♭','','♯'].indexOf(real),ex,play:[sfMidi(d,real)]};},
+  armure:()=>{const c=sfPick('armure',[...[0,1,2,3,4,5,6].map(n=>({k:n+'s',n,a:'♯'})),...[1,2,3,4,5,6].map(n=>({k:n+'b',n,a:'♭'}))]);const flat=c.a==='♭',L=(flat?SIG_FL:SIG_SH).slice(0,c.n);
+    const minor=Math.random()<.3,T=(minor?SF_MIN:SF_MAJ)[c.a][c.n],right=sfL(T[0],T[1])+(minor?' mineur':' majeur');
+    const pool=[...SF_MAJ['♯'],...SF_MAJ['♭']].map(x=>sfL(x[0],x[1])+' majeur'),mpool=[...SF_MIN['♯'],...SF_MIN['♭']].map(x=>sfL(x[0],x[1])+' mineur');const ch=sfChoices(right,minor?mpool:pool);
+    const maj=SF_MAJ[c.a][c.n],majN=sfL(maj[0],maj[1])+' majeur';
+    const rule=!c.n?'Aucune altération : Do majeur.':!flat?`Le dernier dièse est ${sfL(L[c.n-1],'♯')} ; un demi-ton au-dessus : ${majN}.`:c.n===1?'Un seul bémol (Si♭) : Fa majeur, à retenir par cœur.':`L’avant-dernier bémol est ${sfL(L[c.n-2],'♭')} : ${majN}.`;
+    return {k:c.k,q:minor?'Quelle tonalité mineure (la relative) ?':'Quelle tonalité majeure ?',draw:{clef:'sol',key:{L,flat}},choices:ch,ans:ch.indexOf(right),ex:rule+(minor?` Sa relative mineure, une tierce mineure plus bas : ${right}.`:'')};},
+  interv:()=>{const c=sfPick('interv',[2,3,4,5,6,7,8].map(n=>({k:String(n),n})));const d=29+sfRand(6),harm=Math.random()<.35,names=[];for(let i=0;i<c.n;i++)names.push(letterName((d+i)%7));
+    return {k:c.k,q:harm?'Quel intervalle (notes ensemble) ?':'Quel intervalle ?',draw:{clef:'sol',notes:[{d},{d:d+c.n-1}],harm},choices:SF_INT,ans:c.n-2,play:harm?[[fromDiat(d),fromDiat(d+c.n-1)]]:[fromDiat(d),fromDiat(d+c.n-1)],
+      ex:`Compte les notes, les deux bouts compris : ${names.join(', ')} = ${c.n} → ${SF_INT[c.n-2].toLowerCase()}.`};},
+  accords:()=>{const T=[[0,'M'],[0,'m'],[1,'m'],[1,'M'],[2,'m'],[2,'M'],[3,'M'],[3,'m'],[4,'M'],[4,'m'],[5,'m'],[5,'M'],[6,'m']];const c=sfPick('accords',T.map(x=>({k:x[0]+x[1],l:x[0],q:x[1]})));
+    const d=28+c.l,root=fromDiat(d),ps=[root,root+(c.q==='M'?4:3),root+7],ds=[d,d+2,d+4],notes=ds.map((x,i)=>{const s=ps[i]-fromDiat(x);return {d:x,a:s===1?'♯':s===-1?'♭':''};});
+    const nm=(l,q)=>`${letterName(l)} ${q==='M'?'majeur':'mineur'} (${LETTERS_EN[l]}${q==='m'?'m':''})`,right=nm(c.l,c.q);
+    const ch=sfChoices(right,[nm(c.l,c.q==='M'?'m':'M'),...T.map(x=>nm(x[0],x[1]))]);
+    return {k:c.k,q:'Quel accord ?',draw:{clef:'sol',notes,harm:true},choices:ch,ans:ch.indexOf(right),play:[ps],
+      ex:`Fondamentale ${sfL(c.l,'')} (la note du bas) ; tierce ${c.q==='M'?'de 2 tons : accord majeur':'d’un ton et demi : accord mineur'} — ${notes.map(x=>sfL(x.d%7,x.a)).join(' – ')}.`};},
+  termes:()=>{const c=sfPick('termes',SF_TERMS.map((x,i)=>({k:String(i),i})));const [w,m]=SF_TERMS[c.i];const ch=sfChoices(m,SF_TERMS.map(x=>x[1]));
+    return {k:c.k,q:`« ${w} » veut dire…`,big:true,choices:ch,ans:ch.indexOf(m),ex:`${w} : ${m}.`};}};
+function sfNoteQ(type,bot,[lo,hi]){const c=sfPick(type,Array.from({length:hi-lo+1},(_,i)=>({k:String(lo+i),d:lo+i})));const l=c.d%7,m=fromDiat(c.d),ch=LETTERS_FR.map((x,i)=>letterName(i));
+  const p=c.d-bot,pos=p>=0&&p<=8?(p%2===0?`${ord(p/2+1,1)} ligne`:`${ord((p+1)/2)} interligne`):p<0?'sous la portée':'au-dessus de la portée';
+  return {k:c.k,q:'Quelle est cette note ?',draw:{clef:type,notes:[{d:c.d}]},choices:ch,ans:l,play:[m],ex:`${letterName(l)}${Math.floor(m/12)-1} : ${pos}.`};}
+// Portée de l'exercice : clé, armure, notes (successives ou ensemble), figure de durée.
+function sfDraw(o,state){const svg=$('#sf-staff'),ink='#2a221b',bot=o.clef==='fa'?18:30,yOf=d=>110-(d-bot)*7,MF=esc("Noto Music, Bravura, Apple Symbols, serif");let h='';
+  for(let i=0;i<5;i++){const y=110-i*14;h+=`<line x1="8" x2="312" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1.3"/>`;}
+  h+=o.clef==='fa'?`<text x="14" y="102" font-size="52" font-family="${MF}" fill="${ink}">\u{1D122}</text>`:`<text x="12" y="120" font-size="70" font-family="${MF}" fill="${ink}">\u{1D11E}</text>`;
+  if(o.key&&o.key.L.length){const KD=o.key.flat?[34,37,33,36,32,35,31]:[38,35,39,36,33,37,34];o.key.L.forEach((l,i)=>{const d=KD[i]-(o.clef==='fa'?14:0);h+=`<text class="ks" x="${60+13*i}" y="${yOf(d)+(o.key.flat?6:10)}" font-size="30" fill="${ink}">${o.key.flat?'♭':'♯'}</text>`;});}
+  const col=state==='ok'?'#3f7a2e':state==='ko'?'#b4432c':ink;
+  if(o.fig){const x=200,y=yOf(bot+4),v=o.fig.v;
+    if(o.fig.rest){if(v===4)h+=`<rect x="${x-12}" y="${yOf(bot+6)}" width="24" height="8" fill="${col}"/>`;else if(v===2)h+=`<rect x="${x-12}" y="${yOf(bot+4)-8}" width="24" height="8" fill="${col}"/>`;
+      else if(v===1)h+=`<path d="M${x-4} ${y-24} l9 11 l-9 11 l9 11 l-7 0 l5 9" stroke="${col}" stroke-width="3.2" fill="none" stroke-linejoin="round"/>`;
+      else{const k=v===.5?1:2;for(let i=0;i<k;i++){const yy=y-10+i*14;h+=`<circle cx="${x-5-i*3}" cy="${yy}" r="4" fill="${col}"/><path d="M${x-5-i*3} ${yy+1} Q${x+2} ${yy+4} ${x+8-i*3} ${yy-6}" stroke="${col}" stroke-width="2.2" fill="none"/>`;}h+=`<line x1="${x+8}" y1="${y-16}" x2="${x-4}" y2="${y+22}" stroke="${col}" stroke-width="2.2"/>`;}}
+    else{const open=v>=2;h+=`<ellipse class="nh" cx="${x}" cy="${y}" rx="9.5" ry="7" transform="rotate(-20 ${x} ${y})" fill="${open?'none':col}" stroke="${col}" stroke-width="${open?2.2:0}"/>`;
+      if(v<4){h+=`<line x1="${x+8.6}" x2="${x+8.6}" y1="${y-2}" y2="${y-52}" stroke="${col}" stroke-width="1.8"/>`;const fl=v<=.25?2:v<1?1:0;for(let k=0;k<fl;k++)h+=`<path d="M${x+8.6} ${y-52+k*11} q14 10 9 26" stroke="${col}" stroke-width="2.2" fill="none"/>`;}
+      if([3,1.5,.75].includes(v))h+=`<circle cx="${x+18}" cy="${y-3}" r="3" fill="${col}"/>`;}
+    svg.innerHTML=h;return;}
+  const ns=o.notes||[],x0=o.harm?205:ns.length>1?170:205,dx=o.harm?0:70;
+  ns.forEach((n,i)=>{const x=x0+dx*i+(o.harm&&i>0&&n.d-ns[i-1].d===1?18:0),y=yOf(n.d);
+    for(let L=bot-2;L>=n.d;L-=2)h+=`<line x1="${x-16}" x2="${x+16}" y1="${yOf(L)}" y2="${yOf(L)}" stroke="${ink}" stroke-width="1.3"/>`;
+    for(let L=bot+10;L<=n.d;L+=2)h+=`<line x1="${x-16}" x2="${x+16}" y1="${yOf(L)}" y2="${yOf(L)}" stroke="${ink}" stroke-width="1.3"/>`;
+    h+=`<ellipse class="nh" cx="${x}" cy="${y}" rx="9.5" ry="7" transform="rotate(-20 ${x} ${y})" fill="${col}"/>`;
+    if(n.a)h+=`<text class="acc" x="${x-30-(o.harm?i*6:0)}" y="${y+7}" font-size="20" fill="${col}">${n.a}</text>`;});
+  if(ns.length){const ds=ns.map(n=>n.d),lo=Math.min(...ds),hi=Math.max(...ds),up=(lo+hi)/2<bot+4;
+    if(o.harm){const x=x0;h+=up?`<line x1="${x+8.6}" x2="${x+8.6}" y1="${yOf(lo)-2}" y2="${yOf(hi)-50}" stroke="${col}" stroke-width="1.6"/>`:`<line x1="${x-8.6}" x2="${x-8.6}" y1="${yOf(hi)+2}" y2="${yOf(lo)+50}" stroke="${col}" stroke-width="1.6"/>`;}
+    else ns.forEach((n,i)=>{const x=x0+dx*i,y=yOf(n.d),u=n.d<bot+4;h+=u?`<line x1="${x+8.6}" x2="${x+8.6}" y1="${y-2}" y2="${y-50}" stroke="${col}" stroke-width="1.6"/>`:`<line x1="${x-8.6}" x2="${x-8.6}" y1="${y+2}" y2="${y+50}" stroke="${col}" stroke-width="1.6"/>`;});}
+  svg.innerHTML=h;}
+// Une partie : leçon (10 questions) ou chrono (1, 2 ou 5 min).
+const SF={on:false,mode:'',type:'',les:'',n:0,ok:0,ko:0,cur:null,end:0,left:0,paused:false,t0:0,iv:0,next:0,errs:[],times:[],qT:0};
+const sfType=()=>{const b=$('#sf-type button.on');return b?b.dataset.t:'mix';};
+const sfDurSel=()=>{const b=$('#sf-dur button.on');return b?+b.dataset.d:1;};
+function sfStart(mode,type,arg){clearTimeout(SF.next);clearInterval(SF.iv);Object.assign(SF,{on:true,mode,type,les:mode==='les'?arg:'',dur:mode==='chrono'?arg:0,n:0,ok:0,ko:0,errs:[],times:[],t0:Date.now(),paused:false});
+  $('#sf-run').hidden=false;$('#sf-play').hidden=false;$('#sf-sum').hidden=true;$('#sf-again').hidden=true;$('#sf-stop').hidden=false;
+  $('#sf-title').textContent=mode==='les'?'Leçon · '+SF_LES.find(x=>x[0]===arg)[1]:'Chrono · '+SF_TYPES.find(x=>x[0]===type)[1];
+  if(mode==='chrono'){SF.end=Date.now()+arg*60000;SF.iv=setInterval(sfTick,200);}
+  sfTick();sfAsk();const c=$('#sf-run'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);}
+function sfTick(){if(!SF.on)return;if(SF.mode==='les'){$('#sf-clock').textContent=`${Math.min(SF.n+1,10)}/10`;$('#sf-clock').classList.remove('low');}
+  else{const left=SF.paused?SF.left:Math.max(0,SF.end-Date.now());$('#sf-clock').textContent=mmss(Math.ceil(left/1000));$('#sf-clock').classList.toggle('low',left<10000);if(left<=0&&!SF.paused)sfEnd();}
+  $('#sf-prog').textContent=`${SF.ok} juste${SF.ok>1?'s':''} · ${SF.ko} erreur${SF.ko>1?'s':''}`;}
+function sfAsk(){if(!SF.on)return;const t=SF.type==='mix'?SF_TYPES[sfRand(SF_TYPES.length-1)][0]:SF.type,q=SF_GEN[t]();q.t=t;SF.cur=q;SF.qT=Date.now();
+  $('#sf-staff').hidden=!q.draw;if(q.draw)sfDraw(q.draw);$('#sf-q').textContent=q.q;$('#sf-q').classList.toggle('big',!!q.big);
+  $('#sf-ans').innerHTML=q.choices.map((c,i)=>`<button class="btn" data-i="${i}">${esc(c)}</button>`).join('');$('#sf-fb').textContent='';$('#sf-fb').className='fb';}
+function sfAnswer(i){const q=SF.cur;if(!SF.on||!q||q.done)return;q.done=true;const ok=i===q.ans;SF.n++;SF.times.push(Date.now()-SF.qT);
+  const w=S.solf.w,k=q.t+':'+q.k;if(ok){SF.ok++;if(w[k]){w[k]--;if(!w[k])delete w[k];}}else{SF.ko++;w[k]=Math.min(40,(w[k]||0)+2);SF.errs.push(q);}
+  $$('#sf-ans button').forEach(b=>{b.disabled=true;if(+b.dataset.i===q.ans)b.classList.add('ok');else if(+b.dataset.i===i)b.classList.add('ko');});
+  if(q.draw)sfDraw(q.draw,ok?'ok':'ko');$('#sf-fb').textContent=(ok?'Juste. ':'Non. ')+q.ex;$('#sf-fb').className='fb '+(ok?'ok':'ko');
+  if(q.play)try{const a=ac();if(a){let tt=0;q.play.forEach(x=>{[].concat(x).forEach(m=>playNote(m,tt,.9,.6));tt+=.45;});}}catch(e){}
+  sfTick();saveLocal();
+  if(SF.mode==='les'&&SF.n>=10){SF.next=setTimeout(sfEnd,ok?700:2200);return;}
+  SF.next=setTimeout(sfAsk,ok?650:2200);}
+function sfEnd(){if(!SF.on)return;SF.on=false;clearInterval(SF.iv);clearTimeout(SF.next);const sec=Math.round((Date.now()-SF.t0)/1000),tot=SF.ok+SF.ko,pc=tot?Math.round(100*SF.ok/tot):0;
+  const avg=SF.times.length?(SF.times.reduce((a,b)=>a+b,0)/SF.times.length/1000):0,so=S.solf;so.hist.push([Date.now(),SF.type,sec,SF.ok,SF.ko]);if(so.hist.length>400)so.hist.splice(0,so.hist.length-400);
+  let rec='';
+  if(SF.mode==='les'){const prev=so.les[SF.les]||0;if(SF.ok>prev)so.les[SF.les]=SF.ok;rec=SF.ok>=9?' Leçon acquise ✓':` Vise 9/10 pour l’acquérir (meilleur : ${Math.max(prev,SF.ok)}/10).`;}
+  else{const key=SF.type+':'+SF.dur,prev=so.best[key]||0;if(SF.ok>prev&&SF.ok>0){so.best[key]=SF.ok;rec=prev?` Nouveau record (avant : ${prev}) !`:' Premier record !';}else if(prev)rec=` Record : ${prev}.`;}
+  saveLocal();$('#sf-play').hidden=true;$('#sf-stop').hidden=true;$('#sf-again').hidden=false;$('#sf-sum').hidden=false;$('#sf-clock').textContent=SF.mode==='les'?`${SF.ok}/10`:'0:00';
+  const errs=[];SF.errs.forEach(q=>{if(!errs.some(e=>e.ex===q.ex))errs.push(q);});
+  $('#sf-sum').innerHTML=`<p class="fb ${pc>=80?'ok':''}"><b>${SF.ok} juste${SF.ok>1?'s':''}, ${SF.ko} erreur${SF.ko>1?'s':''}</b> (${pc} %)${avg?` · ${avg.toFixed(1).replace('.',',')} s par réponse`:''}.${esc(rec)}</p>`+
+    (errs.length?'<p><b>À retenir</b> :</p><ul>'+errs.slice(0,4).map(q=>`<li>${esc(q.ex)}</li>`).join('')+'</ul>':'<p>Aucune erreur. Bravo !</p>');
+  renderSolf();}
+function sfStop(){if(!SF.on)return;if(SF.n)sfEnd();else{SF.on=false;clearInterval(SF.iv);clearTimeout(SF.next);$('#sf-run').hidden=true;}}
+function sfLabel(k){const [t,v]=k.split(':'),T=(SF_TYPES.find(x=>x[0]===t)||[0,t])[1];
+  if(t==='sol'||t==='fa'){const m=fromDiat(+v);return `${T} : ${letterName(+v%7)}${Math.floor(m/12)-1}`;}
+  if(t==='durees')return `${T} : ${SF_DUR[+v][1]}`;if(t==='termes')return `${T} : ${SF_TERMS[+v][0]}`;if(t==='interv')return `${T} : ${SF_INT[+v-2].toLowerCase()}`;
+  if(t==='armure'){const n=parseInt(v,10),a=v.endsWith('b')?'♭':'♯';return n?`${T} : ${n} ${a==='♭'?'bémol':'dièse'}${n>1?'s':''}`:`${T} : sans altération`;}
+  if(t==='accords'){const l=+v[0];return `${T} : ${letterName(l)} ${v[1]==='M'?'majeur':'mineur'}`;}
+  if(t==='alt')return `${T} : ${v[0]==='w'?'altération écrite':v[0]==='k'?'note à la clé':'note naturelle'} (armure en ${v[1]==='b'?'bémols':'dièses'})`;
+  return `${T} : ${v}`;}
+// Le type à travailler en priorité (le plus de points faibles), pour la séance du jour.
+function sfWeakType(){const w=(S.solf&&S.solf.w)||{},by={};Object.entries(w).forEach(([k,v])=>{const t=k.split(':')[0];by[t]=(by[t]||0)+v;});const e=Object.entries(by).sort((a,b)=>b[1]-a[1])[0];return e?e[0]:'mix';}
+function renderSolf(){const so=S.solf=S.solf&&S.solf.hist?S.solf:{les:{},best:{},hist:[],w:{}};
+  const done=SF_LES.filter(x=>(so.les[x[0]]||0)>=9).length;$('#sf-tag').textContent=`${done}/10 acquise${done>1?'s':''}`;
+  const wk=Date.now()-7*864e5,h=so.hist.filter(x=>x[0]>=wk),sec=h.reduce((a,x)=>a+x[2],0),ok=h.reduce((a,x)=>a+x[3],0),ko=h.reduce((a,x)=>a+x[4],0);
+  $('#sf-week').textContent=h.length?`Cette semaine : ${Math.round(sec/60)} min, ${ok+ko} questions, ${Math.round(100*ok/Math.max(1,ok+ko))} % justes.`:'Cette semaine : pas encore de solfège. Commence par la leçon 1, ou un chrono d’une minute.';
+  if(!$('#sf-type').children.length)$('#sf-type').innerHTML=SF_TYPES.map(([k,l])=>`<button data-t="${k}"${k==='mix'?' class="on"':''}>${esc(l)}</button>`).join('');
+  const key=sfType()+':'+sfDurSel();$('#sf-rec').textContent=so.best[key]?`Record : ${so.best[key]}`:'Pas encore de record';
+  $('#sf-lessons').innerHTML=SF_LES.map(([id,title,txt],i)=>{const b=so.les[id];return `<details class="sf-les" data-id="${id}"><summary><span>${i+1}. ${esc(title)}</span><span class="${b>=9?'ok':'muted'}">${b>=9?'✓ ':''}${b!=null?b+'/10':''}</span></summary>${txt.split('|').map(p=>`<p class="small">${p}</p>`).join('')}<div class="row"><button class="btn primary" data-les="${id}">S’exercer · 10 questions</button><button class="btn ghost" data-chr="${id}">Chrono 1 min</button></div></details>`;}).join('');
+  const weak=Object.entries(so.w).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  $('#sf-weak').innerHTML=weak.length?'<ul>'+weak.map(([k])=>`<li>${esc(sfLabel(k))}</li>`).join('')+'</ul>':'<p class="muted">Rien pour l’instant : les erreurs apparaîtront ici.</p>';}
+
 /* ---------- Coach : déchiffrer avant de jouer ---------- */
 const LETTERS_FR=['Do','Ré','Mi','Fa','Sol','La','Si'],LETTERS_EN=['C','D','E','F','G','A','B'];
 const letterName=l=>NOMS==='en'?LETTERS_EN[l]:NOMS==='both'?LETTERS_FR[l]+'/'+LETTERS_EN[l]:LETTERS_FR[l];
@@ -1792,7 +1993,8 @@ function dayPlan(){const id=coachFocus(),w=WORK[id],n=workBars(id).length,day=da
   if(hard.length)out.push(['Mesures difficiles',6,`${w.t} : ${listBars(hard)}, au Coach jusqu’à ce qu’${hard.length>1?'elles soient propres':'elle soit propre'}.`,'#coach',`bar:${id}:${hard[0]}`]);else spare+=6;
   if(nx!==null)out.push(['Déchiffrer 2 mesures',6,`${w.t} : ${listBars([nx,nx+1].filter(b=>b<n))}. Nomme les notes, trouve les touches.`,'#coach',`dc:${id}:${nx}`]);else spare+=6;
   out.push([nx!==null?'Jouer ce que tu as lu':'Enchaîner',5+spare,nx!==null?`${w.t} à partir de la mesure ${nx+1}, avec « Écoute-moi », jusqu’à propre.`:`${w.t} en entier, avec « Écoute-moi », sans t’arrêter.`,'#coach',`bar:${id}:${nx!==null?nx:0}`]);
-  out.push(['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille'],['Pour le plaisir',2,'Un morceau que tu connais, en entier, sans t’arrêter.','#morceaux']);
+  const sft=sfWeakType(),sfn=(SF_TYPES.find(x=>x[0]===sft)||[0,'mélange'])[1].toLowerCase();
+  out.push(day%2===0?['Solfège',2,`Chrono 1 min : ${sfn}${sft==='mix'?'':' (ton point faible)'}.`,'#solfege','sf:'+sft]:['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille'],['Pour le plaisir',2,'Un morceau que tu connais, en entier, sans t’arrêter.','#morceaux']);
   return out;}
 
 /* ---------- Astuces ---------- */
@@ -1829,6 +2031,7 @@ const TIPS=[
   ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Méthode','Onglet Solfège : une leçon par jour, puis un chrono d’une minute. Bats ton record : la lecture devient un réflexe, et tes erreurs reviennent jusqu’à être solides.'],
   ['Méthode','Enregistre-toi (« Enregistrer », sous « Écoute-moi ») puis réécoute, la partition sous les yeux, et compare avec « Le modèle ». On s’entend bien mieux de l’extérieur qu’en jouant.'],
   ['Méthode','Rythme : coche « Vérifier aussi le rythme » dans le Coach. Un décompte, puis une pulsation à l’écran ; l’app te dit si chaque note arrive à l’heure. Commence lentement : noire = 60.'],
   ['Méthode','Révision espacée : une mesure propre revient le lendemain, puis à 3 jours, à 7 jours, à 14 et à 30. Rejoue-la propre du premier coup : c’est ce qui l’ancre dans la mémoire.'],
@@ -2060,7 +2263,7 @@ function renderBackup(){const el=$('#bk-last');if(!el)return;const lb=S.meta&&S.
   el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:S.seances.length?' · tout est à l’abri':''}.`;
   el.classList.toggle('warn',!!n&&(!lb||Date.now()-lb>7*864e5));$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));}
 async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}.json`;
-  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach}},null,1);
+  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf}},null,1);
   const file=new File([body],name,{type:'application/json'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
@@ -2071,25 +2274,27 @@ async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.a
   if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Les séances sont fusionnées, le reste est remplacé.`)))return;
   snapshot('import');const before=JSON.stringify(S);
   try{const all={};[...S.seances,...d.seances].forEach(s=>{all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
-    if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;if(Object.keys(j.data).includes('mine'))S.mine=d.mine;if(Object.keys(j.data).includes('coach'))S.coach=d.coach;
+    if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;if(Object.keys(j.data).includes('mine'))S.mine=d.mine;if(Object.keys(j.data).includes('coach'))S.coach=d.coach;if(Object.keys(j.data).includes('solf'))S.solf=d.solf;
     mineSync();renderAll();}catch(e){Object.assign(S,JSON.parse(before));renderAll();toast('Fichier non reconnu');return;}
   saveLocal();toast('Import réussi');}
 
 /* ---------- Navigation ---------- */
-const VIEWS=['seance','coach','clavier','oreille','lecture','tempo','morceaux','gauche','astuces','journal'];
+const VIEWS=['seance','coach','clavier','oreille','lecture','solfege','tempo','morceaux','gauche','astuces','journal'];
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
-  mtChip();if(v!=='seance'&&v!=='coach')ecStop();
+  mtChip();if(v!=='seance'&&v!=='coach')ecStop();if(v!=='solfege'&&SF.on)sfStop();if(v==='solfege')renderSolf();
   // Une seule carte « Travailler un morceau » : elle passe dans le Coach, puis revient dans Séance.
   if(v==='coach'&&$('#wk-card').parentNode!==$('#co-slot')){$('#co-slot').appendChild($('#wk-card'));renderCoach();setTimeout(wkScroll,30);}
   $('#wk-card h2').textContent=v==='coach'?'2. Jouer':'Travailler un morceau';if(v==='coach')renderDc();else dcStop();
   if(v==='seance'&&$('#wk-card').previousElementSibling!==$('#wk-home'))$('#wk-home').after($('#wk-card'));
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
-  if(v==='seance')setTimeout(wkScroll,30);
+  if(v==='seance'){setTimeout(wkScroll,30);if(!RUN.on&&!RUN.acc&&!RUN.idx)renderBlocks();}   // séance du jour à jour (Coach, Solfège, date)
   if(v==='lecture'&&!lecCur)lecNew();
   window.scrollTo(0,0);}
 function handleExtra(x){if(!x)return;const [k,v,w]=x.split(':');if(k==='preset')applyPreset(v);
+  if(k==='sf'&&SF_GEN[v]||k==='sf'&&v==='mix'){$$('#sf-type button').forEach(b=>b.classList.toggle('on',b.dataset.t===v));$$('#sf-dur button').forEach(b=>b.classList.toggle('on',b.dataset.d==='1'));renderSolf();
+    setTimeout(()=>{const c=$('#sf-chrono'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
   if(k==='jour'){if(!RUN.on&&!RUN.acc){FMT='jour';$$('#fmt button').forEach(b=>b.classList.toggle('on',b.dataset.f==='jour'));runReset();}const c=$('#blocks').closest('.card'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);}
   if((k==='bar'||k==='dc')&&WORK[v]){if(WK.id!==v)wkSelect(v);wkGo(Math.max(0,Math.min(workBars(v).length-1,+w||0)));if(k==='dc')dcStart();
     setTimeout(()=>{const card=$(k==='dc'?'#dc-card':'#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
@@ -2129,6 +2334,15 @@ function init(){
   smpLoad();
   $('#co-tips').addEventListener('click',e=>{const b=e.target.closest('button[data-cob]');if(!b)return;wkGo(+b.dataset.cob);const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);});
   $('#dc-piece').addEventListener('change',e=>{dcStop();wkSelect(e.target.value);});
+  renderSolf();
+  $('#sf-ans').addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(b)sfAnswer(+b.dataset.i);});
+  $('#sf-type').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;$$('#sf-type button').forEach(x=>x.classList.toggle('on',x===b));renderSolf();});
+  $('#sf-dur').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;$$('#sf-dur button').forEach(x=>x.classList.toggle('on',x===b));renderSolf();});
+  $('#sf-go').onclick=()=>sfStart('chrono',sfType(),sfDurSel());$('#sf-stop').onclick=sfStop;
+  $('#sf-again').onclick=()=>SF.mode==='les'?sfStart('les',SF.les==='mix'?'mix':SF.les,SF.les):sfStart('chrono',SF.type,SF.dur);
+  $('#sf-lessons').addEventListener('click',e=>{const a=e.target.closest('button[data-les]'),c=e.target.closest('button[data-chr]');
+    if(a)sfStart('les',a.dataset.les,a.dataset.les);if(c)sfStart('chrono',c.dataset.chr,1);});
+  document.addEventListener('visibilitychange',()=>{if(!SF.on||SF.mode!=='chrono')return;if(document.hidden){SF.left=Math.max(0,SF.end-Date.now());SF.paused=true;}else if(SF.paused){SF.end=Date.now()+SF.left;SF.paused=false;}sfTick();});
   $('#dc-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();dcStop();renderWork();});
   $('#dc-go').onclick=dcStart;$('#dc-again').onclick=dcStart;$('#dc-listen').onclick=playWork;
   $('#dc-next').onclick=()=>{wkGo(WK.bar+1);dcStart();};
