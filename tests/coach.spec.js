@@ -62,7 +62,7 @@ test('C2. une faute : conseil immédiat, la mesure se rejoue ; propre, on passe 
   await play(page, 81);                                                         // La5 : deux demi-tons
   await expect(page.locator('#ec-fb')).toContainText('La note voisine');
   await play(page, 79);
-  await expect(page.locator('#ec-fb')).toHaveText('Mesure 1 : 2 fautes. On la rejoue jusqu’à ce qu’elle soit propre (essai 2).');
+  await expect(page.locator('#ec-fb')).toHaveText('Mesure 1 : 2 fautes. On la rejoue jusqu’à ce qu’elle soit propre (essai 2/5).');
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 1/16');
   await expect(page.locator('#ec-msg')).toHaveText('Joue : Mi5 · doigt 3');
   for (const m of [76, 76, 77, 79]) await play(page, m);

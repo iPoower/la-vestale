@@ -61,6 +61,10 @@ Bouton « Enregistrer » sous « Écoute-moi » (Séance et Coach), en même tem
 
 « Régler sur mon piano » : l'app écoute le La4 et attend dix lectures d'affilée concordantes (à 12 cents près) avant de retenir leur médiane ; les premières trames du micro ne sont pas lues (0,8 s pour le réglage, 0,4 s pour le jeu : stabilisation du système audio). On peut aussi saisir l'accord à la main (400 à 466 Hz, par exemple 438).
 
+### Accords graves
+
+Chaque note d'un accord est comparée à ses deux voisines à un demi-ton : le pic de chaque harmonique est cherché à ±35 cents (les cordes graves d'un piano droit ont des harmoniques plus décalées), et pour chaque voisine on écarte les harmoniques que la note ou la voisine partagent avec les autres notes de l'accord. Si le réglage du La est à plus de 50 cents de 440 Hz, l'écoute le signale. Au Coach, une mesure se rejoue 5 fois au plus ; après 3 accords ratés, « Passer la note » avance sans compter de faute.
+
 ### Rythme au micro
 
 Case « Vérifier aussi le rythme » (Séance et Coach) : un décompte d'une mesure au tempo choisi, puis une pulsation à l'écran (pas de clic pendant le jeu : le micro l'entendrait comme une note). L'app situe le début de chaque note dans le signal (blocs d'environ 5 ms) et le compare au temps attendu, en tenant compte de la latence de sortie : à l'heure (± 0,1 s, ou 1/5 de temps si plus large), un peu en avance ou en retard (jusqu'au double), sinon faute de rythme, comptée comme une faute de la mesure (le Coach la fait rejouer). Après une fausse note, le rythme n'est plus jugé jusqu'à la fin de la mesure. Les retards et avances fréquents s'affichent dans « Où tu bloques », avec un conseil.
