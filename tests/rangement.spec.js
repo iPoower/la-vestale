@@ -35,7 +35,9 @@ test('R3. portée : notes de la mesure, noms, comptage « 1 2 3 4 » ; liaisons 
   // Bébé s'endort, mesure 8 : Mi♭ à la main gauche, croches non (blanche + noire + soupir)
   await page.locator('#wk-piece').selectOption('bebe');
   for (let i = 0; i < 7; i++) await page.locator('#wk-next').click();
-  expect(await page.$$eval('#wk-staff .acc', a => a.map(x => x.textContent))).toEqual(['♯', '♭']);   // Fa♯ (droite), Mi♭ (gauche)
+  expect(await page.$$eval('#wk-staff .acc', a => a.map(x => x.textContent))).toEqual(['♭']);   // Mi♭ (gauche) ; le Fa♯ est à la clé (Sol majeur)
+  await expect(page.locator('#wk-staff .ks')).toHaveCount(2);                                      // un ♯ par portée
+  await expect(page.locator('#wk-key')).toHaveText('Tonalité : Sol majeur · Fa♯ à la clé');
   await expect(page.locator('#wk-staff .rest')).toHaveCount(1);
   // Mesure 2 : Sol grave lié depuis la mesure 1 (marqué ⁀) ; croches comptées « et »
   for (let i = 0; i < 6; i++) await page.locator('#wk-prev').click();

@@ -113,6 +113,9 @@ textarea{min-height:70px;resize:vertical}
 .dc-names button:disabled{opacity:.35}
 .dc-after{flex-wrap:wrap;gap:8px}
 #dc-card [hidden]{display:none!important}
+.dc-key{margin:4px 0 6px;color:var(--laiton);font-weight:700}
+#kb-dc.dc-target{border-radius:12px;box-shadow:0 0 0 3px var(--laiton);animation:dct 1.2s ease-in-out 2}
+@keyframes dct{50%{box-shadow:0 0 0 6px rgba(201,162,77,.35)}}
 #dc-id ul{margin:6px 0;padding-left:18px} #dc-id li{margin-bottom:6px}
 .nh.cur{stroke:#b4432c;stroke-width:2.4px}.nh.cur:not([fill="none"]){fill:#b4432c}
 .nh.done{stroke:#4f7a3a}.nh.done:not([fill="none"]){fill:#4f7a3a}
@@ -301,8 +304,9 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
       </details>
     </div>
     <details id="wk-staff-box" open><summary>Portée et solfège</summary>
+      <p class="small dc-key" id="wk-key"></p>
       <svg class="staff wkstaff" id="wk-staff" viewBox="0 0 360 250" role="img" aria-label="La mesure sur la portée"></svg>
-      <p class="small muted">En haut, clé de sol (main droite) ; en bas, clé de fa (main gauche). Sous la portée : comment compter. Les ♯ et ♭ sont écrits sur chaque note pour t’aider (sur ta feuille, ils sont souvent à la clé).</p>
+      <p class="small muted">En haut, clé de sol (main droite) ; en bas, clé de fa (main gauche). Sous la portée : comment compter. Comme sur ta feuille, les ♯ et ♭ de la tonalité sont à la clé ; les autres sont écrits devant la note et valent jusqu’à la barre de mesure (sur ta feuille, ils sont souvent à la clé).</p>
       <details class="small" id="wk-solfege"><summary>Aide solfège</summary>
         <p><b>Clé de sol</b> (portée du haut) : lignes de bas en haut <b>Mi Sol Si Ré Fa</b> ; interlignes <b>Fa La Do Mi</b>.<br>
         <b>Clé de fa</b> (portée du bas) : lignes <b>Sol Si Ré Fa La</b> ; interlignes <b>La Do Mi Sol</b>.<br>
@@ -563,12 +567,13 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <details id="dc-id-box" open><summary>Carte d’identité du morceau</summary><div class="small" id="dc-id"></div></details>
     <div class="row between dc-bar"><b id="dc-pos"></b><button class="btn primary" id="dc-go">Déchiffrer</button></div>
     <div id="dc-live" hidden>
+      <p class="small dc-key" id="dc-key"></p>
       <svg class="staff wkstaff" id="dc-staff" viewBox="0 0 360 250" role="img" aria-label="La mesure à déchiffrer"></svg>
       <p id="dc-q" aria-live="polite"></p>
-      <div class="dc-names" id="dc-names"></div>
-      <div class="kb-wrap" id="kb-dc"></div>
       <p class="fb" id="dc-fb" aria-live="polite"></p>
       <div class="row dc-after" id="dc-after" hidden><button class="btn" id="dc-listen">Écouter la mesure</button><button class="btn ghost" id="dc-again">Relire</button><button class="btn" id="dc-next">Mesure suivante</button><button class="btn primary" id="dc-play">Jouer</button></div>
+      <div class="dc-names" id="dc-names"></div>
+      <div class="kb-wrap" id="kb-dc"></div>
     </div>
   </div>
   <div id="co-slot"></div>
@@ -796,6 +801,9 @@ function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=d
   for(let m=lo;m<=hi;m++)if(!isBlack(m)){const k=document.createElement('button');k.className='key white'+(m===60?' c4':'');k.style.left=x+U;k.style.width=W+U;k.dataset.m=m;k.innerHTML='<span class="kl"></span>';inner.appendChild(k);keys[m]=k;x+=W;}
   for(let m=lo;m<=hi;m++)if(isBlack(m)){const lw=keys[m-1];if(!lw)continue;const k=document.createElement('button');k.className='key black';k.style.left=(parseFloat(lw.style.left)+W*.69)+U;k.style.width=(W*.62)+U;k.dataset.m=m;inner.appendChild(k);keys[m]=k;}
   inner.style.width=opts.fit?'calc(100% - 16px)':x+'px';el.appendChild(inner);
+  // Au doigt, le clavier réagit dès l'appui ; on empêche le « clic » que l'iPhone fabrique au lever du doigt :
+  // si l'écran a changé entre-temps, il tomberait sur le bouton qui a pris la place de la touche.
+  inner.addEventListener('touchend',e=>{if(e.cancelable&&e.target.closest&&e.target.closest('.key'))e.preventDefault();},{passive:false});
   inner.addEventListener('pointerdown',e=>{const k=e.target.closest('.key');if(!k)return;const m=+k.dataset.m;if(!opts.silent)playNote(m,0,1.1,.8);k.classList.add('down');setTimeout(()=>k.classList.remove('down'),160);if(opts.onKey)opts.onKey(m);});
   const api={el,keys,W,
     labels(){for(const m in keys){const k=keys[m],mm=+m,l=k.querySelector('.kl');k.setAttribute('aria-label',nm(mm));if(l)l.textContent=(mm%12===0)?keyName(mm,true):(opts.small||compact?'':keyName(mm,false));}},
@@ -1065,7 +1073,7 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   if(WK.hands!=='lh')mark(b.rh,'hl');if(WK.hands!=='rh')mark(b.lh,'hl2');
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
-  $('#wk-info').innerHTML=h;wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
+  $('#wk-info').innerHTML=h;$('#wk-key').textContent=keyLine(dcKey(WK.id));wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
   $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach()){renderCoach();renderDc();}}
 function wkGo(bar){stopBus();WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
@@ -1340,7 +1348,7 @@ const SPB={1:[1,'♭'],3:[2,'♭'],6:[4,'♭'],8:[5,'♭'],10:[6,'♭']};
 function spell(m){const fl=WORK[WK.id]&&WORK[WK.id].flats,pc=m%12,useB=(fl===true||(Array.isArray(fl)&&fl.includes(pc)))&&SPB[pc];const [l,a]=useB?SPB[pc]:SPS[pc];return {d:(Math.floor(m/12)-1)*7+l,a,l};}
 // Nom court sans octave, selon le réglage Do Ré Mi / C D E / les deux.
 function shortName(m){const s=spell(m),F=['Do','Ré','Mi','Fa','Sol','La','Si'],E=['C','D','E','F','G','A','B'];return NOMS==='en'?E[s.l]+s.a:NOMS==='both'?F[s.l]+s.a+'/'+E[s.l]+s.a:F[s.l]+s.a;}
-function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const ink='#2a221b',X0=58,X1=348,bpb=WORK[WK.id].bpb;let h='';
+function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const key=dcKey(WK.id),nk=key.L.length,ink='#2a221b',X0=Math.max(58,46+7*nk),X1=348,bpb=WORK[WK.id].bpb;let h='';
   const ST={rh:{bot:30,y:90,mid:34},lh:{bot:18,y:190,mid:22}};
   const yOfD=(hd,d)=>ST[hd].y-(d-ST[hd].bot)*5;
   for(const hd of ['rh','lh'])for(let i=0;i<5;i++){const y=ST[hd].y-i*10;h+=`<line x1="6" x2="354" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1"/>`;}
@@ -1348,8 +1356,11 @@ function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const
   const MF=esc("Noto Music, Bravura, Apple Symbols, serif");
   h+=`<text x="9" y="95" font-size="49" font-family="${MF}" fill="${ink}">\u{1D11E}</text><text x="10" y="185" font-size="39" font-family="${MF}" fill="${ink}">\u{1D122}</text>`;
   const xOf=t=>X0+(t/bpb)*(X1-X0-14)+8;
+  // Armure (ordre des dièses Fa Do Sol Ré La Mi Si, des bémols Si Mi La Ré Sol Do Fa), clé de sol puis clé de fa (deux octaves plus bas).
+  const KD=key.flat?[34,37,33,36,32,35,31]:[38,35,39,36,33,37,34];
+  for(const hd of ['rh','lh'])for(let i=0;i<nk;i++){const d=KD[i]-(hd==='lh'?14:0);h+=`<text class="ks" x="${38+7*i}" y="${yOfD(hd,d)+(key.flat?3:4)}" font-size="13" fill="${ink}">${key.flat?'♭':'♯'}</text>`;}
   const dense={rh:b.rh.length>8,lh:b.lh.length>8};
-  for(const hd of ['rh','lh']){if(WK.hands!=='both'&&WK.hands!==hd)continue;let t=offset;const S=ST[hd];
+  for(const hd of ['rh','lh']){if(WK.hands!=='both'&&WK.hands!==hd)continue;let t=offset;const S=ST[hd],ACC=staffAcc(b[hd],key);
     const all=b[hd].flatMap(e=>e[0]?e[0].map(m=>spell(m).d):[]);let oct=0;
     if(all.length){const lo=Math.min(...all),hi=Math.max(...all);if(lo<S.bot-6&&hi+7<=S.bot+14)oct=7;else if(hi>S.bot+14&&lo-7>=S.bot-6)oct=-7;}
     if(oct)h+=`<text class="oct" x="18" y="${oct>0?S.y+16:S.y-46}" font-size="10" font-style="italic" font-weight="700" fill="${ink}">${oct>0?'8vb':'8va'}</text>`;
@@ -1366,7 +1377,7 @@ function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const
       for(let L=S.bot+10;L<=hi;L+=2){const y=yOfD(hd,L);h+=`<line x1="${x-10}" x2="${x+10}" y1="${y}" y2="${y}" stroke="${ink}" stroke-width="1"/>`;}
       sp.forEach((s,j)=>{const y=yOfD(hd,s.d);const col=e[4]&&e[4][j]===0?'#8a7d6b':ink;
         h+=`<ellipse class="nh" data-k="${hd}-${ei}-${j}" cx="${x}" cy="${y}" rx="5.6" ry="4.2" transform="rotate(-20 ${x} ${y})" fill="${open?'none':col}" stroke="${col}" stroke-width="${open?1.6:0}"/>`;
-        if(s.a)h+=`<text class="acc" x="${x-15}" y="${y+4}" font-size="12" fill="${col}">${s.a}</text>`;
+        const wa=ACC[ei][j];if(wa)h+=`<text class="acc" x="${x-15}" y="${y+4}" font-size="12" fill="${col}">${wa}</text>`;
         if([3,1.5,.75].some(v=>Math.abs(v-d0)<1e-9))h+=`<circle cx="${x+9}" cy="${y-1}" r="1.6" fill="${col}"/>`;});
       if(d0<4){const up=(lo+hi)/2<S.mid,sx=up?x+5.2:x-5.2,y1=up?yOfD(hd,lo):yOfD(hd,hi),y2=up?yOfD(hd,hi)-30:yOfD(hd,lo)+30;
         h+=`<line x1="${sx}" x2="${sx}" y1="${y1}" y2="${y2}" stroke="${ink}" stroke-width="1.2"/>`;
@@ -1661,7 +1672,13 @@ function dcKey(id){const w=WORK[id],src=w.src||'',PC={Do:0,'Ré':2,Mi:4,Fa:5,Sol
     if(last&&Math.min(...last[0])%12===(tonic+9)%12){tonic=(tonic+9)%12;minor=true;}}
   const maj=minor?(tonic+3)%12:tonic,[n,a]=KSIG[maj],flat=a==='♭'||(maj===6&&!!w.flats);
   const sig=(flat?SIG_FL:SIG_SH).slice(0,flat&&maj===6?6:n).map(l=>letterName(l)+(flat?'♭':'♯'));
-  return {name:pcName(tonic,flat)+(minor?' mineur':' majeur'),sig,flat,scale:new Set([0,2,4,5,7,9,11].map(i=>(maj+i)%12))};}
+  const L=(flat?SIG_FL:SIG_SH).slice(0,flat&&maj===6?6:n),acc={};L.forEach(l=>{acc[l]=flat?'♭':'♯';});
+  return {name:pcName(tonic,flat)+(minor?' mineur':' majeur'),sig,flat,L,acc,scale:new Set([0,2,4,5,7,9,11].map(i=>(maj+i)%12))};}
+const keyLine=k=>`Tonalité : ${k.name} · ${k.sig.length?k.sig.join(', ')+' à la clé':'aucune altération à la clé'}`;
+// Altérations écrites, comme sur une partition : l'armure vaut partout ; une altération devant une note vaut jusqu'à la barre ;
+// un bécarre (♮) annule. Renvoie, pour chaque événement, ce qui est écrit devant chaque note ('' si rien).
+function staffAcc(evs,key){const mem={};return evs.map(e=>!e[0]?[]:e[0].map((m,j)=>{const s=spell(m);if(e[4]&&e[4][j]===0){mem[s.d]=s.a;return '';}
+  const cur=s.d in mem?mem[s.d]:(key.acc[s.l]||'');mem[s.d]=s.a;return s.a===cur?'':(s.a||'♮');}));}
 function dcMeter(w){const bt=w.beat||1;
   if(bt===1.5){const g=Math.round(w.bpb/1.5);return `${Math.round(w.bpb*2)}/8 : ${g} grands temps par mesure (noire pointée), et 3 croches dans chacun : compte « 1-2-3 » par temps.`;}
   return Number.isInteger(w.bpb)?`${w.bpb}/4 : ${w.bpb} temps par mesure (noire) ; compte ${Array.from({length:w.bpb},(_,i)=>i+1).join('-')}.`:`${String(w.bpb).replace('.',',')} temps par mesure.`;}
@@ -1696,10 +1713,10 @@ function renderDcId(){const id=WK.id,w=WORK[id],hs=dcHands(),k=id+'|'+WK.hands+'
   $('#dc-id').innerHTML=h;}
 const DC={on:false,items:[],k:0,step:'name',err:0,tries:0,bar:-1,id:'',hands:'',from:null,last:null,run:0};
 let DCKB=null;
-function dcItems(){const b=workBars(WK.id)[WK.bar],items=[];
+function dcItems(){const b=workBars(WK.id)[WK.bar],items=[],key=dcKey(WK.id),ACC={rh:staffAcc(b.rh,key),lh:staffAcc(b.lh,key)};
   dcHands().forEach(h=>{let last=null;b[h].forEach((e,ei)=>{if(!e[0])return;const ms=e[0].map((m,j)=>({m,j})).filter(x=>!(e[4]&&e[4][x.j]===0)).sort((p,q)=>p.m-q.m);
     if(!ms.length)return;if(ms.length===1&&ms[0].m===last){items[items.length-1].also.push(`${h}-${ei}-${ms[0].j}`);return;}      // même note répétée : déjà lue
-    ms.forEach(x=>items.push({h,ei,j:x.j,m:x.m,f:e[2]&&e[2][x.j],also:[]}));last=ms.length===1?ms[0].m:null;});});
+    ms.forEach(x=>items.push({h,ei,j:x.j,m:x.m,f:e[2]&&e[2][x.j],also:[],wa:ACC[h][ei][x.j]}));last=ms.length===1?ms[0].m:null;});});
   return items;}
 function dcStop(){DC.on=false;const l=$('#dc-live');if(l)l.hidden=true;}
 function renderDc(){if(!WORK[WK.id])return;const sel=$('#dc-piece');if(sel.innerHTML!==$('#wk-piece').innerHTML)sel.innerHTML=$('#wk-piece').innerHTML;sel.value=WK.id;
@@ -1720,16 +1737,24 @@ function dcStart(){stopBus();const items=dcItems();Object.assign(DC,{on:true,ite
   dcShow();}
 function dcDraw(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0,$('#dc-staff'),true);
   DC.items.forEach((x,i)=>[`${x.h}-${x.ei}-${x.j}`,...x.also].forEach(k=>{const el=$(`#dc-staff [data-k="${k}"]`);if(el)el.classList.add(i<DC.k?'done':i===DC.k&&DC.on&&k===`${x.h}-${x.ei}-${x.j}`?'cur':'x');}));}
-function dcShow(){dcDraw();const x=DC.items[DC.k];DCKB.clear();
+function dcShow(){dcDraw();const x=DC.items[DC.k];DCKB.clear();$('#dc-key').textContent=keyLine(dcKey(WK.id));$('#dc-names').hidden=false;
+  $('#kb-dc').classList.toggle('dc-target',DC.step==='key');dcSee(DC.step==='key'?'#kb-dc':'#dc-names');
   const where=`Note ${DC.k+1}/${DC.items.length} · ${x.h==='rh'?'main droite, clé de sol':'main gauche, clé de fa'}`;
-  $('#dc-q').innerHTML=DC.step==='name'?`${where} : <b>quelle est la note en rouge ?</b>`:`${where} : <b>trouve ${esc(wkNm(x.m))} sur le clavier</b>${x.f?` (doigt ${x.f})`:''}.`;
+  $('#dc-q').innerHTML=DC.step==='name'?`${where} : <b>quelle est la note en rouge ?</b>`:`${where} : <b>touche ${esc(wkNm(x.m))} sur le clavier ci-dessous</b>${x.f?` (doigt ${x.f})`:''}.`;
   $$('#dc-names button').forEach(bt=>{bt.disabled=DC.step!=='name';});}
+// Garde l'élément utile à l'écran (sous la barre d'onglets), sans sauter s'il est déjà visible.
+function dcSee(sel){const el=$(sel);if(!el||!el.getBoundingClientRect)return;const r=el.getBoundingClientRect(),nav=$('nav'),top=(nav?nav.offsetHeight:0)+8,h=window.innerHeight;
+  if(r.top>=top&&r.bottom<=h)return;window.scrollTo(0,window.scrollY+(r.bottom>h?Math.min(r.bottom-h+12,r.top-top):r.top-top));}
 function dcFb(msg,cls){const f=$('#dc-fb');f.textContent=msg;f.className='fb'+(cls?' '+cls:'');}
 function dcClefTip(h){const L=h==='rh'?[[2,4,6,1,3],[3,5,0,2]]:[[4,6,1,3,5],[5,0,2,4]],s=a=>a.map(letterName).join(' ');
   return h==='rh'?`Clé de sol : lignes de bas en haut ${s(L[0])} ; interlignes ${s(L[1])}.`:`Clé de fa : lignes de bas en haut ${s(L[0])} ; interlignes ${s(L[1])}.`;}
 function dcName(l){if(!DC.on||DC.step!=='name')return;const x=DC.items[DC.k],sp=spell(x.m);
-  if(l===sp.l){const acc=sp.a?` avec un ${sp.a} : ${wkNm(x.m)}. Le ${sp.a} se joue sur la touche juste ${sp.a==='♯'?'à droite':'à gauche'}.`:'.';
-    dcFb(`Oui, c’est ${letterName(sp.l)}${acc}`,'ok');DC.step='key';DC.tries=0;dcShow();return;}
+  if(l===sp.l){const k=dcKey(WK.id),side=sp.a==='♯'?'juste à droite':'juste à gauche',L=letterName(sp.l);let acc='.';
+    if(sp.a&&x.wa===sp.a)acc=`, avec un ${sp.a} écrit devant : ${wkNm(x.m)}. Le ${sp.a} se joue sur la touche ${side}.`;
+    else if(sp.a&&k.acc[sp.l]===sp.a)acc=`. Attention : ${L}${sp.a} est à la clé (${k.name}), donc c’est ${wkNm(x.m)}, touche ${side}.`;
+    else if(sp.a)acc=`. Le ${sp.a} écrit plus tôt dans la mesure vaut encore : ${wkNm(x.m)}, touche ${side}.`;
+    else if(x.wa==='♮')acc=`, avec un bécarre ♮ : il annule l’altération, c’est ${L} naturel (touche blanche).`;
+    dcFb(`Oui, c’est ${L}${acc}`,'ok');DC.step='key';DC.tries=0;dcShow();return;}
   DC.err++;DC.tries++;const prev=DC.items[DC.k-1];let tip;
   if(DC.tries>=3){dcFb(`C’est ${letterName(sp.l)}. ${dcClefTip(x.h)}`,'ko');DC.step='key';DC.tries=0;dcShow();return;}
   if(DC.tries===1&&prev&&prev.h===x.h){const dd=sp.d-spell(prev.m).d,n=Math.abs(dd);tip=dd===0?`Même hauteur que la note d’avant (${letterName(spell(prev.m).l)}).`:`Compte depuis la note d’avant (${letterName(spell(prev.m).l)}) : ${n} note${n>1?'s':''} plus ${dd>0?'haut':'bas'}.`;}
@@ -1742,13 +1767,14 @@ function dcKeyTap(m){if(!DC.on||!DCKB)return;if(DC.step==='name'){dcFb('D’abor
   const up=x.m>m?'plus haut':'plus bas';
   dcFb(m%12===x.m%12?`Bonne note, mauvaise octave : ${wkNm(x.m)} est ${up}. Repère-toi avec les Do.`:spell(m).l===spell(x.m).l?`Bonne lettre, mais regarde l’altération : il faut ${wkNm(x.m)}.`:`Tu as touché ${wkNm(m)} : cherche ${wkNm(x.m)}, ${up}.`,'ko');}
 function dcDone(){const clean=!DC.err,bars=workBars(WK.id),last=WK.bar>=bars.length-1;DC.k=DC.items.length;DC.on=false;dcDraw();DC.on=true;
-  $$('#dc-names button').forEach(bt=>{bt.disabled=true;});$('#dc-after').hidden=false;$('#dc-next').hidden=last;
+  $('#dc-names').hidden=true;$('#kb-dc').classList.remove('dc-target');$('#dc-after').hidden=false;$('#dc-next').hidden=last;setTimeout(()=>dcSee('#dc-after'),30);
   if(clean){const c=S.coach[WK.id]=S.coach[WK.id]||{b:{},c:{}};c.d=c.d||{};c.d[WK.bar]=1;saveLocal();
     if(DC.from===null||DC.last!==WK.bar-1||DC.id!==WK.id){DC.from=WK.bar;DC.run=0;}DC.run++;DC.last=WK.bar;
     const a=DC.from,z=WK.bar;$('#dc-play').textContent=a<z?`Jouer les mesures ${a+1} à ${z+1}`:`Jouer la mesure ${z+1}`;$('#dc-play').hidden=false;
+    const goNext=DC.run<2&&!last;$('#dc-next').classList.toggle('primary',goNext);$('#dc-play').classList.toggle('primary',!goNext);$('#dc-next').textContent=goNext?'Mesure suivante →':'Mesure suivante';
     $('#dc-q').textContent='';
     dcFb(`Mesure ${z+1} déchiffrée sans erreur. `+(DC.run>=4?'Ne lis pas plus loin : joue ces mesures maintenant.':DC.run>=2||last?'Place au piano : joue-les.':'Lis la suivante, puis joue les deux ensemble.'),'ok');}
-  else{$('#dc-play').hidden=true;$('#dc-q').textContent='';dcFb(`Mesure lue avec ${DC.err} erreur${DC.err>1?'s':''} : relis-la une fois pour la fixer.`,'ko');}
+  else{$('#dc-play').hidden=true;$('#dc-next').classList.remove('primary');$('#dc-next').textContent='Mesure suivante';$('#dc-q').textContent='';dcFb(`Mesure lue avec ${DC.err} erreur${DC.err>1?'s':''} : relis-la une fois pour la fixer.`,'ko');}
   renderDc();}
 
 /* ---------- Séance du jour (30 min) ---------- */
