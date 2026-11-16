@@ -129,8 +129,8 @@ test('V8. confort : chiffres alignés, liens « Ouvrir » au doigt, octave fran�
   await page.goto('./#tempo');
   expect(await page.locator('#mt-bpm').evaluate(e => getComputedStyle(e).fontVariantNumeric)).toContain('lining-nums');
   await page.goto('./#seance');
-  const h = await page.locator('#blocks a').first().evaluate(e => e.getBoundingClientRect().height);
-  expect(h).toBeGreaterThanOrEqual(44);
+  // la mise en page (polices, carte de visite) peut finir juste après le chargement : on mesure quand elle est stable
+  await expect.poll(() => page.locator('#blocks a').first().evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
   await page.goto('./#clavier');
   await expect(page.locator('#v-clavier .hint').first()).toContainText('En France, on l’appelle souvent Do3');
 });
