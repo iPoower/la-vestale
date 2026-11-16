@@ -9,7 +9,7 @@ test('B1. le badge ouvre les deux choix ; Sauvegarder télécharge et met le bad
   await page.locator('#sync').click();
   await expect(page.locator('#bk-pop')).toBeVisible();
   await expect(page.locator('#sync')).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#bk-pop-t')).toHaveText('Dernière sauvegarde : jamais.');
+  await expect(page.locator('#bk-pop-t')).toHaveText(/^Fichier d’environ \d+ Ko\. Dernière sauvegarde : jamais\.$/);
   await expect(page.locator('#bk-pop-save')).toHaveText('Sauvegarder');
   await expect(page.locator('#bk-pop-imp')).toHaveText('Importer');
   await page.mouse.click(30, 700);                                                // toucher ailleurs ferme
@@ -19,11 +19,11 @@ test('B1. le badge ouvre les deux choix ; Sauvegarder télécharge et met le bad
   await expect(page.locator('#bk-pop')).toBeHidden();
   await page.locator('#sync').click();
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-pop-save').click()]);
-  expect(download.suggestedFilename()).toMatch(/^la-vestale-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toBe('la-vestale-sauvegarde.json');
   await expect(page.locator('#bk-pop')).toBeHidden();
   await expect(page.locator('#sync')).toHaveText('sauvegardé aujourd’hui');
   await page.locator('#sync').click();
-  await expect(page.locator('#bk-pop-t')).toHaveText('Dernière sauvegarde : aujourd’hui.');
+  await expect(page.locator('#bk-pop-t')).toHaveText(/^Fichier d’environ \d+ Ko\. Dernière sauvegarde : aujourd’hui\.$/);
 });
 
 test('B2. Importer depuis le badge : choix du fichier, confirmation, progression reprise (Coach et Solfège compris)', async ({ page }) => {
@@ -60,4 +60,20 @@ test('B3. au doigt : le badge se touche facilement, la fenêtre tient dans l’�
   await page.touchscreen.tap(30, 820);
   await expect(page.locator('#bk-pop')).toBeHidden();
 });
+});
+
+test('B4. une seule sauvegarde : toujours le même nom (l’iPhone propose « Remplacer »), contenu compact, date à l’intérieur', async ({ page }) => {
+  await page.goto('./#solfege');
+  // @ts-ignore
+  await page.evaluate(() => { S.solf.les = { sol: 10 }; saveLocal(); });
+  const noms = [], tailles = [];
+  for (let i = 0; i < 2; i++) {
+    await page.locator('#sync').click();
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-pop-save').click()]);
+    const body = require('fs').readFileSync(await dl.path(), 'utf8'); noms.push(dl.suggestedFilename()); tailles.push(body.length);
+    expect(body).not.toContain('\n');                                               // pas d'indentation : plus léger
+    expect(JSON.parse(body).exported).toMatch(/^\d{4}-\d{2}-\d{2}T/);              // la date reste dans le fichier
+  }
+  expect(noms).toEqual(['la-vestale-sauvegarde.json', 'la-vestale-sauvegarde.json']);
+  expect(tailles[0]).toBeLessThan(20000);
 });

@@ -279,7 +279,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div id="bk-pop" class="bk-pop" role="dialog" aria-label="Sauvegarde de ta progression" hidden>
     <p class="small" id="bk-pop-t"></p>
     <div class="row"><button class="btn primary" id="bk-pop-save" type="button">Sauvegarder</button><label class="btn" for="bk-file" id="bk-pop-imp" role="button" tabindex="0">Importer</label></div>
-    <p class="small muted">« Sauvegarder » crée un fichier avec toute ta progression (séances, morceaux, Coach, Solfège). Sur iPhone, choisis « Enregistrer dans Fichiers ». « Importer » la reprend depuis ce fichier, sur ce téléphone ou un autre.</p>
+    <p class="small muted">« Sauvegarder » crée <b>la-vestale-sauvegarde.json</b>, toujours le même fichier, avec toute ta progression. Sur iPhone : « Enregistrer dans Fichiers », même dossier, puis <b>« Remplacer »</b> : il ne reste que la plus récente. « Importer » la reprend, sur ce téléphone ou un autre.</p>
   </div>
 </header>
 <nav aria-label="Sections"><div class="in" id="tabs">
@@ -818,7 +818,8 @@ function bkMode(){const b=S.meta&&S.meta.bk;return ['seance','semaine','jamais']
 // Badge du haut : un toucher ouvre « Sauvegarder / Importer ».
 function bkPop(open){const pop=$('#bk-pop'),b=$('#sync');if(open==null)open=pop.hidden;pop.hidden=!open;b.setAttribute('aria-expanded',String(open));
   if(open){const lb=S.meta&&S.meta.lastBackup,n=bkUnsaved(),d=lb?Math.floor((Date.now()-lb)/864e5):null;
-    $('#bk-pop-t').innerHTML=`Dernière sauvegarde : <b>${d==null?'jamais':d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:''}.`;}}
+    const ko=Math.max(1,Math.round(new Blob([JSON.stringify({seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf})]).size/1024));
+    $('#bk-pop-t').innerHTML=`Fichier d’environ ${ko} Ko. Dernière sauvegarde : <b>${d==null?'jamais':d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:''}.`;}}
 function bkUnsaved(){const lb=(S.meta&&S.meta.lastBackup)||0;return S.seances.filter(s=>s.ts>lb).length;}
 function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.meta&&S.meta.remindAfter,mode=bkMode(),n=bkUnsaved();
   if(!S.seances.length||mode==='jamais'||!n)return false;
@@ -2170,7 +2171,7 @@ const TIPS=[
   ['Sur iPhone','Pas de son ? Monte le volume avec les boutons de côté, et vérifie que le son ne part pas vers une enceinte ou des écouteurs Bluetooth.'],
   ['Sur iPhone','Pose le téléphone sur le pupitre : l’écran reste allumé pendant le métronome et les boucles.'],
   ['Sur iPhone','Active « Ne pas déranger » pendant ta séance : une notification casse la concentration.'],
-  ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
+  ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers », toujours dans le même dossier, et « Remplacer » : une seule sauvegarde, la plus récente. Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
   ['Méthode','Onglet Solfège : une leçon par jour, puis un chrono d’une minute. Bats ton record : la lecture devient un réflexe, et tes erreurs reviennent jusqu’à être solides.'],
@@ -2419,8 +2420,11 @@ function renderBackup(){const el=$('#bk-last');if(!el)return;const lb=S.meta&&S.
   const when=!lb?'jamais':(d=>d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`)(Math.floor((Date.now()-lb)/864e5));
   el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:S.seances.length?' · tout est à l’abri':''}.`;
   el.classList.toggle('warn',!!n&&(!lb||Date.now()-lb>7*864e5));$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));}
-async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}.json`;
-  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf,settings:{a4:S.meta.a4,noms:NOMS,bk:S.meta.bk}}},null,1);
+// Toujours le même nom : dans Fichiers, l'iPhone propose « Remplacer », et il ne reste qu'une sauvegarde, la plus récente
+// (la date est à l'intérieur du fichier, et s'affiche à l'import).
+const BK_NAME='la-vestale-sauvegarde.json';
+async function exportData(){const d=new Date();const name=BK_NAME;
+  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf,settings:{a4:S.meta.a4,noms:NOMS,bk:S.meta.bk}}});
   const file=new File([body],name,{type:'application/json'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}

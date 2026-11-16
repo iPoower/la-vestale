@@ -130,7 +130,7 @@ test('S6. rappel : jamais sauvegardé → bandeau après la séance, export en u
   await expect(page.locator('#bk-remind')).toBeVisible();
   await expect(page.locator('#rm-t')).toContainText('que sur ce téléphone');
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#rm-go').click()]);
-  expect(download.suggestedFilename()).toMatch(/^la-vestale-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toBe('la-vestale-sauvegarde.json');
   await expect(page.locator('#bk-remind')).toBeHidden();
   await expect(page.locator('#sync')).toHaveText('sauvegardé aujourd’hui');
   await noteSeance(page, 'deuxième séance');
@@ -173,7 +173,7 @@ test('S8. après chaque séance (par défaut) : bandeau à chaque séance non sa
   await expect(page.locator('#bk-last')).toHaveText('Dernière sauvegarde hors du téléphone : jamais · 2 séances pas encore sauvegardées.');
   await expect(page.locator('#bk-last')).toHaveClass(/warn/);
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-export').click()]);
-  expect(download.suggestedFilename()).toMatch(/^la-vestale-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toBe('la-vestale-sauvegarde.json');
   await expect(page.locator('#bk-last')).toHaveText('Dernière sauvegarde hors du téléphone : aujourd’hui · tout est à l’abri.');
   await expect(page.locator('#bk-last')).not.toHaveClass(/warn/);
   await noteSeance(page, 'trois');
