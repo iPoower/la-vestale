@@ -1,6 +1,7 @@
 // @ts-check
 // Lecture › Rythme : rythmes par niveau, notation, écoute, frappe jugée sur l'horloge audio, progression.
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 
 const LS = 'vestale-studio-v1';
 /** Impose un rythme connu (liste de [durée, silence?]). */
@@ -95,7 +96,7 @@ test('Y6. trois réussites : conseil de niveau suivant, progression gardée apr�
   await expect(page.locator('#ry-fb')).toContainText('passe au niveau 2');
   await page.locator('#ry-lvl button[data-l="3"]').click();
   await page.reload();
-  await page.locator('#tabs a[data-v="lecture"]').click();
+  await aller(page, 'lecture');
   await expect(page.locator('#ry-tag')).toHaveText('Niveau 3');
   await expect(page.locator('#ry-tot')).toHaveText('3');
   const st = await page.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null').stats.rythme, LS);

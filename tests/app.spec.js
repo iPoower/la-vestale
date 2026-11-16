@@ -2,6 +2,7 @@
 // Tests de La Vestale : chargement, PWA (manifeste, service worker, hors ligne), polices locales,
 // sauvegarde Export/Import et navigation. Lancement : npm test (voir README).
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const SW_VERSION = /const VERSION = '([^']+)'/.exec(fs.readFileSync(require('path').join(__dirname, '..', 'sw.js'), 'utf8'))[1];
@@ -129,7 +130,7 @@ test('6. rechargement hors ligne fonctionnel (serveur réellement arrêté)', as
   await expect(page).toHaveTitle('Studio La Vestale');
   await expect(page.locator('#v-seance')).toBeVisible();
   expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#v-journal')).toBeVisible();
   const fontsOk = await page.evaluate(async () => {
     await document.fonts.load('600 16px "Cormorant Garamond"', 'V');
@@ -196,10 +197,10 @@ test('8. navigation par clic dans les 7 onglets', async ({ page }) => {
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto('./');
   for (const v of [...TABS.slice(1), TABS[0]]) {
-    await page.locator(`#tabs a[data-v="${v}"]`).click();
+    await aller(page, v);
     await expect(page).toHaveURL(new RegExp(`#${v}$`));
     await expect(page.locator(`#v-${v}`)).toBeVisible();
-    await expect(page.locator(`#tabs a[data-v="${v}"]`)).toHaveClass(/\bon\b/);
+    await expect(page.locator(`#tabs a[data-g="${GROUP[v]}"]`)).toHaveClass(/\bon\b/);
     await expect(page.locator('.view:visible')).toHaveCount(1);
   }
   expect(errors).toEqual([]);
@@ -218,7 +219,7 @@ test('9. accès direct par URL à chacun des 7 onglets', async ({ page }) => {
 test('10. aucun défilement horizontal en 390 × 844 sur les 7 onglets', async ({ page }) => {
   await page.goto('./');
   for (const v of TABS) {
-    await page.locator(`#tabs a[data-v="${v}"]`).click();
+    await aller(page, v);
     await expect(page.locator(`#v-${v}`)).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `onglet ${v}`).toBeLessThanOrEqual(0);

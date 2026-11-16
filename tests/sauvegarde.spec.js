@@ -1,6 +1,7 @@
 // @ts-check
 // Sauvegarde : copies automatiques sur l'appareil (restauration réversible) et rappel d'export en un toucher.
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 
 const LS = 'vestale-studio-v1';
 const SNAP = 'vestale-copies-v1';
@@ -18,7 +19,7 @@ async function seed(page, data, snapList) {
 }
 
 async function noteSeance(page, note) {
-  await page.locator('#tabs a[data-v="seance"]').click();
+  await aller(page, 'seance');
   await page.locator('#quicklog').click();
   await page.locator('#f-note').fill(note);
   await page.locator('#f-save').click();
@@ -26,7 +27,7 @@ async function noteSeance(page, note) {
 }
 
 async function restore(page, index, confirm = true) {
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await page.locator('#snap-sel').selectOption(String(index));
   await page.locator('#snap-restore').click();
   await expect(page.locator('#dlg')).toBeVisible();
@@ -53,7 +54,7 @@ test('S1. une copie par jour au lancement, aucune copie vide ni en double', asyn
 test('S2. suppression d’une séance : copie avant, restauration, puis retour en arrière possible', async ({ page }) => {
   await seed(page, { seances: [seance('a'), seance('b')], meta: { lastBackup: Date.now() } });
   await noteSeance(page, 'séance du jour');                              // l'état diffère de la copie du jour
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#entries .entry')).toHaveCount(3);
   await page.locator('#entries .entry', { hasText: 'séance du jour' }).locator('button[data-del]').click();
   await page.locator('#dlg-ok').click();
@@ -75,14 +76,14 @@ test('S2. suppression d’une séance : copie avant, restauration, puis retour e
   await restore(page, 0);                                                 // et la restauration s'annule elle-même
   await expect(page.locator('#entries .entry')).toHaveCount(2);
   await page.reload();
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#entries .entry')).toHaveCount(2);
 });
 
 test('S3. import : copie avant, et retour à l’état d’avant l’import', async ({ page }) => {
   await seed(page, { seances: [seance('a')], meta: { lastBackup: Date.now() } });
   await noteSeance(page, 'avant import');
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   const body = JSON.stringify({ app: 'la-vestale', version: 1, exported: '2026-11-11T08:00:00Z', data: { seances: [seance('x', { note: 'importée' })], rep: { hymne: { stage: 4 } } } });
   await page.locator('#bk-file').setInputFiles({ name: 'sauvegarde.json', mimeType: 'application/json', buffer: Buffer.from(body) });
   await page.locator('#dlg-ok').click();
@@ -116,7 +117,7 @@ test('S5. si les copies ne peuvent pas s’écrire, la séance est quand même e
   await page.goto('./');
   await noteSeance(page, 'malgré le quota');
   expect((await state(page)).seances.map(s => s.note)).toEqual(['malgré le quota']);
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#snap-sel option')).toHaveText('Aucune copie pour l’instant');
   await expect(page.locator('#snap-restore')).toBeDisabled();
   expect(errors).toEqual([]);
@@ -168,7 +169,7 @@ test('S8. après chaque séance (par défaut) : bandeau à chaque séance non sa
   await page.locator('#rm-later').click();
   await noteSeance(page, 'deux');
   await expect(page.locator('#rm-t')).toContainText('(2 séances pas encore sauvegardées.)');  // « Plus tard » ne bloque pas la séance suivante
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#bk-last')).toHaveText('Dernière sauvegarde hors du téléphone : jamais · 2 séances pas encore sauvegardées.');
   await expect(page.locator('#bk-last')).toHaveClass(/warn/);
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-export').click()]);
@@ -187,7 +188,7 @@ test('S9. réglage « Jamais » puis « Chaque semaine » : gardé après rechar
   await expect(page.locator('#bk-mode button.on')).toHaveText('Jamais');
   await noteSeance(page, 'sans bandeau');
   await expect(page.locator('#bk-remind')).toBeHidden();
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#bk-last')).toContainText('1 séance pas encore sauvegardée');  // le témoin reste
   await page.locator('#bk-mode button[data-b="semaine"]').click();
   await noteSeance(page, 'jamais exporté');
@@ -196,6 +197,6 @@ test('S9. réglage « Jamais » puis « Chaque semaine » : gardé après rechar
   expect(await page.evaluate(k => JSON.parse(localStorage.getItem(k)).meta.bk, LS)).toBe('semaine');
   await page.evaluate(k => { const d = JSON.parse(localStorage.getItem(k)); d.meta.bk = '<img src=x onerror=alert(1)>'; localStorage.setItem(k, JSON.stringify(d)); }, LS);
   await page.reload();
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#bk-mode button.on')).toHaveText('Après chaque séance');   // valeur inconnue : réglage par défaut
 });

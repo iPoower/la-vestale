@@ -1,6 +1,7 @@
 // @ts-check
 // Corrections issues d'une revue externe (musicien et développeur) : un test par constat.
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 
 /** Remplace une fonction globale de l'app par un espion qui note ses appels (puis appelle l'originale). */
 async function spy(page, name) {
@@ -111,7 +112,7 @@ test('V7. écran allumé pendant le métronome ; le métronome continue dans les
   });
   await page.goto('./#tempo');
   await page.locator('#mt-go').click();
-  await page.locator('#tabs a[data-v="seance"]').click();
+  await aller(page, 'seance');
   // @ts-ignore
   expect(await page.evaluate(() => MT.on)).toBe(true);
   await expect(page.locator('#mt-chip')).toBeVisible();
@@ -128,8 +129,8 @@ test('V8. confort : chiffres alignés, liens « Ouvrir » au doigt, octave fran�
   await page.goto('./#tempo');
   expect(await page.locator('#mt-bpm').evaluate(e => getComputedStyle(e).fontVariantNumeric)).toContain('lining-nums');
   await page.goto('./#seance');
-  const h = await page.locator('#blocks a').first().evaluate(e => e.getBoundingClientRect().height);
-  expect(h).toBeGreaterThanOrEqual(44);
+  // la mise en page (polices, carte de visite) peut finir juste après le chargement : on mesure quand elle est stable
+  await expect.poll(() => page.locator('#blocks a').first().evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
   await page.goto('./#clavier');
   await expect(page.locator('#v-clavier .hint').first()).toContainText('En France, on l’appelle souvent Do3');
 });

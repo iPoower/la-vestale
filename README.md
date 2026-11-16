@@ -39,6 +39,10 @@ Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et 
 
 Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous SIL Open Font License 1.1 (textes dans `fonts/`). Fichiers issus des paquets Fontsource 5.3.0 (sous-ensemble latin) ; Noto Music est en plus réduite aux deux clés musicales U+1D11E et U+1D122.
 
+## Navigation : 5 onglets
+
+Aujourd'hui (séance du jour), Jouer (Coach), Apprendre (Solfège, Lecture, Oreille), Morceaux, Plus (Clavier, Tempo, Main gauche, Astuces, Journal). Apprendre et Plus ont des sous-onglets et rouvrent la dernière section visitée ; les adresses (#coach, #lecture…) restent les mêmes. « Commencer ma séance » démarre la séance du jour et ouvre chaque étape ; une barre sous les onglets suit la séance partout (Ouvrir, Suivant, pause). Une visite guidée de 5 étapes s'affiche au premier lancement (Plus › Astuces › Revoir la visite).
+
 ## Sauvegarde en un toucher
 
 Le badge en haut à droite (« à sauvegarder », « sauvegardé aujourd'hui »…) s'ouvre sur deux choix : « Sauvegarder » (fichier JSON de toute la progression ; sur iPhone, « Enregistrer dans Fichiers ») et « Importer » (reprend ce fichier, avec confirmation et copie de sécurité avant import). Les mêmes boutons restent dans Journal.
