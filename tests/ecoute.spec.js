@@ -49,7 +49,7 @@ test('E2. piano ancien, 45 cents trop bas : le réglage sur le La recale toutes 
   await expect(page.locator('#ec-cal-msg')).toContainText('J’écoute');
   const a4 = 440 * Math.pow(2, -45 / 1200);                                   // ≈ 428,7 Hz
   // @ts-ignore
-  await page.evaluate(a => { for (let k = 0; k < 9; k++) ecFeed(window.__piano(69, { a4: a, t0: 0.05 + k * 0.07 }), 48000); }, a4);
+  await page.evaluate(a => { for (let k = 0; k < 12; k++) ecFeed(window.__piano(69, { a4: a, t0: 0.05 + (k % 6) * 0.07 }), 48000); }, a4);
   await expect(page.locator('#ec-cal-msg')).toContainText(/(3[5-9]|4[0-9]) cents plus bas/);
   // @ts-ignore
   const r = await page.evaluate(a => { const bad = []; for (let m = 36; m <= 96; m++) { const d = detectPitch(window.__piano(m, { a4: a }), 48000), got = Math.round(69 + 12 * Math.log2(d.f / a4())); if (got !== m) bad.push(m); }
@@ -217,4 +217,60 @@ test('E8. départ annulé : quitter Séance pendant la demande du micro ne laiss
   await page.waitForTimeout(700);
   // @ts-ignore
   expect(await page.evaluate(() => [EC.on, EC_ON, window.__dest.stream.getTracks().map(t => t.readyState).join()])).toEqual([false, false, 'ended']);
+});
+
+test('E10. réglage du La : deux groupes de lectures (trames faussées au démarrage du micro) ne donnent jamais une moyenne', async ({ page }) => {
+  await page.goto('./#coach');
+  await page.evaluate(() => { /* @ts-ignore */ window.__fakeMic(); });
+  await page.locator('#ec-cal summary').click();
+  await page.locator('#ec-cal-go').click();
+  await expect(page.locator('#ec-cal-msg')).toContainText('J’écoute');
+  // 4 trames lues 146 cents trop bas (438 × 44 100 / 48 000 = 402,4 Hz), puis le vrai La à 438 Hz.
+  // @ts-ignore
+  await page.evaluate(() => { const feed = (f, n) => { for (let k = 0; k < n; k++) ecFeed(window.__piano(69, { a4: f, t0: 0.05 + (k % 6) * 0.07 }), 48000); };
+    feed(402.4, 4); feed(438, 4); });
+  await expect(page.locator('#ec-cal-msg')).toContainText('(4/10)');                // on continue d'écouter, rien n'est décidé
+  // @ts-ignore
+  expect(await page.evaluate(() => [EC.on, S.meta.a4])).toEqual([true, undefined]);
+  // @ts-ignore
+  await page.evaluate(() => { for (let k = 0; k < 6; k++) ecFeed(window.__piano(69, { a4: 438, t0: 0.05 + (k % 6) * 0.07 }), 48000); });
+  await expect(page.locator('#ec-cal-msg')).toContainText('Réglage actuel : La = 4');
+  // @ts-ignore
+  const a4 = await page.evaluate(() => S.meta.a4);
+  expect(a4).toBeGreaterThan(435);                                                  // le vrai La (438, à 2 Hz près avec ce son de synthèse)…
+  expect(a4).toBeLessThan(441);                                                     // …et surtout pas 420,2, la moyenne des deux groupes
+});
+
+test('E11. réglage saisi à la main : 438 Hz appliqué et gardé ; valeur hors plage refusée ; 440 remet à zéro', async ({ page }) => {
+  await page.goto('./#coach');
+  await page.locator('#ec-cal summary').click();
+  await page.locator('#ec-cal-hz').fill('438');
+  await page.locator('#ec-cal-set').click();
+  await expect(page.locator('#ec-cal-msg')).toContainText('La = 438 Hz, soit 8 cents plus bas que 440');
+  await page.reload();
+  // @ts-ignore
+  expect(await page.evaluate(() => [S.meta.a4, a4()])).toEqual([438, 438]);
+  await page.locator('#ec-cal summary').click();
+  await expect(page.locator('#ec-cal-hz')).toHaveValue('438');
+  await page.locator('#ec-cal-hz').fill('300');
+  await page.locator('#ec-cal-set').click();
+  await expect(page.locator('#ec-cal-msg')).toContainText('entre 400 et 466 Hz');
+  // @ts-ignore
+  expect(await page.evaluate(() => S.meta.a4)).toBe(438);
+  await page.locator('#ec-cal-hz').fill('440');
+  await page.locator('#ec-cal-set').click();
+  await expect(page.locator('#ec-cal-msg')).toContainText('La = 440 Hz (piano accordé)');
+});
+
+test('E12. chaîne complète : un micro qui démarre faussé (402,4 Hz) puis se stabilise à 438 Hz donne 438', async ({ page }) => {
+  await page.goto('./#coach');
+  // @ts-ignore
+  await page.evaluate(() => window.__setMic(async () => { const a = ac(), d = a.createMediaStreamDestination(), o = a.createOscillator(), g = a.createGain(); g.gain.value = 0.3;
+    o.frequency.setValueAtTime(402.4, a.currentTime); o.frequency.setValueAtTime(438, a.currentTime + 1.25); o.connect(g); g.connect(d); o.start(); return d.stream; }));
+  await page.locator('#ec-cal summary').click();
+  await page.locator('#ec-cal-go').click();
+  await expect(page.locator('#ec-cal-msg')).toContainText('cents plus bas que 440', { timeout: 8000 });
+  // @ts-ignore
+  const a4 = await page.evaluate(() => S.meta.a4);
+  expect(Math.abs(a4 - 438)).toBeLessThan(0.6);
 });
