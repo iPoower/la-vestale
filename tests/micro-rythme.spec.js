@@ -78,7 +78,7 @@ test('R2. note en retard : faute de rythme nommée, mesure rejouée au Coach, re
   await perform(page, notes, 4.7, 6.73);
   await expect(page.locator('#ec-fb')).toHaveText(/^Juste : Fa5 · mais en retard de 0,3[3-7] s : prépare le doigt pendant la note d’avant\.$/);
   await perform(page, notes, 6.8, 7.2);
-  await expect(page.locator('#ec-fb')).toHaveText('Mesure 1 : 1 faute. On la rejoue jusqu’à ce qu’elle soit propre (essai 2). Rythme : 3/4 à l’heure.');
+  await expect(page.locator('#ec-fb')).toHaveText('Mesure 1 : 1 faute. On la rejoue jusqu’à ce qu’elle soit propre (essai 2/5). Rythme : 3/4 à l’heure.');
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 1/16');
   // @ts-ignore
   expect(await page.evaluate(() => RZ.t0)).toBeCloseTo(7.4, 5);

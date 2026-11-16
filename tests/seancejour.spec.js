@@ -58,6 +58,9 @@ test('J1. premier jour : 30 minutes, déchiffrer et jouer le début, chaque bloc
   await expect(page.locator('#dc-live')).toBeVisible();
   await expect(page.locator('#dc-pos')).toHaveText('Mesure 1/16');
   await page.goto('./#seance');
+  // le changement d'onglet (remise en haut de page, carte de travail replacée) se fait juste après : on l'attend avant de cliquer
+  await expect(page.locator('#v-seance')).toHaveClass(/\bon\b/);
+  await expect.poll(() => page.evaluate(() => document.querySelector('#wk-home').nextElementSibling.id)).toBe('wk-card');
   await page.locator('#blocks li').first().locator('a').click();
   await expect(page.locator('#v-gauche')).toBeVisible();
   await page.goto('./#seance');

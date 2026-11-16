@@ -1539,17 +1539,22 @@ function fftMag(x){let n=1;while(n*2<=x.length)n*=2;const re=new Float64Array(n)
   const mag=new Float64Array(n/2);for(let i=0;i<n/2;i++)mag[i]=Math.hypot(re[i],im[i]);return {mag,n};}
 // Saillance d'une note : pics du spectre à ses harmoniques choisies (corde légèrement inharmonique), pondérés.
 const hzOf=m=>a4()*Math.pow(2,(m-69)/12),hInh=(m,h)=>h*hzOf(m)*Math.sqrt(1+.0004*h*h);
-function salience(sp,sr,m,hs){const f0=hzOf(m);let s=0;
-  for(const h of hs){const f=h*f0*Math.sqrt(1+.0004*h*h);if(f>sr/2.4)continue;const b=f*sp.n/sr,lo=Math.max(0,Math.floor(b-1)),hi=Math.min(sp.mag.length-1,Math.ceil(b+1));
-    let mx=0;for(let i=lo;i<=hi;i++)if(sp.mag[i]>mx)mx=sp.mag[i];s+=mx/Math.sqrt(h);}return s;}
-// Pour chaque note attendue : présente si elle ressort nettement de ses deux voisines à un demi-ton.
-// On écarte les harmoniques partagées avec une autre note de l'accord (ex. : 4e harmonique de Mi3 ≈ 5e de Do3),
-// sinon Do + Sol joués sans Mi feraient croire que le Mi est là. S'il en reste moins de deux, on les garde toutes
-// (note doublée à l'octave : vérification indulgente).
+// Pic du spectre autour d'une fréquence, à ±cents près (les cordes réelles, surtout graves, ont des harmoniques
+// un peu plus aiguës que prévu : la fenêtre en cents les retrouve, à toutes les hauteurs).
+function peakAt(sp,sr,f,cents){const r=Math.pow(2,cents/1200),lo=Math.max(0,Math.floor(f/r*sp.n/sr)),hi=Math.min(sp.mag.length-1,Math.ceil(f*r*sp.n/sr));let mx=0;for(let i=lo;i<=hi;i++)if(sp.mag[i]>mx)mx=sp.mag[i];return mx;}
+// Saillance d'une note : pics du spectre à ses harmoniques choisies (corde légèrement inharmonique), pondérés.
+function salience(sp,sr,m,hs){const f0=hzOf(m);let s=0;for(const h of hs){const f=h*f0*Math.sqrt(1+.0004*h*h);if(f>sr/2.4)continue;s+=peakAt(sp,sr,f,35)/Math.sqrt(h);}return s;}
+// Une fréquence tombe-t-elle sur une harmonique d'une autre note de l'accord (à 2 % près) ?
+function clash(f,others){return others.some(o=>{for(let k=1;k<=12;k++)if(Math.abs(f-k*hzOf(o))/f<.02)return true;return false;});}
+// Pour chaque note attendue : présente si elle ressort nettement de chacune de ses deux voisines à un demi-ton.
+// Pour chaque comparaison, on écarte les harmoniques que la note OU la voisine partagent avec les autres notes de l'accord :
+// sinon, dans Si2 + Fa3 + Sol3, la voisine Do3 « emprunte » les harmoniques du Sol3 et le Si2 grave paraît absent
+// (et Do + Sol joués sans Mi feraient croire que le Mi est là). S'il en reste moins de deux, on assouplit.
 function chordCheck(buf,sr,notes){const sp=fftMag(buf);
-  return notes.map(m=>{const all=[1,2,3,4,5,6].filter(h=>hInh(m,h)<=sr/2.4);
-    const un=all.filter(h=>!notes.some(o=>o!==m&&[1,2,3,4,5,6,7,8].some(k=>Math.abs(h*hzOf(m)-k*hzOf(o))/(h*hzOf(m))<.012)));
-    const hs=un.length>=2?un:all;return salience(sp,sr,m,hs)>1.4*Math.max(salience(sp,sr,m-1,hs),salience(sp,sr,m+1,hs));});}
+  return notes.map(m=>{const others=notes.filter(o=>o!==m),H=[1,2,3,4,5,6].filter(h=>h*hzOf(m)<=sr/2.4);
+    const cmp=n=>{let hs=H.filter(h=>!clash(h*hzOf(m),others)&&!clash(h*hzOf(n),others));if(hs.length<2)hs=H.filter(h=>!clash(h*hzOf(m),others));if(hs.length<2)hs=H;
+      return salience(sp,sr,m,hs)>1.4*salience(sp,sr,n,hs);};
+    return cmp(m-1)&&cmp(m+1);});}
 const EC={on:false,tok:0,mode:'',stream:null,src:null,an:null,buf:null,big:null,votes:null,cv:0,iv:0,seq:[],i:0,sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]};
 // Nom d'une note dans le morceau en cours (bémols si le morceau en demande).
 function wkNm(m){const fl=WORK[WK.id].flats;return (fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m);}
@@ -1560,14 +1565,17 @@ function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));const hz=$(
 function ecSeq(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];let t=WK.bar===0&&w.pickup?w.bpb-w.pickup:0;
   return b[WK.hands==='lh'?'lh':'rh'].map(e=>{const at=t;t+=e[1];if(!e[0])return null;const keep=e[0].map((m,j)=>j).filter(j=>!(e[4]&&e[4][j]===0));
     return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null,at}:null;}).filter(Boolean);}
-function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
+// Réglage du La à plus de 50 cents de 440 Hz : presque toujours une erreur (piano droit ancien : 438 à 442).
+function calFar(){const f=a4(),c=Math.round(1200*Math.log2(f/440));return Math.abs(c)>50?`Ton réglage du La est à ${String(f).replace('.',',')} Hz (${Math.abs(c)} cents ${c<0?'plus bas':'plus haut'} que 440) : s’il est faux, aucune note ne passe. Vérifie « Régler sur mon piano », ou saisis 438 ou 440.`:'';}
+function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();if(EC.cfI!==EC.i+'|'+WK.bar){EC.cf=0;EC.cfI=EC.i+'|'+WK.bar;}x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
   $('#ec-msg').textContent=(x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`)+(RZ.on?' · '+rzBeat(x.at):'');}
 function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.rzOff=false;EC.rzOk=0;EC.rzN=0;
   if(RZ.on){if(RZ.adv){RZ.adv=false;rzNext();}else rzStart();}EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
 function ecNextBar(){RZ.adv=true;if(EC.mode==='play'&&EC.seq&&EC.seq.length){const clean=!EC.bErr,sr=coachBar(clean);
     const srm=sr==='ko'?' Révision ratée : elle revient demain.':sr&&sr.startsWith('ok:')?` Révision réussie : elle revient dans ${sr.slice(3)} jours.`:'';
     const rzm=RZ.on&&EC.rzN?` Rythme : ${EC.rzOk}/${EC.rzN} à l’heure.`:'',n=EC.bErr;
-    if(coachOn()&&!clean){EC.tries++;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}).`+rzm+srm,'ko');ecPrep();return;}
+    if(coachOn()&&!clean&&EC.tries<4){EC.tries++;ecFb(`Mesure ${WK.bar+1} : ${n} faute${n>1?'s':''}. On la rejoue jusqu’à ce qu’elle soit propre (essai ${EC.tries+1}/5).`+rzm+srm,'ko');ecPrep();return;}
+    if(coachOn()&&!clean)ecFb(`Mesure ${WK.bar+1} : on avance après 5 essais. Elle t’attend dans « Où tu bloques » : travaille-la lentement, mains séparées.`+rzm+srm,'ko');else
     if(coachOn()&&EC.tries)ecFb(`Mesure ${WK.bar+1} propre après ${EC.tries+1} essais. Bravo !`+rzm+srm,'ok');
     else if(srm||rzm)ecFb(`Mesure ${WK.bar+1}`+(clean?' propre.':` : ${n} faute${n>1?'s':''}.`)+rzm+srm,clean&&sr!=='ko'?'ok':'ko');}
   if(WK.bar>=workBars(WK.id).length-1){ecStop(`Morceau terminé : ${EC.ok} juste${EC.ok>1?'s':''}, ${EC.ko} à revoir.`);return;}wkGo(WK.bar+1);}
@@ -1598,7 +1606,9 @@ function ecFeed(buf,sr,big,tNow){const d=detectPitch(buf,sr),now=tNow!=null?tNow
   if(x.ms.length>1){if(EC.loud<2)return;const pres=chordCheck(big||buf,sr,x.ms);EC.votes=EC.votes||x.ms.map(()=>0);pres.forEach((v,k)=>{if(v)EC.votes[k]++;});
     if(++EC.cv<3)return;const miss=x.ms.filter((m,k)=>EC.votes[k]<2);EC.armed=false;EC.last=null;EC.low=d.rms;EC.votes=null;EC.cv=0;
     if(!miss.length){ecHes();EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + ')+rz.msg,rz.cls);ecScore();ecAdvance();}
-    else{EC.ko++;EC.rzOff=true;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+(inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':''),'ko');ecScore();}return;}
+    else{EC.ko++;EC.rzOff=true;EC.cf=(EC.cf||0)+1;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));
+      const help=EC.cf>=3?' '+(calFar()||'Si tu l’entends juste, touche « Passer la note » : l’app avance sans compter de faute.'):inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':'';
+      ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+help,'ko');ecScore();}return;}
   if(EC.n<3)return;
   const want=x.ms[0];EC.armed=false;EC.last=m;EC.low=d.rms;
   if(m===want){ecHes();EC.ok++;ecFlash(want,'ok');const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Juste : '+wkNm(want)+rz.msg,rz.cls);ecScore();ecAdvance();}
@@ -1623,7 +1633,8 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
   $('#ec-box').classList.add('on');$('#kb-wk').classList.toggle('ecoute',mode==='play');ecFb('','');
   if(mode==='cal'){$('#ec-cal-msg').textContent='J’écoute… Joue le La4 et laisse-le sonner.';$('#ec-cal-go').textContent='Arrêter';return;}
   $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
-  if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();}
+  if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();
+  const far=calFar();if(far)ecFb(far,'ko');}
 function ecStop(msg){EC.tok++;RZ.on=false;if(REC.on&&!REC.own)recStop();$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
   try{EC.stream.getTracks().forEach(tr=>tr.stop());}catch(e){}try{EC.src.disconnect();}catch(e){}
   EC.on=false;EC_ON=false;EC.mode='';try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
@@ -2509,7 +2520,7 @@ function init(){
   $('#my-add').onclick=()=>{const x=myCur();if(!x||x.bars.length>=MY_BARS)return;x.bars.splice(MY.bar+1,0,[]);MY.bar++;mySave();myRender();};
   $('#my-delbar').onclick=()=>{const x=myCur();if(!x)return;if(x.bars[MY.bar].length)x.bars[MY.bar]=[];else if(x.bars.length>1)x.bars.splice(MY.bar,1);mySave();myRender();};
   $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
-  $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
+  $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){const x=EC.seq[EC.i];if(x&&x.ms.length>1&&EC.cf){EC.bErr=Math.max(0,(EC.bErr||0)-EC.cf);EC.cf=0;}ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
   $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
   $('#ec-cal-set').onclick=()=>{const v=parseFloat(String($('#ec-cal-hz').value).replace(',','.'));
     if(!(v>=400&&v<=466)){$('#ec-cal-msg').textContent='Entre une valeur entre 400 et 466 Hz (un piano accordé est entre 438 et 443).';return;}
