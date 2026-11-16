@@ -109,6 +109,7 @@ textarea{min-height:70px;resize:vertical}
 .hidden{display:none!important}
 [hidden]{display:none!important}   /* « caché » l'emporte toujours, même sur une carte ou une rangée */
 .co-list li{margin-bottom:10px}
+.cal-man{align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}.cal-man input{width:6.2em;font-size:16px;min-height:44px;padding:6px 8px;border-radius:10px;border:1px solid var(--ligne);background:var(--bois2);color:inherit}
 .sf-clock{font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:800;color:var(--laiton)}
 .sf-clock.low{color:#e07a62}
 .sf-q{font-size:1.1rem;font-weight:700;text-align:center;margin:8px 0}
@@ -335,6 +336,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
       <details class="small" id="ec-cal"><summary>Régler sur mon piano</summary>
         <p>Un piano ancien est souvent un peu bas. Joue le La au-dessus du Do central (La4) et laisse-le sonner deux secondes : l’app se cale sur ton piano.</p>
         <div class="row"><button class="btn" id="ec-cal-go">Écouter mon La</button><button class="btn ghost" id="ec-cal-reset">Revenir à 440 Hz</button></div>
+        <div class="row cal-man"><label for="ec-cal-hz">Ou saisis l’accord de ton piano : La =</label><input type="number" id="ec-cal-hz" min="400" max="466" step="0.1" inputmode="decimal" placeholder="440"><span>Hz</span><button class="btn" id="ec-cal-set" type="button">Appliquer</button></div>
         <p id="ec-cal-msg" aria-live="polite"></p>
       </details>
     </div>
@@ -1553,7 +1555,7 @@ const EC={on:false,tok:0,mode:'',stream:null,src:null,an:null,buf:null,big:null,
 function wkNm(m){const fl=WORK[WK.id].flats;return (fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m);}
 function ecFb(text,cls){const el=$('#ec-fb');el.textContent=text||'';el.className='fb'+(cls?' '+cls:'');}
 function ecScore(){$('#ec-score').innerHTML=`Justes <b>${EC.ok}</b> À revoir <b>${EC.ko}</b>`;}
-function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));$('#ec-cal-msg').textContent=f===440?'Réglage actuel : La = 440 Hz (piano accordé).':`Réglage actuel : La = ${String(f).replace('.',',')} Hz, soit ${Math.abs(c)} cents ${c<0?'plus bas':'plus haut'} que 440. Si l’écart dépasse 50 cents, vérifie que tu as bien joué le La.`;}
+function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));const hz=$('#ec-cal-hz');if(hz&&document.activeElement!==hz)hz.value=f===440?'':String(f);$('#ec-cal-msg').textContent=f===440?'Réglage actuel : La = 440 Hz (piano accordé).':`Réglage actuel : La = ${String(f).replace('.',',')} Hz, soit ${Math.abs(c)} cent${Math.abs(c)>1?'s':''} ${c<0?'plus bas':'plus haut'} que 440.${Math.abs(c)>50?' C’est beaucoup : vérifie que tu as bien joué le La (au-dessus du Do central), ou saisis l’accord à la main.':''}`;}
 // Notes attendues dans la mesure en cours, pour la main choisie (les notes liées, déjà tenues, ne sont pas rejouées).
 function ecSeq(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];let t=WK.bar===0&&w.pickup?w.bpb-w.pickup:0;
   return b[WK.hands==='lh'?'lh':'rh'].map(e=>{const at=t;t+=e[1];if(!e[0])return null;const keep=e[0].map((m,j)=>j).filter(j=>!(e[4]&&e[4][j]===0));
@@ -1575,7 +1577,13 @@ function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);se
 function ecFeed(buf,sr,big,tNow){const d=detectPitch(buf,sr),now=tNow!=null?tNow:(AC?AC.currentTime:0);EC.lastNow=now;
   // Rythme : pendant le décompte, on n'écoute pas (les clics s'entendent dans le micro).
   if(EC.mode==='play'&&RZ.on&&now<RZ.grid+RZ.lat-Math.min(.25,.5*RZ.bu*RZ.spb)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=0;EC.prev=0;EC.pk=0;EC.onT=null;EC.votes=null;EC.cv=0;return;}
-  if(EC.mode==='cal'){if(d.c>=EC_CLEAR&&d.f>370&&d.f<475){EC.cal.push(d.f);if(EC.cal.length>=8){const s=EC.cal.slice().sort((a,b)=>a-b);S.meta=Object.assign({},S.meta,{a4:Math.round((s[3]+s[4])/2*10)/10});saveLocal();ecStop();ecCalMsg();}}return;}
+  // Réglage sur le La : on attend dix lectures d'affilée qui s'accordent (à 12 cents près), puis on prend leur médiane.
+  // Avant : médiane de 8 lectures quelconques ; si elles formaient deux groupes (au démarrage du micro, l'iPhone peut livrer
+  // quelques trames à une autre cadence, lues 146 cents trop bas), le résultat tombait entre les deux : 420,2 Hz pour un La à 438.
+  if(EC.mode==='cal'){if(d.c>=EC_CLEAR&&d.f>370&&d.f<475){const c=EC.cal,med=c.length?c.slice().sort((a,b)=>a-b)[c.length>>1]:d.f;
+      if(c.length&&Math.abs(1200*Math.log2(d.f/med))>12)EC.cal=[d.f];else c.push(d.f);
+      $('#ec-cal-msg').textContent=`J’écoute… ${d.f.toFixed(1).replace('.',',')} Hz (${EC.cal.length}/10). Laisse sonner.`;
+      if(EC.cal.length>=10){const s=EC.cal.slice().sort((a,b)=>a-b);S.meta=Object.assign({},S.meta,{a4:Math.round((s[4]+s[5])/2*10)/10});saveLocal();ecStop();ecCalMsg();}}return;}
   const x=EC.seq[EC.i];if(!x)return;
   if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;EC.prev=d.rms;EC.pk=0;EC.onT=null;return;}
   // Le niveau remonte : nouvelle attaque, seulement si le saut est brusque (plus de 2,2 fois la trame d'avant) ou s'il revient
@@ -1608,7 +1616,10 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
   RZ.on=mode==='play'&&$('#ec-rz').checked;RZ.adv=false;
   Object.assign(EC,{on:true,mode,stream,src:a.createMediaStreamSource(stream),an:a.createAnalyser(),buf:new Float32Array(16384),sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]});
   EC.an.fftSize=16384;EC.src.connect(EC.an);awake('ec',true);
-  EC.iv=setInterval(()=>{if(!EC.on)return;try{if(a.state!=='running')a.resume();}catch(e){}EC.an.getFloatTimeDomainData(EC.buf);ecFeed(EC.buf.subarray(16384-4096),a.sampleRate,EC.buf);},70);
+  // Le temps que l'iPhone stabilise le micro (cadence d'échantillonnage) : les premières trames ne sont pas lues.
+  // 0,8 s pour le réglage (la note est tenue 2 s), 0,4 s pour le jeu (pour ne pas manquer une première note rapide).
+  EC.warm=performance.now()+(mode==='cal'?800:400);
+  EC.iv=setInterval(()=>{if(!EC.on)return;try{if(a.state!=='running')a.resume();}catch(e){}if(performance.now()<EC.warm)return;EC.an.getFloatTimeDomainData(EC.buf);ecFeed(EC.buf.subarray(16384-4096),a.sampleRate,EC.buf);},70);
   $('#ec-box').classList.add('on');$('#kb-wk').classList.toggle('ecoute',mode==='play');ecFb('','');
   if(mode==='cal'){$('#ec-cal-msg').textContent='J’écoute… Joue le La4 et laisse-le sonner.';$('#ec-cal-go').textContent='Arrêter';return;}
   $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
@@ -2500,6 +2511,9 @@ function init(){
   $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
   $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
   $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
+  $('#ec-cal-set').onclick=()=>{const v=parseFloat(String($('#ec-cal-hz').value).replace(',','.'));
+    if(!(v>=400&&v<=466)){$('#ec-cal-msg').textContent='Entre une valeur entre 400 et 466 Hz (un piano accordé est entre 438 et 443).';return;}
+    if(EC.on&&EC.mode==='cal')ecStop();S.meta=Object.assign({},S.meta,{a4:Math.round(v*10)/10});if(S.meta.a4===440)delete S.meta.a4;saveLocal();$('#ec-cal-hz').blur();ecCalMsg();toast('Réglage appliqué');};
   document.addEventListener('visibilitychange',()=>{if(document.hidden){recStop();ecStop();}});
   $('#rec-go').onclick=()=>REC.on?recStop():recStart();
   $('#rec-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ra]'),it=e.target.closest('.rec-item');if(b&&it)recAct(it.dataset.id,b.dataset.ra);});
