@@ -1,6 +1,7 @@
 // @ts-check
 // Corrections issues d'une revue externe (musicien et développeur) : un test par constat.
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 
 /** Remplace une fonction globale de l'app par un espion qui note ses appels (puis appelle l'originale). */
 async function spy(page, name) {
@@ -111,7 +112,7 @@ test('V7. écran allumé pendant le métronome ; le métronome continue dans les
   });
   await page.goto('./#tempo');
   await page.locator('#mt-go').click();
-  await page.locator('#tabs a[data-v="seance"]').click();
+  await aller(page, 'seance');
   // @ts-ignore
   expect(await page.evaluate(() => MT.on)).toBe(true);
   await expect(page.locator('#mt-chip')).toBeVisible();

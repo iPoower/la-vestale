@@ -1,6 +1,7 @@
 // @ts-check
 // Noms des notes : Do Ré Mi, C D E ou les deux ; exercice de traduction dans Lecture.
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 
 test('N1. « Les deux » : touches, Séance et réponses de Lecture dans les deux systèmes ; choix gardé', async ({ page }) => {
   await page.goto('./#clavier');
@@ -14,7 +15,7 @@ test('N1. « Les deux » : touches, Séance et réponses de Lecture dans les deu
   await expect(page.locator('#lec-ans button').first()).toHaveText('Do · C');
   await page.reload();
   await expect(page.locator('#noms button.on')).toHaveText('Les deux');
-  await page.locator('#tabs a[data-v="clavier"]').click();
+  await aller(page, 'clavier');
   await page.locator('#noms button[data-n="fr"]').click();
   await expect(page.locator('#kb-main .key[data-m="64"]')).toHaveAttribute('aria-label', 'Mi4');
 });

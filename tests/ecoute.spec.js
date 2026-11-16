@@ -1,6 +1,7 @@
 // @ts-check
 // Écoute au micro : reconnaissance des notes (sons de piano de synthèse), piano désaccordé, déroulé dans Séance, micro coupé.
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 
 // Son de piano de synthèse (côté test seulement) : partiels un peu inharmoniques, deux cordes à 3 cents, bruit de fond.
 const PIANO = () => {
@@ -181,11 +182,11 @@ test('E6. le micro est coupé : écoute d’un passage, changement d’onglet, a
   await page.locator('#wk-stop').click();
   await page.locator('#ec-go').click();
   await expect(page.locator('#ec-skip')).toBeVisible();
-  await page.locator('#tabs a[data-v="clavier"]').click();
+  await aller(page, 'clavier');
   await expect(page.locator('#v-clavier')).toBeVisible();                       // le changement d'onglet est traité
   // @ts-ignore
   expect(await page.evaluate(() => EC.on)).toBe(false);
-  await page.locator('#tabs a[data-v="seance"]').click();
+  await aller(page, 'seance');
   await page.locator('#ec-go').click();
   await expect(page.locator('#ec-skip')).toBeVisible();
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
@@ -212,7 +213,7 @@ test('E8. départ annulé : quitter Séance pendant la demande du micro ne laiss
   // @ts-ignore
   await page.evaluate(() => window.__setMic(() => new Promise(res => setTimeout(() => { const d = ac().createMediaStreamDestination(); window.__dest = d; res(d.stream); }, 400))));
   await page.locator('#ec-go').click();
-  await page.locator('#tabs a[data-v="clavier"]').click();
+  await aller(page, 'clavier');
   await page.waitForTimeout(700);
   // @ts-ignore
   expect(await page.evaluate(() => [EC.on, EC_ON, window.__dest.stream.getTracks().map(t => t.readyState).join()])).toEqual([false, false, 'ended']);

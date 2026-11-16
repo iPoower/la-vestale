@@ -51,6 +51,14 @@ nav{position:sticky;top:0;z-index:20;background:rgba(20,17,16,.94);backdrop-filt
 nav .in{display:flex;gap:4px;overflow-x:auto;padding:8px 12px;max-width:760px;margin:0 auto;scrollbar-width:none}
 nav .in::-webkit-scrollbar{display:none}
 nav a{flex:0 0 auto;text-decoration:none;color:var(--muted);padding:7px 12px;border-radius:99px;font-size:.92rem;font-weight:700}
+#tabs a{flex:1 1 0;text-align:center;padding:9px 4px;white-space:nowrap;font-size:.9rem}
+#subtabs{padding-top:0;gap:6px;flex-wrap:wrap;overflow:visible}#subtabs[hidden],.runbar[hidden]{display:none}
+#subtabs a{font-size:.8rem;padding:7px 9px;border:1px solid var(--ligne)}#subtabs a.on{background:var(--bois2);color:var(--laiton);border-color:var(--laiton)}
+.runbar{display:flex;align-items:center;gap:6px;max-width:760px;margin:0 auto;padding:6px 12px 8px;font-size:.84rem}
+.rb-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}.rb-c{font-variant-numeric:tabular-nums;color:var(--laiton)}
+.rb-b{min-height:40px;padding:6px 11px;border-radius:10px;border:1px solid var(--ligne);background:var(--bois2);color:inherit;font-weight:700;font-family:inherit;cursor:pointer;touch-action:manipulation}
+.rb-n{border-color:var(--laiton);color:var(--laiton)}.rb-n.due{background:var(--laiton);color:#1a140c}
+.tour{border-color:var(--laiton)}.tour h2{margin:6px 0}.go-big{width:100%;font-size:1.1rem;min-height:54px;margin:6px 0 4px}
 nav a.on{background:var(--laiton);color:#1a140c}
 nav a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--laiton);outline-offset:2px}
 main{max-width:760px;margin:0 auto;padding:14px 16px 80px}
@@ -99,6 +107,7 @@ textarea{min-height:70px;resize:vertical}
 .toggle{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted);cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
+[hidden]{display:none!important}   /* « caché » l'emporte toujours, même sur une carte ou une rangée */
 .co-list li{margin-bottom:10px}
 .sf-clock{font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:800;color:var(--laiton)}
 .sf-clock.low{color:#e07a62}
@@ -273,25 +282,26 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
 </header>
 <nav aria-label="Sections"><div class="in" id="tabs">
-  <a href="#seance" data-v="seance">Séance</a>
-  <a href="#coach" data-v="coach">Coach</a>
-  <a href="#clavier" data-v="clavier">Clavier</a>
-  <a href="#oreille" data-v="oreille">Oreille</a>
-  <a href="#lecture" data-v="lecture">Lecture</a>
-  <a href="#solfege" data-v="solfege">Solfège</a>
-  <a href="#tempo" data-v="tempo">Tempo</a>
-  <a href="#morceaux" data-v="morceaux">Morceaux</a>
-  <a href="#gauche" data-v="gauche">Main gauche</a>
-  <a href="#astuces" data-v="astuces">Astuces</a>
-  <a href="#journal" data-v="journal">Journal</a>
-</div></nav>
+  <a href="#seance" data-g="aujourdhui" data-v="seance">Aujourd’hui</a>
+  <a href="#coach" data-g="jouer" data-v="coach">Jouer</a>
+  <a href="#solfege" data-g="apprendre" data-v="solfege">Apprendre</a>
+  <a href="#morceaux" data-g="morceaux" data-v="morceaux">Morceaux</a>
+  <a href="#clavier" data-g="plus" data-v="clavier">Plus</a>
+</div><div class="in sub" id="subtabs" hidden></div>
+<div class="runbar" id="run-bar" hidden><span class="rb-t" id="rb-t"></span><b class="rb-c" id="rb-c"></b><button type="button" class="rb-b" id="rb-pause" aria-label="Pause">❚❚</button><button type="button" class="rb-b" id="rb-open">Ouvrir</button><button type="button" class="rb-b rb-n" id="rb-next">Suivant ›</button></div></nav>
 <main>
 
 <!-- SÉANCE -->
 <section class="view" id="v-seance">
   <div id="bk-remind" class="card remind hidden" role="status"><p id="rm-t" class="small"></p><div class="row"><button class="btn primary" id="rm-go">Sauvegarder maintenant</button><button class="btn ghost" id="rm-later">Plus tard</button></div></div>
+  <div class="card tour" id="tour" hidden>
+    <div class="row between"><b id="tour-step"></b><button class="btn ghost" id="tour-skip" type="button">Passer</button></div>
+    <h2 id="tour-h"></h2><p id="tour-p"></p>
+    <div class="row"><button class="btn primary" id="tour-next" type="button">Suivant</button></div>
+  </div>
   <div class="card hero">
     <div class="eyebrow" id="today-date">Aujourd’hui</div>
+    <button class="btn primary go-big" id="go-seance" type="button">▶ Commencer ma séance · 30 min</button>
     <h1 id="today-title">Plan du jour</h1>
     <p id="today-desc" class="muted"></p>
     <div class="row" id="today-actions"></div>
@@ -584,7 +594,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 <section class="view" id="v-coach">
   <div class="card">
     <h2>Coach : une partition, jusqu’à la réussite</h2>
-    <p class="small muted"><b>1. Déchiffre</b> une mesure : les notes, les touches, les doigts, sans jouer. <b>2. Joue-la</b> sur ton piano avec « Écoute-moi » : l’app suit chaque note, te dit quand tu te trompes, te fait rejouer la mesure jusqu’à ce qu’elle soit propre, et note où tu bloques. Avance par 2 à 4 mesures.</p>
+    <p class="small muted"><b>1. Déchiffre</b> une mesure (notes, touches, doigts). <b>2. Joue-la</b> au piano avec « Écoute-moi » : l’app te corrige jusqu’à ce qu’elle soit propre. Avance par 2 à 4 mesures.</p>
     <label class="toggle"><input type="checkbox" id="co-redo" checked> Rejouer la mesure jusqu’à ce qu’elle soit sans faute</label>
   </div>
   <div class="card" id="dc-card">
@@ -614,7 +624,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 <section class="view" id="v-solfege">
   <div class="card">
     <div class="row between"><h2>Solfège</h2><span class="tag" id="sf-tag">Débutant</span></div>
-    <p class="small muted">Trois niveaux (Débutant, Intermédiaire, Avancé), 15 leçons, des exercices au minuteur, tes records et la culture musicale. Cinq minutes par jour suffisent : la régularité fait tout. Les notes s’écrivent selon ton réglage (Do Ré Mi, C D E ou les deux).</p>
+    <p class="small muted">Trois niveaux, 15 leçons, un chrono et la culture musicale. Cinq minutes par jour suffisent.</p>
     <p class="small" id="sf-level"></p>
     <p class="small" id="sf-week"></p>
   </div>
@@ -657,6 +667,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 
 <!-- ASTUCES -->
 <section class="view" id="v-astuces">
+  <div class="card"><div class="row between"><span class="small muted">Découvrir l’app en 30 secondes</span><button class="btn" id="tour-again" type="button">Revoir la visite</button></div></div>
   <div class="card" id="tip-card">
     <div class="row between"><h2>Astuce du jour</h2><span class="tag" id="tip-cat"></span></div>
     <p id="tip-text" aria-live="polite" style="font-size:1.05rem"></p>
@@ -778,7 +789,7 @@ function cleanMine(a){const out=[];(Array.isArray(a)?a:[]).filter(isObj).slice(0
       if((e[0]!==null&&n==null)||!MY_DUR.some(z=>z[0]===d)||sum+d>bpb+1e-9)return null;sum+=d;return [n,d,intIn(e[2],0,5)||0,e[3]?1:0];}).filter(Boolean);});
     const acc=typeof x.acc==='string'&&MY_ACC().includes(x.acc)?x.acc:'';
     out.push({id:x.id,t:str(x.t,60).trim()||'Sans titre',bpb,acc,bars:bars.length?bars:[[]]});});return out;}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter','a4'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(['seance','semaine','jamais'].includes(j.meta.bk))S.meta.bk=j.meta.bk;if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta))for(const k of ['lastBackup','remindAfter','a4','tour'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(['seance','semaine','jamais'].includes(j.meta.bk))S.meta.bk=j.meta.bk;if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}}
 /* Copies automatiques : 10 au plus, sur ce téléphone, dans une clé séparée. Un échec d'écriture n'empêche jamais l'enregistrement normal. */
 const SNAP='vestale-copies-v1',SNAP_MAX=10;
 const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
@@ -2095,6 +2106,17 @@ function dayPlan(){const id=coachFocus(),w=WORK[id],n=workBars(id).length,day=da
   out.push(day%2===0?['Solfège',2,`Chrono 1 min : ${sfn}${sft==='mix'?'':' (ton point faible)'}.`,'#solfege','sf:'+sft]:['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille'],['Pour le plaisir',2,'Un morceau que tu connais, en entier, sans t’arrêter.','#morceaux']);
   return out;}
 
+/* ---------- Visite guidée : 5 étapes, une fois ---------- */
+const TOUR=[['Bienvenue','La Vestale t’accompagne chaque jour au piano. Cinq onglets ; voici l’essentiel en 30 secondes.'],
+  ['Aujourd’hui','Touche « Commencer ma séance » : l’app compose 30 minutes pour toi et ouvre chaque étape. La barre en haut te suit partout : Ouvrir, Suivant, pause.'],
+  ['Jouer','Le Coach : déchiffre une mesure, puis joue-la sur ton piano. Le micro vérifie les notes et le rythme, et te fait rejouer jusqu’à ce que ce soit propre.'],
+  ['Apprendre','Solfège par niveaux et culture musicale, lecture des notes, oreille. Un chrono d’une minute suffit pour progresser chaque jour.'],
+  ['Morceaux et Plus','Tes morceaux et tes partitions. Dans Plus : clavier, métronome, main gauche, astuces, journal. Le badge en haut à droite sauvegarde ta progression en deux touchers.']];
+let TOUR_I=0;
+function renderTour(){const el=$('#tour');if(!el)return;if(S.meta&&S.meta.tour){el.hidden=true;return;}el.hidden=false;const [h,p]=TOUR[TOUR_I];
+  $('#tour-step').textContent=`Visite · ${TOUR_I+1}/${TOUR.length}`;$('#tour-h').textContent=h;$('#tour-p').textContent=p;$('#tour-next').textContent=TOUR_I<TOUR.length-1?'Suivant':'C’est parti';}
+function tourEnd(){S.meta=Object.assign({},S.meta,{tour:1});saveLocal();TOUR_I=0;renderTour();}
+
 /* ---------- Astuces ---------- */
 const TIPS=[
   ['Méthode','Dix minutes chaque jour valent mieux qu’une heure le dimanche : la mémoire des doigts se construit pendant le sommeil.'],
@@ -2284,10 +2306,19 @@ const PLAN={
 };
 function today(){return PLAN[new Date().getDay()];}
 function renderToday(){const d=new Date(),p=today();$('#today-date').textContent=`${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;$('#today-title').textContent=p.t;$('#today-desc').textContent=p.d;
-  $('#today-actions').innerHTML=`<a class="btn primary" style="text-decoration:none" href="#seance" data-extra="jour">Ma séance du jour · 30 min</a>`+p.go.map(g=>`<a class="btn" style="text-decoration:none" href="${g[1]}" data-extra="${g[2]||''}">${esc(g[0])}</a>`).join('');
+  $('#today-actions').innerHTML=`<a class="btn" style="text-decoration:none" href="#seance" data-extra="jour">Voir le programme</a>`+p.go.map(g=>`<a class="btn" style="text-decoration:none" href="${g[1]}" data-extra="${g[2]||''}">${esc(g[0])}</a>`).join('');
   const w=weekMinutes();$('#k-week').textContent=w;$('#k-week-bar').style.width=Math.min(100,w/180*100)+'%';$('#k-streak').textContent=streak();$('#k-total').textContent=S.seances.length;}
 
 /* ---------- Séance guidée ---------- */
+// « Commencer ma séance » : la séance du jour démarre et ouvre son premier bloc ; la barre du haut guide ensuite partout.
+function goSeance(){if(!RUN.on&&!RUN.acc&&!RUN.idx){FMT='jour';$$('#fmt button').forEach(b=>b.classList.toggle('on',b.dataset.f==='jour'));runReset();}
+  if(!RUN.on)runToggle();runOpen();}
+function runOpen(){const b=blocks()[RUN.idx];if(!b)return;if(location.hash!==b[3])location.hash=b[3];setTimeout(()=>handleExtra(b[4]||''),60);}
+function renderRunBar(){const bar=$('#run-bar');if(!bar)return;const on=RUN.on||RUN.acc>0||RUN.idx>0;bar.hidden=!on;$('#go-seance').textContent=on?(RUN.on?'▶ Continuer ma séance':'▶ Reprendre ma séance'):'▶ Commencer ma séance · 30 min';if(!on)return;
+  const bs=blocks(),b=bs[RUN.idx],el=RUN.blockAcc+(RUN.on?(Date.now()-RUN.blockStart)/1000:0),left=Math.max(0,b[1]*60-el),last=RUN.idx>=bs.length-1;
+  $('#rb-t').textContent=`${RUN.idx+1}/${bs.length} · ${b[0]}`;$('#rb-c').textContent=fmt(left);$('#rb-pause').textContent=RUN.on?'❚❚':'▶';$('#rb-pause').setAttribute('aria-label',RUN.on?'Pause':'Reprendre');
+  $('#rb-next').textContent=last?'Terminer':'Suivant ›';$('#rb-next').classList.toggle('due',left<=0);}
+function runNext(){const bs=blocks();if(RUN.idx>=bs.length-1){runEnd(false);return;}runSkip();runOpen();}
 let FMT='jour',DAYPLAN=null;
 // La séance du jour est composée au démarrage, puis figée tant qu'elle tourne (les blocs ne bougent pas en cours de route).
 function blocks(){if(FMT==='jour'){if(!DAYPLAN||(!RUN.on&&!RUN.acc&&!RUN.idx))DAYPLAN=dayPlan();return DAYPLAN;}const p=today();if(FMT==='court'||p.short)return [['Repères',5,'Do central, Sol4, C et G7','#clavier'],['Un passage',5,p.pass,'#tempo'],['Pour le plaisir',5,'Ton morceau préféré, sans t’arrêter','#morceaux']];
@@ -2296,7 +2327,7 @@ const RUN={on:false,idx:0,start:0,acc:0,blockStart:0,blockAcc:0,iv:null,total:0}
 function renderBlocks(){const bs=blocks();$('#blocks').innerHTML=bs.map((b,i)=>`<li class="${i===RUN.idx&&(RUN.on||RUN.acc)?'cur':''}${i<RUN.idx?' done':''}"><span class="m">${b[1]}′</span><div><b>${esc(b[0])}</b><div class="small muted">${esc(b[2])}</div></div><a href="${b[3]}" data-extra="${esc(b[4]||'')}">Ouvrir</a></li>`).join('');
   const w=$('#jour-why');if(w)w.textContent=FMT==='jour'?'Composée pour toi chaque jour : révisions dues, mesures où tu bloques, la suite de ton morceau.':'';}
 const fmt=s=>`${pad(Math.floor(s/60))}:${pad(Math.floor(s%60))}`;
-function tick(){const bs=blocks();const now=Date.now();const bEl=RUN.blockAcc+(RUN.on?(now-RUN.blockStart)/1000:0);const lim=bs[RUN.idx][1]*60;const left=Math.max(0,lim-bEl);
+function tick(){renderRunBar();const bs=blocks();const now=Date.now();const bEl=RUN.blockAcc+(RUN.on?(now-RUN.blockStart)/1000:0);const lim=bs[RUN.idx][1]*60;const left=Math.max(0,lim-bEl);
   $('#t-clock').textContent=fmt(left);$('#t-label').textContent=`${RUN.idx+1}/${bs.length} · ${bs[RUN.idx][0]}`+(RUN.on?'':' · en pause');
   if(RUN.on&&left<=0){chime();if(RUN.idx<bs.length-1){RUN.idx++;RUN.blockAcc=0;RUN.blockStart=Date.now();renderBlocks();}else{runEnd(true);}}}
 function runToggle(){ac();if(RUN.on){RUN.on=false;awake('seance',false);RUN.acc+=(Date.now()-RUN.start)/1000;RUN.blockAcc+=(Date.now()-RUN.blockStart)/1000;$('#t-start').textContent='Reprendre';}
@@ -2304,8 +2335,9 @@ function runToggle(){ac();if(RUN.on){RUN.on=false;awake('seance',false);RUN.acc+
 function runSkip(){const bs=blocks();if(RUN.idx<bs.length-1){RUN.idx++;RUN.blockAcc=0;RUN.blockStart=Date.now();renderBlocks();tick();}}
 function runElapsed(){return RUN.acc+(RUN.on?(Date.now()-RUN.start)/1000:0);}
 function runEnd(auto){const el=runElapsed();awake('seance',false);if(RUN.on){RUN.acc=el;RUN.on=false;}clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';
-  openLog(el<60?30:Math.round(el/60));if(auto)toast('Séance terminée. Note ce qui a progressé.');}
-function runReset(){RUN.on=false;awake('seance',false);RUN.idx=0;RUN.acc=0;RUN.blockAcc=0;clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';$('#t-clock').textContent='00:00';$('#t-label').textContent='Prêt quand tu l’es';renderBlocks();}
+  const go=()=>openLog(el<60?30:Math.round(el/60));if(location.hash&&location.hash!=='#seance'){location.hash='#seance';setTimeout(go,80);}else go();
+  if(auto)toast('Séance terminée. Note ce qui a progressé.');renderRunBar();}
+function runReset(){RUN.on=false;awake('seance',false);RUN.idx=0;RUN.acc=0;RUN.blockAcc=0;clearInterval(RUN.iv);RUN.iv=null;$('#t-start').textContent='Démarrer';$('#t-clock').textContent='00:00';$('#t-label').textContent='Prêt quand tu l’es';renderBlocks();renderRunBar();}
 let FEEL=3;
 function openLog(min){$('#f-piece').innerHTML=grouped(PIECES.map(p=>p.id)).map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(id=>`<option value="${id}">${esc(PIECES.find(x=>x.id===id).t)}</option>`).join('')}</optgroup>`).join('')+'<option value="accords">Accords et grille</option><option value="libre">Jeu libre</option>';
   $('#f-piece').value=today().piece;$('#f-min').value=min||30;$('#f-pass').value='';$('#f-bpm').value=MT.preset===today().piece?MT.bpm:'';$('#f-note').value='';
@@ -2413,9 +2445,16 @@ function importSummary(){const so=S.solf||{les:{}},lec=Object.values(S.stats.lec
 
 /* ---------- Navigation ---------- */
 const VIEWS=['seance','coach','clavier','oreille','lecture','solfege','tempo','morceaux','gauche','astuces','journal'];
+/* ---------- Navigation : 5 onglets ; Apprendre et Plus ont des sous-onglets ---------- */
+const NAV={seance:'aujourdhui',coach:'jouer',solfege:'apprendre',lecture:'apprendre',oreille:'apprendre',morceaux:'morceaux',clavier:'plus',tempo:'plus',gauche:'plus',astuces:'plus',journal:'plus'};
+const NAV_SUB={apprendre:[['solfege','Solfège'],['lecture','Lecture'],['oreille','Oreille']],plus:[['clavier','Clavier'],['tempo','Tempo'],['gauche','Main gauche'],['astuces','Astuces'],['journal','Journal']]};
+const NAV_LAST={apprendre:'solfege',plus:'clavier'};
+// L'onglet d'un groupe rouvre la dernière section visitée ; la barre de sous-onglets montre les autres.
+function navSync(v){const g=NAV[v]||'aujourdhui';if(NAV_SUB[g])NAV_LAST[g]=v;
+  $$('#tabs a').forEach(a=>{a.classList.toggle('on',a.dataset.g===g);if(NAV_SUB[a.dataset.g])a.setAttribute('href','#'+NAV_LAST[a.dataset.g]);});
+  const sub=$('#subtabs');if(NAV_SUB[g]){sub.innerHTML=NAV_SUB[g].map(([k,l])=>`<a href="#${k}" data-v="${k}"${k===v?' class="on" aria-current="page"':''}>${esc(l)}</a>`).join('');sub.hidden=false;}else{sub.hidden=true;sub.innerHTML='';}}
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
-  $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));$$('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
-  const tab=$(`#tabs a[data-v="${v}"]`);if(tab&&tab.scrollIntoView)tab.scrollIntoView({block:'nearest',inline:'center'});
+  $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));navSync(v);
   mtChip();if(v!=='seance'&&v!=='coach')ecStop();if(v!=='solfege'&&SF.on)sfStop();if(v==='solfege')renderSolf();
   // Une seule carte « Travailler un morceau » : elle passe dans le Coach, puis revient dans Séance.
   if(v==='coach'&&$('#wk-card').parentNode!==$('#co-slot')){$('#co-slot').appendChild($('#wk-card'));renderCoach();setTimeout(wkScroll,30);}
@@ -2562,6 +2601,10 @@ function init(){
   $('#quicklog').onclick=()=>openLog(30);
   $('#f-feel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;FEEL=+b.dataset.v;$$('#f-feel button').forEach(x=>x.classList.toggle('on',x===b));});
   $('#f-save').onclick=saveLog;$('#f-cancel').onclick=()=>$('#logform').classList.add('hidden');
+  $('#go-seance').onclick=goSeance;$('#rb-open').onclick=runOpen;$('#rb-next').onclick=runNext;$('#rb-pause').onclick=()=>{runToggle();renderRunBar();};
+  $('#tour-next').onclick=()=>{if(TOUR_I<TOUR.length-1){TOUR_I++;renderTour();}else tourEnd();};$('#tour-skip').onclick=tourEnd;
+  $('#tour-again').onclick=()=>{S.meta=Object.assign({},S.meta,{tour:0});saveLocal();TOUR_I=0;renderTour();location.hash='#seance';};
+  renderTour();renderRunBar();
   $('#today-actions').addEventListener('click',e=>{const a=e.target.closest('a');if(a)setTimeout(()=>handleExtra(a.dataset.extra),50);});
   $('#blocks').addEventListener('click',e=>{const a=e.target.closest('a[data-extra]');if(a&&a.dataset.extra)setTimeout(()=>handleExtra(a.dataset.extra),50);});
 

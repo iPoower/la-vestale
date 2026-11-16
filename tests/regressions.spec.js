@@ -1,6 +1,7 @@
 // @ts-check
 // Tests de non-régression : un test par bug corrigé (rapport de test du 11 novembre 2026).
 const { test, expect } = require('@playwright/test');
+const { aller, GROUP } = require('./aller');
 const { spawn } = require('child_process');
 
 const LS = 'vestale-studio-v1';
@@ -81,7 +82,7 @@ test('R2. import : un fichier abîmé ne bloque plus l’app, les séances lisib
   expect((await toasts(page)).some(x => x.startsWith('Import réussi'))).toBe(true);
   await page.reload();
   await expect(page.locator('#v-journal')).toBeVisible();
-  await page.locator('#tabs a[data-v="seance"]').click();
+  await aller(page, 'seance');
   await expect(page.locator('#v-seance')).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -91,7 +92,7 @@ test('R2 bis. des données déjà abîmées sur l’appareil sont réparées au 
   await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ seances: [{ id: 'z', ts: 1, date: '2026-11-10', piece: 'hymne', min: 5, feel: 7 }], meta: { lastBackup: 'x' } })), LS);
   await page.reload();
   await expect(page.locator('#v-seance')).toBeVisible();
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'journal');
   await expect(page.locator('#entries .entry')).toHaveCount(1);
   await expect(page.locator('#sync')).toHaveText('à sauvegarder');
 });
@@ -112,8 +113,8 @@ test('R3. import : aucun champ piégé n’exécute de code', async ({ page }) =
     stats: { lecture: { [`${trap}:30`]: { ok: 0, ko: 1 } }, oreille: {} },
     questions: { done: {}, items: [{ id: trap, t: trap }] },
   }));
-  await page.locator('#tabs a[data-v="lecture"]').click();
-  await page.locator('#tabs a[data-v="journal"]').click();
+  await aller(page, 'lecture');
+  await aller(page, 'journal');
   await page.waitForTimeout(500);
   // @ts-ignore
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
@@ -214,9 +215,9 @@ test('R9. lecture : passer en noms anglais garde la question déjà répondue ve
   await page.locator(`#lec-ans button[data-l="${wrong}"]`).click();
   await expect(page.locator('#lec-ans button:disabled')).toHaveCount(7);
   const marks = await page.locator('#lec-ans button.ok, #lec-ans button.ko').count();
-  await page.locator('#tabs a[data-v="clavier"]').click();
+  await aller(page, 'clavier');
   await page.locator('#noms button[data-n="en"]').click();
-  await page.locator('#tabs a[data-v="lecture"]').click();
+  await aller(page, 'lecture');
   await expect(page.locator('#lec-ans button').first()).toHaveText('C');
   await expect(page.locator('#lec-ans button:disabled')).toHaveCount(7);
   expect(await page.locator('#lec-ans button.ok, #lec-ans button.ko').count()).toBe(marks);
