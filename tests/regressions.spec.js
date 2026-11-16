@@ -78,7 +78,7 @@ test('R2. import : un fichier abîmé ne bloque plus l’app, les séances lisib
   expect(saved.rep).toEqual({ hymne: { stage: 0 } });            // étape hors limites : ramenée au début
   expect(saved.stats).toEqual({ lecture: { 'sol:30': { ok: 0, ko: 2 } }, oreille: { tension: { ok: 3, ko: 0 } } });
   expect(saved.questions).toEqual({ done: { pedales: true }, items: [{ id: 'u1', t: 'Ma question', done: false }] });
-  expect(await toasts(page)).toContain('Import réussi');
+  expect((await toasts(page)).some(x => x.startsWith('Import réussi'))).toBe(true);
   await page.reload();
   await expect(page.locator('#v-journal')).toBeVisible();
   await page.locator('#tabs a[data-v="seance"]').click();

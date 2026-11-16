@@ -471,6 +471,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="answers" id="lec-ans"></div>
     <div class="fb" id="lec-fb" aria-live="polite"></div>
     <div class="kb-wrap" id="kb-mini"></div>
+    <p class="small muted" id="lec-tot"></p>
     <div class="row between"><div class="score">Juste <b id="lec-ok">0</b> Erreurs <b id="lec-ko">0</b></div>
       <div class="row"><button class="btn" id="lec-next">Suivant</button><button class="btn primary" id="lec-sprint">Sprint 20 notes</button></div></div>
   </div>
@@ -482,6 +483,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="answers" id="tr-ans"></div>
     <div class="fb" id="tr-fb" aria-live="polite"></div>
     <div class="row between"><div class="score">Juste <b id="tr-ok">0</b> Erreurs <b id="tr-ko">0</b></div><button class="btn" id="tr-next">Suivant</button></div>
+    <p class="small muted" id="tr-tot"></p>
     <details class="small"><summary>Tableau des 7 notes</summary><p>Do = C · Ré = D · Mi = E · Fa = F · Sol = G · La = A · Si = B<br>Le dièse et le bémol ne changent pas : Fa♯ = F♯, Si♭ = B♭. Un accord « m » est mineur : Em = Mi mineur.</p></details>
   </div>
   <div class="card" id="ry-card">
@@ -718,7 +720,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 "use strict";
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2200);}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),t.length>60?6000:2200);}
 function ask(text){return new Promise(res=>{$('#dlg-t').textContent=text;$('#dlg').classList.remove('hidden');const done=v=>{$('#dlg').classList.add('hidden');$('#dlg-ok').onclick=$('#dlg-no').onclick=null;res(v);};$('#dlg-ok').onclick=()=>done(true);$('#dlg-no').onclick=()=>done(false);});}
 async function copy(text,okMsg){try{await navigator.clipboard.writeText(text);toast(okMsg||'Copié');return true;}catch(e){toast('Copie refusée par le navigateur');return false;}}
 
@@ -749,7 +751,9 @@ function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},
   const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
   const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
   return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
-    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{})},questions:{done,items},mine,coach:cleanCoach(d.coach),solf:cleanSolf(d.solf)};}
+    stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{}),
+      ...(isObj(st.noms)?{noms:{ok:intIn(st.noms.ok,0,1e7)||0,ko:intIn(st.noms.ko,0,1e7)||0,best:intIn(st.noms.best,0,1e6)||0}}:{}),
+      ...(isObj(st.sprint)?{sprint:{n:intIn(st.sprint.n,0,1e6)||0,best:intIn(st.sprint.best,0,20)||0,sec:intIn(st.sprint.sec,0,36000)||0}}:{})},questions:{done,items},mine,coach:cleanCoach(d.coach),solf:cleanSolf(d.solf)};}
 // Solfège : les = meilleur score par leçon (sur 10), best = record par chrono (« type:minutes »), hist = [date, type, secondes, justes, erreurs],
 // w = points faibles (« type:clé » → poids).
 function cleanSolf(o){const out={les:{},best:{},hist:[],w:{},lv:{}};if(!isObj(o))return out;
@@ -1304,7 +1308,9 @@ function lecAnswer(btn){if(!lecCur||lecAns)return;lecAns=true;lecCur.chosen=+btn
   drawStaff(d,ok?'ok':'ko');playNote(m,0,1,.75);MINI.clear();MINI.mark([m],ok?'ok':'hl');MINI.scrollTo(m);
   const fb=$('#lec-fb');fb.className='fb '+(ok?'ok':'ko');fb.textContent=(ok?'Juste : ':'C’était ')+nm(m)+' · '+posName(d);
   renderWeak();
-  if(sprint){sprint.n++;if(ok)sprint.ok++;if(sprint.n>=20){const sec=(performance.now()-sprint.t0)/1000;const msg=`Sprint terminé : ${sprint.ok}/20 en ${Math.round(sec)} s (${(sec/20).toFixed(1)} s par note).`;sprint=null;$('#lec-sprint-tag').textContent='Libre';setTimeout(()=>{$('#lec-fb').className='fb ok';$('#lec-fb').textContent=msg;},900);return;}$('#lec-sprint-tag').textContent=`Sprint ${sprint.n}/20`;}
+  renderLecTot();
+  if(sprint){sprint.n++;if(ok)sprint.ok++;if(sprint.n>=20){const sec=(performance.now()-sprint.t0)/1000;
+    {const sp=S.stats.sprint=S.stats.sprint||{n:0,best:0,sec:0},s=Math.round(sec);sp.n++;if(sprint.ok>sp.best||(sprint.ok===sp.best&&(!sp.sec||s<sp.sec))){sp.best=sprint.ok;sp.sec=s;}saveStats();renderLecTot();}const msg=`Sprint terminé : ${sprint.ok}/20 en ${Math.round(sec)} s (${(sec/20).toFixed(1)} s par note).`;sprint=null;$('#lec-sprint-tag').textContent='Libre';setTimeout(()=>{$('#lec-fb').className='fb ok';$('#lec-fb').textContent=msg;},900);return;}$('#lec-sprint-tag').textContent=`Sprint ${sprint.n}/20`;}
   if(ok)setTimeout(()=>{if(lecAns)lecNew();},sprint?500:1100);}
 function renderLecAns(){const F7=['Do','Ré','Mi','Fa','Sol','La','Si'],E7=['C','D','E','F','G','A','B'];const names=NOMS==='both'?F7.map((n,i)=>n+' · '+E7[i]):useEN?E7:F7;$('#lec-ans').innerHTML=names.map((n,i)=>`<button class="btn" data-l="${i}">${n}</button>`).join('');
   if(lecCur&&lecAns){const right=((lecCur.d%7)+7)%7;$$('#lec-ans button').forEach(b=>{b.disabled=true;const l=+b.dataset.l;if(l===right)b.classList.add('ok');else if(l===lecCur.chosen)b.classList.add('ko');});}}
@@ -2235,6 +2241,10 @@ function setNoms(n,remember){if(!['fr','en','both'].includes(n))n='fr';NOMS=n;us
 // Exercice de traduction : une note dans un système, la réponse dans l'autre.
 const TR_FR=['Do','Ré','Mi','Fa','Sol','La','Si'],TR_EN=['C','D','E','F','G','A','B'];
 const TR={lvl:1,cur:null,done:false,ok:0,ko:0,run:0};
+// Totaux gardés (et sauvegardés) : depuis le début, pas seulement la séance en cours.
+function renderTrTot(){const n=S.stats.noms,el=$('#tr-tot');if(!el)return;el.textContent=n&&(n.ok+n.ko)?`Depuis le début : ${n.ok} juste${n.ok>1?'s':''} sur ${n.ok+n.ko} · meilleure série ${n.best}`:'';}
+function renderLecTot(){const el=$('#lec-tot');if(!el)return;let ok=0,ko=0;Object.values(S.stats.lecture||{}).forEach(x=>{ok+=x.ok||0;ko+=x.ko||0;});const sp=S.stats.sprint;
+  el.textContent=(ok+ko?`Depuis le début : ${ok+ko} notes lues, ${Math.round(100*ok/(ok+ko))} % justes`:'')+(sp&&sp.n?`${ok+ko?' · ':''}meilleur sprint : ${sp.best}/20 en ${sp.sec} s`:'');}
 function trNew(){const i=Math.floor(Math.random()*7),toEN=Math.random()<.5;let acc='';
   if(TR.lvl===2&&Math.random()<.6)acc=Math.random()<.5?'♯':'♭';
   const q=(toEN?TR_FR:TR_EN)[i]+acc,good=(toEN?TR_EN:TR_FR)[i]+acc;let opts;
@@ -2245,6 +2255,7 @@ function trNew(){const i=Math.floor(Math.random()*7),toEN=Math.random()<.5;let a
 function trAnswer(btn){if(!TR.cur||TR.done)return;TR.done=true;const ok=btn.dataset.v===TR.cur.good;
   $$('#tr-ans button').forEach(b=>{b.disabled=true;if(b.dataset.v===TR.cur.good)b.classList.add('ok');});if(!ok)btn.classList.add('ko');
   if(ok){TR.ok++;TR.run++;}else{TR.ko++;TR.run=0;}
+  const ns=S.stats.noms=S.stats.noms||{ok:0,ko:0,best:0};ok?ns.ok++:ns.ko++;if(TR.run>ns.best)ns.best=TR.run;saveStats();renderTrTot();
   $('#tr-ok').textContent=TR.ok;$('#tr-ko').textContent=TR.ko;$('#tr-streak').textContent='Série '+TR.run;
   $('#tr-fb').textContent=ok?`Juste : ${TR.cur.q} = ${TR.cur.good}`:`Non : ${TR.cur.q} = ${TR.cur.good}`;$('#tr-fb').className='fb '+(ok?'ok':'ko');
   if(ok)setTimeout(()=>{if(TR.done)trNew();},800);}
@@ -2355,7 +2366,7 @@ function renderBackup(){const el=$('#bk-last');if(!el)return;const lb=S.meta&&S.
   el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:S.seances.length?' · tout est à l’abri':''}.`;
   el.classList.toggle('warn',!!n&&(!lb||Date.now()-lb>7*864e5));$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));}
 async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}.json`;
-  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf}},null,1);
+  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf,settings:{a4:S.meta.a4,noms:NOMS,bk:S.meta.bk}}},null,1);
   const file=new File([body],name,{type:'application/json'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});}
     else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
@@ -2363,12 +2374,42 @@ async function exportData(){const d=new Date();const name=`la-vestale-${dkey(d)}
   catch(e){if(e&&e.name==='AbortError')return false;toast('Export impossible');return false;}}
 async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}
   const skipped=j.data.seances.length-d.seances.length;
-  if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Les séances sont fusionnées, le reste est remplacé.`)))return;
+  if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Tout est fusionné avec ce téléphone : pour chaque exercice, on garde le meilleur des deux, rien n’est perdu (copie de sécurité avant).`)))return;
   snapshot('import');const before=JSON.stringify(S);
   try{const all={};[...S.seances,...d.seances].forEach(s=>{all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
-    if(Object.keys(j.data).includes('rep'))S.rep=d.rep;if(Object.keys(j.data).includes('stats'))S.stats=d.stats;if(Object.keys(j.data).includes('questions'))S.questions=d.questions;if(Object.keys(j.data).includes('mine'))S.mine=d.mine;if(Object.keys(j.data).includes('coach'))S.coach=d.coach;if(Object.keys(j.data).includes('solf'))S.solf=d.solf;
+    mergeInto(d,Object.keys(j.data));importSettings(j.data.settings);
     mineSync();renderAll();}catch(e){Object.assign(S,JSON.parse(before));renderAll();toast('Fichier non reconnu');return;}
-  saveLocal();toast('Import réussi');}
+  saveLocal();toast(importSummary());}
+// Fusion d'une sauvegarde : compteurs au maximum, listes réunies, niveaux et records au meilleur ; ce qui est sur le téléphone n'est jamais perdu.
+const mx=(a,b)=>Math.max(+a||0,+b||0);
+function mergeCounts(a,b){const o=Object.assign({},a);for(const k in b){const x=o[k]||{ok:0,ko:0},y=b[k];o[k]={ok:mx(x.ok,y.ok),ko:mx(x.ko,y.ko)};}return o;}
+function mergeInto(d,keys){const has=k=>keys.includes(k);
+  if(has('rep'))for(const k in d.rep){const a=S.rep[k],b=d.rep[k];if(!a||(b.stage||0)>(a.stage||0))S.rep[k]=b;}
+  if(has('stats')){const a=S.stats,b=d.stats;a.lecture=mergeCounts(a.lecture,b.lecture);a.oreille=mergeCounts(a.oreille,b.oreille);
+    if(b.rythme){const r=a.rythme||{lvl:1,ok:0,ko:0};a.rythme={lvl:mx(r.lvl,b.rythme.lvl)||1,ok:mx(r.ok,b.rythme.ok),ko:mx(r.ko,b.rythme.ko)};}
+    if(b.noms){const r=a.noms||{};a.noms={ok:mx(r.ok,b.noms.ok),ko:mx(r.ko,b.noms.ko),best:mx(r.best,b.noms.best)};}
+    if(b.sprint){const r=a.sprint||{n:0,best:0,sec:0},y=b.sprint,better=y.best>r.best||(y.best===r.best&&y.sec&&(!r.sec||y.sec<r.sec));a.sprint={n:mx(r.n,y.n),best:better?y.best:r.best,sec:better?y.sec:r.sec};}}
+  if(has('questions')){for(const k in d.questions.done)if(d.questions.done[k])S.questions.done[k]=true;
+    d.questions.items.forEach(x=>{const i=S.questions.items.find(y=>y.id===x.id);if(!i)S.questions.items.push(x);else if(x.done)i.done=true;});}
+  if(has('mine'))d.mine.forEach(x=>{if(!S.mine.some(y=>y.id===x.id))S.mine.push(x);});
+  if(has('coach'))for(const id in d.coach){const a=S.coach[id],b=d.coach[id];if(!a){S.coach[id]=b;continue;}
+    for(const bar in b.b){const x=a.b[bar]||[0,0,0,0];a.b[bar]=x.map((v,i)=>mx(v,b.b[bar][i]));}
+    for(const k in b.c)a.c[k]=mx(a.c[k],b.c[k]);
+    if(b.d){a.d=a.d||{};for(const k in b.d)a.d[k]=1;}
+    if(b.r){a.r=a.r||{};for(const k in b.r){const x=a.r[k],y=b.r[k];if(!x||y[2]>x[2]||(y[2]===x[2]&&y[0]>x[0]))a.r[k]=y;}}
+    if(b.t)a.t=mx(a.t,b.t);}
+  if(has('solf')){const a=S.solf=S.solf&&S.solf.hist?S.solf:{les:{},best:{},hist:[],w:{},lv:{}},b=d.solf;a.lv=a.lv||{};
+    for(const k in b.les)a.les[k]=mx(a.les[k],b.les[k]);for(const k in b.best)a.best[k]=mx(a.best[k],b.best[k]);for(const k in b.lv)a.lv[k]=Math.min(3,mx(a.lv[k],b.lv[k]));
+    for(const k in b.w)a.w[k]=mx(a.w[k],b.w[k]);const seen=new Set(a.hist.map(h=>h[0]+'|'+h[1]));b.hist.forEach(h=>{if(!seen.has(h[0]+'|'+h[1]))a.hist.push(h);});
+    a.hist.sort((x,y)=>x[0]-y[0]);if(a.hist.length>400)a.hist.splice(0,a.hist.length-400);}}
+// Réglages : appliqués seulement s'ils manquent sur ce téléphone (un nouvel appareil les retrouve, l'actuel garde les siens).
+function importSettings(s){if(!isObj(s))return;S.meta=S.meta||{};const a4=+s.a4;
+  if(S.meta.a4==null&&a4>=370&&a4<=475)S.meta.a4=a4;if(!S.meta.bk&&['seance','semaine','jamais'].includes(s.bk))S.meta.bk=s.bk;
+  let saved=null;try{saved=localStorage.getItem('vestale-noms');}catch(e){}if(!saved&&['fr','en','both'].includes(s.noms))setNoms(s.noms,true);
+  try{ecCalMsg();}catch(e){}}
+function importSummary(){const so=S.solf||{les:{}},lec=Object.values(S.stats.lecture||{}).reduce((n,x)=>n+(x.ok||0)+(x.ko||0),0),les=Object.values(so.les||{}).filter(v=>v>=9).length,
+    bars=Object.values(S.coach||{}).reduce((n,c)=>n+Object.keys(c.d||{}).length,0),ns=S.stats.noms;
+  return `Import réussi · progression reprise : ${S.seances.length} séance${S.seances.length>1?'s':''} · ${lec} notes lues · ${les} leçon${les>1?'s':''} de solfège acquise${les>1?'s':''} · ${bars} mesure${bars>1?'s':''} déchiffrée${bars>1?'s':''}`+(ns&&(ns.ok+ns.ko)?` · Do Ré Mi ⇄ C D E : ${ns.ok} justes`:'');}
 
 /* ---------- Navigation ---------- */
 const VIEWS=['seance','coach','clavier','oreille','lecture','solfege','tempo','morceaux','gauche','astuces','journal'];
@@ -2399,7 +2440,7 @@ function handleExtra(x){if(!x)return;const [k,v,w]=x.split(':');if(k==='preset')
 /* ---------- Rendu ---------- */
 let KB;
 function renderAll(){renderTips();renderMine();renderToday();renderBlocks();renderPieces();renderPath();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();renderSnaps();
-  renderSolf();if(inCoach()){renderCoach();renderDc();}}   // après un import ou une restauration : Solfège et Coach à jour aussi
+  renderSolf();if(inCoach()){renderCoach();renderDc();}renderLecTot();renderTrTot();if($('#ry-tot'))$('#ry-tot').textContent=(S.stats.rythme&&S.stats.rythme.ok)||0;}   // après un import ou une restauration : Solfège et Coach à jour aussi
 
 function init(){
   loadLocal();
