@@ -79,6 +79,10 @@ Séance › Séance guidée › « Du jour · 30 min » (par défaut) compose ch
 
 Révision espacée : une mesure jouée propre au micro revient le lendemain ; propre du premier coup, elle revient à 3 jours, puis 7, 14 et 30 ; ratée, elle revient le lendemain. Seul le premier passage du jour compte.
 
+### Mon morceau, de A à Z
+
+En tête de l'onglet Jouer, un parcours guide tout le morceau : écouter ; puis, par sections de 4 mesures : lire (déchiffrage), main droite et main gauche (au micro, chaque mesure propre), mains ensemble (jugé par l'élève, trois fois propre d'affilée), enchaîner avec la section précédente ; enfin le morceau en entier, au tempo, et s'enregistrer. Un bouton ouvre le bon outil à la bonne mesure ; l'écoute s'arrête en fin de section (acquise, ou ce qu'il reste à réussir) ; « Valider moi-même » débloque une étape si le micro n'entend pas ; « Tout le parcours » montre chaque étape et permet d'y revenir. La progression est gardée, exportée et fusionnée à l'import.
+
 ### Déchiffrer avant de jouer
 
 Dans le Coach, l'étape « 1. Déchiffrer » donne la carte d'identité du morceau (tonalité et armure, mesure et comptage, tempo, étendue de chaque main, position de départ, mesures identiques, pièges repérés : grands sauts, altérations hors armure, passages chargés, mesures où l'on a déjà bloqué), puis guide la lecture d'une mesure note par note : nommer la note sur la portée, la trouver sur le clavier, l'écouter. La portée affiche la tonalité à la clé, comme sur une partition (armure dessinée après les clés ; une altération écrite vaut jusqu'à la barre ; bécarre pour l'annuler), et la tonalité est rappelée au-dessus de la portée. Une mesure lue sans erreur est retenue ; après 2 à 4 mesures, l'app propose de les jouer avec « Écoute-moi ».
