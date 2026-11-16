@@ -43,6 +43,8 @@ Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous S
 
 Le badge en haut à droite (« à sauvegarder », « sauvegardé aujourd'hui »…) s'ouvre sur deux choix : « Sauvegarder » (fichier JSON de toute la progression ; sur iPhone, « Enregistrer dans Fichiers ») et « Importer » (reprend ce fichier, avec confirmation et copie de sécurité avant import). Les mêmes boutons restent dans Journal.
 
+Importer **fusionne** : pour chaque exercice, on garde le meilleur des deux (compteurs, niveaux, records, leçons acquises, mesures déchiffrées et révisions), les listes sont réunies, rien de ce qui est sur le téléphone n'est perdu ; un bilan s'affiche ensuite. La sauvegarde contient aussi les résultats de « Do Ré Mi ⇄ C D E », les sprints de lecture et les réglages (calibrage du La, Do Ré Mi / C D E, rappel), appliqués seulement s'ils manquent sur l'appareil.
+
 ## Coach
 
 L'onglet Coach reprend « Travailler un morceau » avec l'écoute au micro : chaque mesure jouée avec une faute se rejoue jusqu'à ce qu'elle soit propre, un conseil s'affiche à chaque erreur (demi-ton, note voisine, octave, doigté, accord incomplet), et l'app retient, par morceau, les mesures difficiles, les hésitations (plus de 4 s) et les confusions fréquentes. Ce suivi reste sur l'appareil et dans l'export.
