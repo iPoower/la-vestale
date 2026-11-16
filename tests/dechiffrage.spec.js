@@ -51,7 +51,7 @@ test('D2. lecture guidée : nommer, trouver la touche, indices ; avec erreurs la
   await expect(page.locator('#dc-fb')).toHaveText('Pas Do. Clé de sol : lignes de bas en haut Mi Sol Si Ré Fa ; interlignes Fa La Do Mi.');
   await name(page, 'Mi');
   await expect(page.locator('#dc-fb')).toHaveText('Oui, c’est Mi.');
-  await expect(page.locator('#dc-q')).toContainText('trouve Mi5 sur le clavier (doigt 3)');
+  await expect(page.locator('#dc-q')).toContainText('touche Mi5 sur le clavier ci-dessous (doigt 3)');
   await key(page, 64);
   await expect(page.locator('#dc-fb')).toHaveText('Bonne note, mauvaise octave : Mi5 est plus haut. Repère-toi avec les Do.');
   await key(page, 76);
@@ -111,7 +111,7 @@ test('D4. accords lus note par note, du grave à l’aigu ; altérations ; mesur
     // @ts-ignore
     const l = await page.evaluate(m => spell(m).l, m);
     await page.locator(`#dc-names button[data-l="${l}"]`).click();
-    if (m === 54) await expect(page.locator('#dc-fb')).toHaveText('Oui, c’est Fa avec un ♯ : Fa♯3. Le ♯ se joue sur la touche juste à droite.');
+    if (m === 54) await expect(page.locator('#dc-fb')).toHaveText('Oui, c’est Fa, avec un ♯ écrit devant : Fa♯3. Le ♯ se joue sur la touche juste à droite.');
     await key(page, m === 54 ? 53 : m);
     if (m === 54) { await expect(page.locator('#dc-fb')).toHaveText('Bonne lettre, mais regarde l’altération : il faut Fa♯3.'); await key(page, 54); }
   }
@@ -133,4 +133,74 @@ test('D5. sur iPhone : tout tient dans l’écran, boutons de 44 px, rien ne dé
   await page.goto('./#seance');                                                  // la carte revient dans Séance avec son titre
   await expect(page.locator('#wk-card h2')).toHaveText('Travailler un morceau');
   await expect(page.locator('#wk-piece')).toBeVisible();
+});
+
+test('D6. tonalité à la clé, comme sur la feuille ; altérations jusqu’à la barre ; réponse et suite visibles sans défiler', async ({ page }) => {
+  await page.setViewportSize({ width: 414, height: 896 });
+  await page.goto('./#coach');
+  await page.locator('#dc-piece').selectOption('bebe');
+  // @ts-ignore
+  const acc = await page.evaluate(() => { const k = dcKey('bebe'); return [staffAcc([[[65], 1], [[66], 1], [[65], 1], [[77], 1]], k), staffAcc([[[66], 1], [[66], 1]], k), k.acc]; });
+  expect(acc[0]).toEqual([['♮'], ['♯'], ['♮'], ['♮']]);                         // Fa naturel annule la clé ; le ♯ écrit vaut jusqu'à la barre ; autre octave : à part
+  expect(acc[1]).toEqual([[''], ['']]);                                          // Fa♯ en Sol majeur : rien à écrire
+  expect(acc[2]).toEqual({ 3: '♯' });
+  await page.locator('#dc-hands button[data-h="rh"]').click();
+  // @ts-ignore
+  await page.evaluate(() => wkGo(7));
+  await page.locator('#dc-go').click();
+  await expect(page.locator('#dc-key')).toHaveText('Tonalité : Sol majeur · Fa♯ à la clé');
+  await expect(page.locator('#dc-staff .ks')).toHaveCount(2);
+  await expect(page.locator('#dc-staff .acc')).toHaveCount(0);                   // le Fa♯ n'est pas réécrit devant la note
+  // @ts-ignore
+  const ord = await page.evaluate(() => ['dc-key', 'dc-staff', 'dc-q', 'dc-fb', 'dc-after', 'dc-names', 'kb-dc'].map(id => document.getElementById(id)).every((e, i, a) => !i || (a[i - 1].compareDocumentPosition(e) & 4)));
+  expect(ord).toBe(true);                                                        // la réponse et la suite sont au-dessus du clavier
+  // @ts-ignore
+  const items = await page.evaluate(() => DC.items.map(x => x.m));
+  for (const m of items) {
+    // @ts-ignore
+    const l = await page.evaluate(m => spell(m).l, m);
+    await page.locator(`#dc-names button[data-l="${l}"]`).click();
+    if (m % 12 === 6) await expect(page.locator('#dc-fb')).toHaveText(`Oui, c’est Fa. Attention : Fa♯ est à la clé (Sol majeur), donc c’est Fa♯${Math.floor(m / 12) - 1}, touche juste à droite.`);
+    await expect(page.locator('#kb-dc')).toHaveClass(/dc-target/);
+    const fb = await page.locator('#dc-fb').boundingBox(), kb = await page.locator('#kb-dc').boundingBox();
+    expect(fb && fb.y).toBeGreaterThan(40);                                     // la réponse est à l'écran
+    expect(kb && kb.y + kb.height).toBeLessThanOrEqual(896 + 1);                 // le clavier aussi
+    await page.locator(`#kb-dc .key[data-m="${m}"]`).dispatchEvent('pointerdown');
+  }
+  await expect(page.locator('#dc-names')).toBeHidden();
+  await expect(page.locator('#dc-next')).toHaveText('Mesure suivante →');
+  await expect(page.locator('#dc-next')).toHaveClass(/primary/);
+  const nx = await page.locator('#dc-next').boundingBox();
+  expect(nx && nx.y > 40 && nx.y + nx.height <= 896).toBe(true);                 // « Mesure suivante » visible tout de suite
+  await page.locator('#dc-next').click();
+  await expect(page.locator('#dc-pos')).toContainText('Mesure 9/');
+  await expect(page.locator('#dc-names')).toBeVisible();
+});
+
+test.describe('au doigt (écran tactile)', () => {
+  test.use({ hasTouch: true, viewport: { width: 414, height: 896 } });
+test('D7. vrais touchers : la dernière touche ne déclenche pas le bouton qui apparaît ; « Mesure suivante » enchaîne', async ({ page }) => {
+  await page.goto('./#coach');
+  await page.locator('#dc-hands button[data-h="both"]').tap();
+  await page.locator('#dc-go').tap();
+  for (let k = 0; k < 2; k++) {                                                   // mesures 1 puis 2, deux mains
+    // @ts-ignore
+    const items = await page.evaluate(() => DC.items.map(x => x.m));
+    for (const m of items) {
+      // @ts-ignore
+      const l = await page.evaluate(m => spell(m).l, m);
+      await page.locator(`#dc-names button[data-l="${l}"]`).tap();
+      await expect(page.locator('#kb-dc')).toHaveClass(/dc-target/);
+      await page.locator(`#kb-dc .key[data-m="${m}"]`).tap();
+      await page.waitForTimeout(320);
+    }
+    await expect(page.locator('#dc-live')).toBeVisible();                         // pas de clic fantôme sur « Jouer »
+    await expect(page.locator('#dc-after')).toBeVisible();
+    // @ts-ignore
+    expect(await page.evaluate(() => EC.on)).toBe(false);
+    if (k === 0) { await page.locator('#dc-next').tap(); await expect(page.locator('#dc-pos')).toHaveText('Mesure 2/16'); }
+  }
+  await expect(page.locator('#dc-fb')).toHaveText('Mesure 2 déchiffrée sans erreur. Place au piano : joue-les.');
+  await expect(page.locator('#dc-play')).toHaveText('Jouer les mesures 1 à 2');
+});
 });

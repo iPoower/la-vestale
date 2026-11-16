@@ -59,7 +59,7 @@ Révision espacée : une mesure jouée propre au micro revient le lendemain ; pr
 
 ### Déchiffrer avant de jouer
 
-Dans le Coach, l'étape « 1. Déchiffrer » donne la carte d'identité du morceau (tonalité et armure, mesure et comptage, tempo, étendue de chaque main, position de départ, mesures identiques, pièges repérés : grands sauts, altérations hors armure, passages chargés, mesures où l'on a déjà bloqué), puis guide la lecture d'une mesure note par note : nommer la note sur la portée, la trouver sur le clavier, l'écouter. Une mesure lue sans erreur est retenue ; après 2 à 4 mesures, l'app propose de les jouer avec « Écoute-moi ».
+Dans le Coach, l'étape « 1. Déchiffrer » donne la carte d'identité du morceau (tonalité et armure, mesure et comptage, tempo, étendue de chaque main, position de départ, mesures identiques, pièges repérés : grands sauts, altérations hors armure, passages chargés, mesures où l'on a déjà bloqué), puis guide la lecture d'une mesure note par note : nommer la note sur la portée, la trouver sur le clavier, l'écouter. La portée affiche la tonalité à la clé, comme sur une partition (armure dessinée après les clés ; une altération écrite vaut jusqu'à la barre ; bécarre pour l'annuler), et la tonalité est rappelée au-dessus de la portée. Une mesure lue sans erreur est retenue ; après 2 à 4 mesures, l'app propose de les jouer avec « Écoute-moi ».
 
 ## Écoute réaliste
 
