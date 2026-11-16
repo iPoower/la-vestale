@@ -40,7 +40,12 @@ p{margin:0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 6px;max-width:760px;margin:0 auto}
 .brand .mark{font-family:var(--display);font-size:1.35rem;letter-spacing:.18em;color:var(--laiton);font-weight:700}
 .brand .sub{display:block;font-size:.78rem;color:var(--muted);letter-spacing:.04em}
-.sync{font-size:.72rem;border:1px solid var(--ligne);border-radius:99px;padding:3px 9px;color:var(--muted);white-space:nowrap}
+.sync{font-size:.72rem;border:1px solid var(--ligne);border-radius:99px;padding:6px 11px;color:var(--muted);white-space:nowrap;background:transparent;font-family:inherit;cursor:pointer;position:relative}
+.sync::before{content:'';position:absolute;inset:-8px -4px}   /* zone de toucher élargie, sans grossir le badge */
+.sync[aria-expanded="true"]{border-color:var(--laiton);color:var(--laiton)}
+header.top{position:relative}
+.bk-pop{position:absolute;right:12px;top:calc(100% - 6px);z-index:50;width:min(340px,calc(100vw - 24px));background:var(--bois2);border:1px solid var(--laiton);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.bk-pop[hidden]{display:none}.bk-pop .row{gap:8px;margin:8px 0}.bk-pop .btn{min-height:44px;display:inline-flex;align-items:center}
 .sync.on{color:var(--ok);border-color:#3d5a33}
 nav{position:sticky;top:0;z-index:20;background:rgba(20,17,16,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--ligne)}
 nav .in{display:flex;gap:4px;overflow-x:auto;padding:8px 12px;max-width:760px;margin:0 auto;scrollbar-width:none}
@@ -260,7 +265,12 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 <body>
 <header class="top">
   <div class="brand"><span class="mark">LA VESTALE</span><span class="sub">Studio de travail au piano</span></div>
-  <span id="sync" class="sync" title="Dernière sauvegarde">sur cet appareil</span>
+  <button id="sync" class="sync" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="bk-pop" title="Sauvegarder ou importer ta progression">sur cet appareil</button>
+  <div id="bk-pop" class="bk-pop" role="dialog" aria-label="Sauvegarde de ta progression" hidden>
+    <p class="small" id="bk-pop-t"></p>
+    <div class="row"><button class="btn primary" id="bk-pop-save" type="button">Sauvegarder</button><label class="btn" for="bk-file" id="bk-pop-imp" role="button" tabindex="0">Importer</label></div>
+    <p class="small muted">« Sauvegarder » crée un fichier avec toute ta progression (séances, morceaux, Coach, Solfège). Sur iPhone, choisis « Enregistrer dans Fichiers ». « Importer » la reprend depuis ce fichier, sur ce téléphone ou un autre.</p>
+  </div>
 </header>
 <nav aria-label="Sections"><div class="in" id="tabs">
   <a href="#seance" data-v="seance">Séance</a>
@@ -788,6 +798,10 @@ async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value
    « Chaque semaine » : seulement si le dernier export date de plus de 7 jours (« Plus tard » reporte de 24 h) ;
    « Jamais » : aucun bandeau, le témoin du Journal reste visible. Sur iPhone, un toucher ouvre le partage : « Enregistrer dans Fichiers ». */
 function bkMode(){const b=S.meta&&S.meta.bk;return ['seance','semaine','jamais'].includes(b)?b:'seance';}
+// Badge du haut : un toucher ouvre « Sauvegarder / Importer ».
+function bkPop(open){const pop=$('#bk-pop'),b=$('#sync');if(open==null)open=pop.hidden;pop.hidden=!open;b.setAttribute('aria-expanded',String(open));
+  if(open){const lb=S.meta&&S.meta.lastBackup,n=bkUnsaved(),d=lb?Math.floor((Date.now()-lb)/864e5):null;
+    $('#bk-pop-t').innerHTML=`Dernière sauvegarde : <b>${d==null?'jamais':d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:''}.`;}}
 function bkUnsaved(){const lb=(S.meta&&S.meta.lastBackup)||0;return S.seances.filter(s=>s.ts>lb).length;}
 function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.meta&&S.meta.remindAfter,mode=bkMode(),n=bkUnsaved();
   if(!S.seances.length||mode==='jamais'||!n)return false;
@@ -2384,7 +2398,8 @@ function handleExtra(x){if(!x)return;const [k,v,w]=x.split(':');if(k==='preset')
 
 /* ---------- Rendu ---------- */
 let KB;
-function renderAll(){renderTips();renderMine();renderToday();renderBlocks();renderPieces();renderPath();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();renderSnaps();}
+function renderAll(){renderTips();renderMine();renderToday();renderBlocks();renderPieces();renderPath();renderChart();renderEntries();renderQ();renderWeak();earUpdateScore();renderSnaps();
+  renderSolf();if(inCoach()){renderCoach();renderDc();}}   // après un import ou une restauration : Solfège et Coach à jour aussi
 
 function init(){
   loadLocal();
@@ -2515,6 +2530,12 @@ function init(){
   $('#q-add').onclick=addQ;$('#q-new').addEventListener('keydown',e=>{if(e.key==='Enter')addQ();});
   $('#j-copy').onclick=()=>copy(journalText());
   $('#bk-mode').addEventListener('click',e=>{const b=e.target.closest('button[data-b]');if(!b)return;S.meta=Object.assign({},S.meta,{bk:b.dataset.b});delete S.meta.remindAfter;saveLocal();renderBackup();if(b.dataset.b==='jamais')hideRemind();});
+  $('#sync').onclick=e=>{e.stopPropagation();bkPop();};
+  $('#bk-pop-save').onclick=async()=>{bkPop(false);await exportData();};
+  $('#bk-pop-imp').addEventListener('click',()=>setTimeout(()=>bkPop(false),0));
+  $('#bk-pop-imp').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#bk-file').click();bkPop(false);}});
+  document.addEventListener('click',e=>{if(!$('#bk-pop').hidden&&!e.target.closest('#bk-pop')&&!e.target.closest('#sync'))bkPop(false);});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#bk-pop').hidden){bkPop(false);$('#sync').focus();}});
   $('#coach-go').onclick=coach;$('#bk-export').onclick=exportData;$('#snap-restore').onclick=restoreSnap;$('#rm-go').onclick=exportData;$('#rm-later').onclick=()=>{S.meta=Object.assign({},S.meta,{remindAfter:Date.now()+864e5});saveLocal();hideRemind();};$('#bk-file').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value='';});
 
   let fitW=0;const refit=()=>{const w=Math.min(window.innerWidth,760);if(w===fitW)return;fitW=w;

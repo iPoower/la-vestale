@@ -39,6 +39,10 @@ Ils vérifient : le chargement sans erreur ni requête externe, le manifeste et 
 
 Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous SIL Open Font License 1.1 (textes dans `fonts/`). Fichiers issus des paquets Fontsource 5.3.0 (sous-ensemble latin) ; Noto Music est en plus réduite aux deux clés musicales U+1D11E et U+1D122.
 
+## Sauvegarde en un toucher
+
+Le badge en haut à droite (« à sauvegarder », « sauvegardé aujourd'hui »…) s'ouvre sur deux choix : « Sauvegarder » (fichier JSON de toute la progression ; sur iPhone, « Enregistrer dans Fichiers ») et « Importer » (reprend ce fichier, avec confirmation et copie de sécurité avant import). Les mêmes boutons restent dans Journal.
+
 ## Coach
 
 L'onglet Coach reprend « Travailler un morceau » avec l'écoute au micro : chaque mesure jouée avec une faute se rejoue jusqu'à ce qu'elle soit propre, un conseil s'affiche à chaque erreur (demi-ton, note voisine, octave, doigté, accord incomplet), et l'app retient, par morceau, les mesures difficiles, les hésitations (plus de 4 s) et les confusions fréquentes. Ce suivi reste sur l'appareil et dans l'export.
