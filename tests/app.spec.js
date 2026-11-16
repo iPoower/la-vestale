@@ -163,7 +163,7 @@ test('7. cycle complet : noter une séance, Exporter, vider, Importer, séance r
 
   await page.goto('./#journal');
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-export').click()]);
-  expect(download.suggestedFilename()).toMatch(/^la-vestale-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toBe('la-vestale-sauvegarde.json');
   const file = testInfo.outputPath(download.suggestedFilename());
   await download.saveAs(file);
   const exportedText = fs.readFileSync(file, 'utf8');
