@@ -95,6 +95,12 @@ textarea{min-height:70px;resize:vertical}
 .toggle input{width:20px;height:20px;accent-color:var(--laiton)}
 .hidden{display:none!important}
 .co-list li{margin-bottom:10px}
+.rec-row{align-items:center;gap:10px;margin:2px 0 6px}
+.rec-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#c0392b;margin-right:8px;vertical-align:middle}
+#rec-go.on{border-color:#c0392b;color:#e07a62}#rec-go.on .rec-dot{animation:recp 1s infinite}
+@keyframes recp{50%{opacity:.25}}
+.rec-item{border-top:1px solid var(--ligne);padding:8px 0}.rec-item .row{flex-wrap:wrap;gap:6px;margin-top:6px}
+.rec-item audio{width:100%;margin-top:6px}
 .ec-beat{display:flex;align-items:center;gap:10px;margin:4px 0 8px;min-height:30px;font-weight:700;color:var(--laiton)}
 .ec-beat i{width:22px;height:22px;border-radius:50%;border:2px solid var(--laiton);opacity:.45;transition:transform .06s}
 .ec-beat i.on{background:var(--laiton);opacity:1;transform:scale(1.25)}
@@ -281,8 +287,13 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
       <div class="row"><button class="btn" id="ec-go">Écoute-moi</button><button class="btn ghost hidden" id="ec-skip">Passer la note</button><span class="score hidden" id="ec-score"></span></div>
       <label class="toggle"><input type="checkbox" id="ec-rz"><span>Vérifier aussi le rythme : décompte, puis pulsation à l’écran (noire = <b id="ec-rz-bpm">60</b>, réglable plus bas)</span></label>
       <div class="ec-beat hidden" id="ec-beat" aria-hidden="true"></div>
-      <p class="small" id="ec-msg" aria-live="polite">Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.</p>
+      <p class="small" id="ec-msg" aria-live="polite">Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est envoyé ; rien n’est gardé, sauf si tu touches « Enregistrer ».</p>
       <p class="fb" id="ec-fb" aria-live="polite"></p>
+      <div class="row rec-row"><button class="btn" id="rec-go"><span class="rec-dot"></span>Enregistrer</button><span class="small muted" id="rec-t" aria-live="polite"></span></div>
+      <details class="small" id="rec-box"><summary>Mes enregistrements (<span id="rec-n">0</span>)</summary>
+        <div id="rec-list"></div>
+        <p class="muted">Sur cet appareil seulement : jamais envoyés, ni inclus dans l’export. Les 12 derniers sont gardés ; ★ pour en garder un plus longtemps, « Télécharger » pour le conserver ailleurs.</p>
+      </details>
       <details class="small" id="ec-cal"><summary>Régler sur mon piano</summary>
         <p>Un piano ancien est souvent un peu bas. Joue le La au-dessus du Do central (La4) et laisse-le sonner deux secondes : l’app se cale sur ton piano.</p>
         <div class="row"><button class="btn" id="ec-cal-go">Écouter mon La</button><button class="btn ghost" id="ec-cal-reset">Revenir à 440 Hz</button></div>
@@ -1491,11 +1502,66 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
   if(mode==='cal'){$('#ec-cal-msg').textContent='J’écoute… Joue le La4 et laisse-le sonner.';$('#ec-cal-go').textContent='Arrêter';return;}
   $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
   if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();}
-function ecStop(msg){EC.tok++;RZ.on=false;$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
+function ecStop(msg){EC.tok++;RZ.on=false;if(REC.on&&!REC.own)recStop();$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
   try{EC.stream.getTracks().forEach(tr=>tr.stop());}catch(e){}try{EC.src.disconnect();}catch(e){}
   EC.on=false;EC_ON=false;EC.mode='';try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   awake('ec',false);wkClear();$('#ec-box').classList.remove('on');$('#kb-wk').classList.remove('ecoute');$('#ec-go').textContent='Écoute-moi';$('#ec-cal-go').textContent='Écouter mon La';$('#ec-skip').classList.add('hidden');
-  $('#ec-msg').textContent='Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est enregistré ni envoyé.';ecCalMsg();ecFb(msg||'','');}
+  $('#ec-msg').textContent='Le micro écoute ton piano et vérifie tes notes, une main à la fois, à ton rythme. Rien n’est envoyé ; rien n’est gardé, sauf si tu touches « Enregistrer ».';ecCalMsg();ecFb(msg||'','');}
+
+/* ---------- S'enregistrer, se réécouter ---------- */
+// Sur l'appareil seulement (IndexedDB) : « meta » pour la liste, « data » pour le son. Jamais envoyé ni exporté.
+const REC={on:false,mr:null,ch:[],t0:0,iv:0,own:null,meta:null,max:300,keep:12};
+let RDB=null;
+function rdb(){if(RDB)return RDB;RDB=new Promise((res,rej)=>{let r;try{r=indexedDB.open('la-vestale-rec',1);}catch(e){rej(e);return;}
+  r.onupgradeneeded=()=>{r.result.createObjectStore('meta',{keyPath:'id'});r.result.createObjectStore('data',{keyPath:'id'});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+  RDB.catch(()=>{RDB=null;});return RDB;}
+function rtx(stores,mode,fn){return rdb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(stores,mode);let out;const st=stores.map(s=>tx.objectStore(s));const q=fn(...st);
+  if(q&&'onsuccess' in q)q.onsuccess=()=>{out=q.result;};tx.oncomplete=()=>res(out);tx.onerror=tx.onabort=()=>rej(tx.error);}));}
+const recList=()=>rtx(['meta'],'readonly',m=>m.getAll()).then(l=>(l||[]).sort((p,q)=>q.ts-p.ts)).catch(()=>[]);
+const recMime=()=>window.MediaRecorder&&['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(x=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(x));
+const recExt=m=>/mp4|m4a|aac/.test(m||'')?'m4a':/ogg/.test(m||'')?'ogg':'webm';
+const mmss=s=>`${Math.floor(s/60)}:${pad(Math.floor(s%60))}`;
+async function recStart(){if(REC.on)return;if(!window.MediaRecorder){recMsg('Enregistrement indisponible dans ce navigateur. Sur iPhone : iOS 14.3 ou plus récent.');return;}
+  let stream=EC.on&&EC.stream?EC.stream:null;
+  if(!stream){const md=navigator.mediaDevices;if(!md||!md.getUserMedia){recMsg('Micro indisponible.');return;}
+    try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){}
+    try{stream=await md.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});REC.own=stream;}
+    catch(e){try{if(navigator.audioSession&&!EC_ON)navigator.audioSession.type='playback';}catch(e2){}recMsg(e&&e.name==='NotAllowedError'?'Micro refusé : autorise le micro pour ce site.':'Micro indisponible.');return;}}
+  const mime=recMime();let mr;try{mr=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);}catch(e){recCleanup();recMsg('Enregistrement impossible sur cet appareil.');return;}
+  Object.assign(REC,{on:true,mr,ch:[],t0:Date.now(),meta:{piece:WK.id,bar:WK.bar,hands:WK.hands}});
+  mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.ch.push(e.data);};mr.onstop=recSave;mr.start(1000);
+  $('#rec-go').classList.add('on');$('#rec-go').lastChild.textContent='Arrêter';awake('rec',true);
+  REC.iv=setInterval(()=>{const s=(Date.now()-REC.t0)/1000;recMsg(`● ${mmss(s)} · ${esc(WORK[REC.meta.piece].t)}, à partir de la mesure ${REC.meta.bar+1}`);if(s>=REC.max)recStop();},250);}
+function recStop(){if(!REC.on)return;REC.on=false;clearInterval(REC.iv);try{if(REC.mr.state!=='inactive')REC.mr.stop();else recSave();}catch(e){recSave();}}
+function recCleanup(){if(REC.own){try{REC.own.getTracks().forEach(t=>t.stop());}catch(e){}REC.own=null;try{if(navigator.audioSession&&!EC_ON)navigator.audioSession.type='playback';}catch(e){}}
+  $('#rec-go').classList.remove('on');$('#rec-go').lastChild.textContent='Enregistrer';awake('rec',false);}
+const recMsg=h=>{$('#rec-t').innerHTML=h;};
+async function recSave(){if(!REC.mr)return;const mr=REC.mr,dur=Math.round((Date.now()-REC.t0)/100)/10;REC.mr=null;REC.on=false;clearInterval(REC.iv);recCleanup();
+  const blob=new Blob(REC.ch,{type:mr.mimeType||recMime()||'audio/webm'});REC.ch=[];
+  if(dur<1||blob.size<500){recMsg('Trop court : rien n’a été gardé.');return;}
+  const id='r'+Date.now(),m=REC.meta,meta={id,ts:Date.now(),piece:m.piece,bar:m.bar,hands:m.hands,dur,mime:blob.type,size:blob.size,star:false};
+  try{const buf=await blob.arrayBuffer();await rtx(['meta','data'],'readwrite',(a,b)=>{a.put(meta);b.put({id,buf});});
+    if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+    const gone=await recTrim();recMsg(`Gardé (${mmss(dur)}). Écoute-toi, la partition sous les yeux : le rythme est-il régulier, les notes tenues jusqu’au bout ?`+(gone?` Le plus ancien (${gone}) a été retiré : seuls les 12 derniers sont gardés.`:''));}
+  catch(e){recMsg('Impossible de garder l’enregistrement (mémoire de l’appareil pleine ?).');}
+  $('#rec-box').open=true;await renderRec(id);}
+// Garde les 12 derniers (les ★ en plus) ; renvoie combien ont été retirés.
+async function recTrim(){const l=await recList(),old=l.filter(x=>!x.star).slice(REC.keep);if(!old.length)return 0;
+  await rtx(['meta','data'],'readwrite',(a,b)=>{old.forEach(x=>{a.delete(x.id);b.delete(x.id);});});return old.length;}
+async function renderRec(openId){const l=await recList();$('#rec-n').textContent=l.length;
+  $('#rec-list').innerHTML=l.length?l.map(x=>{const d=new Date(x.ts),w=WORK[x.piece];return `<div class="rec-item" data-id="${esc(x.id)}"><b>${esc(w?w.t:'Morceau')}</b> · mesure ${x.bar+1}${x.hands==='lh'?' · main gauche':x.hands==='rh'?' · main droite':''} · ${mmss(x.dur)}<br><span class="muted">${d.getDate()} ${MOIS[d.getMonth()]} ${pad(d.getHours())}:${pad(d.getMinutes())}</span>
+    <div class="row"><button class="btn" data-ra="play">▶ Écouter</button>${w?'<button class="btn ghost" data-ra="model">Le modèle</button>':''}<button class="btn ghost" data-ra="star" aria-pressed="${x.star}">${x.star?'★ Gardé':'☆ Garder'}</button><button class="btn ghost" data-ra="dl">Télécharger</button><button class="btn ghost" data-ra="del">Supprimer</button></div></div>`;}).join(''):'<p class="muted">Aucun enregistrement. Touche « Enregistrer », joue, puis « Arrêter ».</p>';
+  if(openId)recPlay(openId,false);}
+async function recBlob(id){const r=await rtx(['data'],'readonly',b=>b.get(id)),m=await rtx(['meta'],'readonly',a=>a.get(id));return r&&m?{blob:new Blob([r.buf],{type:m.mime}),meta:m}:null;}
+let RECURL=null;
+async function recPlay(id,auto=true){const x=await recBlob(id);if(!x)return;$$('#rec-list audio').forEach(a=>{a.pause();a.remove();});if(RECURL)URL.revokeObjectURL(RECURL);RECURL=URL.createObjectURL(x.blob);
+  const it=$(`#rec-list .rec-item[data-id="${CSS.escape(id)}"]`);if(!it)return;const au=document.createElement('audio');au.controls=true;au.src=RECURL;au.preload='auto';it.appendChild(au);if(auto)au.play().catch(()=>{});}
+async function recAct(id,act){
+  if(act==='play')return recPlay(id);
+  if(act==='model'){const m=await rtx(['meta'],'readonly',a=>a.get(id));if(!m||!WORK[m.piece])return;if(WK.id!==m.piece)wkSelect(m.piece);wkGo(Math.min(m.bar,workBars(m.piece).length-1));playWork();return;}
+  if(act==='star'){await rtx(['meta'],'readwrite',a=>{const q=a.get(id);q.onsuccess=()=>{const m=q.result;if(m){m.star=!m.star;a.put(m);}};return null;});return renderRec();}
+  if(act==='dl'){const x=await recBlob(id);if(!x)return;const d=new Date(x.meta.ts),u=URL.createObjectURL(x.blob),a=document.createElement('a');a.href=u;a.download=`la-vestale-${x.meta.piece}-m${x.meta.bar+1}-${dkey(d)}.${recExt(x.meta.mime)}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);return;}
+  if(act==='del'){if(!(await ask('Supprimer cet enregistrement ? Il ne pourra pas être récupéré.')))return;await rtx(['meta','data'],'readwrite',(a,b)=>{a.delete(id);b.delete(id);});return renderRec();}}
 
 /* ---------- Rythme au micro ---------- */
 // t0 : début (heure audio) de la mesure attendue ; grid : début de la première mesure (pour la pulsation) ;
@@ -1737,6 +1803,7 @@ const TIPS=[
   ['Sur iPhone','Après chaque séance, accepte la sauvegarde : un toucher, puis « Enregistrer dans Fichiers ». Tes séances et tes partitions ne vivent sinon que sur ce téléphone (réglage dans Journal › Sauvegarde).'],
   ['Sur iPhone','Des écouteurs à fil évitent le léger retard du Bluetooth avec le métronome.'],
   ['Sur iPhone','Clavier › « Les deux » affiche Do Ré Mi et C D E en même temps, partout dans l’app.'],
+  ['Méthode','Enregistre-toi (« Enregistrer », sous « Écoute-moi ») puis réécoute, la partition sous les yeux, et compare avec « Le modèle ». On s’entend bien mieux de l’extérieur qu’en jouant.'],
   ['Méthode','Rythme : coche « Vérifier aussi le rythme » dans le Coach. Un décompte, puis une pulsation à l’écran ; l’app te dit si chaque note arrive à l’heure. Commence lentement : noire = 60.'],
   ['Méthode','Révision espacée : une mesure propre revient le lendemain, puis à 3 jours, à 7 jours, à 14 et à 30. Rejoue-la propre du premier coup : c’est ce qui l’ancre dans la mémoire.'],
   ['Méthode','Avant de jouer, déchiffre : Coach › « 1. Déchiffrer ». Nomme chaque note, trouve-la sur le clavier, puis joue 2 à 4 mesures. Lire et jouer en même temps, c’est deux difficultés à la fois.'],
@@ -2029,7 +2096,10 @@ function init(){
   $('#wk-piece').addEventListener('change',e=>wkSelect(e.target.value));
   $('#ec-go').onclick=()=>{EC.on&&EC.mode==='play'?ecStop():ecStart('play');};$('#ec-skip').onclick=()=>{if(EC.on&&EC.mode==='play'){ecFb('Note passée.','');EC.armed=false;ecAdvance();}};
   $('#ec-cal-go').onclick=()=>{EC.on&&EC.mode==='cal'?ecStop():ecStart('cal');};$('#ec-cal-reset').onclick=()=>{if(S.meta)delete S.meta.a4;saveLocal();ecCalMsg();};ecCalMsg();
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)ecStop();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){recStop();ecStop();}});
+  $('#rec-go').onclick=()=>REC.on?recStop():recStart();
+  $('#rec-list').addEventListener('click',e=>{const b=e.target.closest('button[data-ra]'),it=e.target.closest('.rec-item');if(b&&it)recAct(it.dataset.id,b.dataset.ra);});
+  renderRec();
   smpLoad();
   $('#co-tips').addEventListener('click',e=>{const b=e.target.closest('button[data-cob]');if(!b)return;wkGo(+b.dataset.cob);const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);});
   $('#dc-piece').addEventListener('change',e=>{dcStop();wkSelect(e.target.value);});
