@@ -51,6 +51,10 @@ Bouton « Enregistrer » sous « Écoute-moi » (Séance et Coach), en même tem
 
 Case « Vérifier aussi le rythme » (Séance et Coach) : un décompte d'une mesure au tempo choisi, puis une pulsation à l'écran (pas de clic pendant le jeu : le micro l'entendrait comme une note). L'app situe le début de chaque note dans le signal (blocs d'environ 5 ms) et le compare au temps attendu, en tenant compte de la latence de sortie : à l'heure (± 0,1 s, ou 1/5 de temps si plus large), un peu en avance ou en retard (jusqu'au double), sinon faute de rythme, comptée comme une faute de la mesure (le Coach la fait rejouer). Après une fausse note, le rythme n'est plus jugé jusqu'à la fin de la mesure. Les retards et avances fréquents s'affichent dans « Où tu bloques », avec un conseil.
 
+### Solfège
+
+Onglet Solfège : un parcours en 10 leçons (clé de sol, clé de fa, durées et silences, tons et demi-tons, altérations, tonalités et armures, intervalles, accords, termes d'interprétation, mélange final), chacune avec sa théorie et 10 questions (acquise à 9/10) ; un chrono de 1, 2 ou 5 minutes par thème ou en mélange, avec records et bilan (justes, erreurs, temps par réponse, « à retenir ») ; les points faibles reviennent plus souvent (tirage pondéré) et sont listés. Le minuteur se met en pause quand l'app passe en arrière-plan. Dans la séance du jour, un jour sur deux, le bloc de 2 minutes devient un chrono de solfège sur le point faible.
+
 ### Séance du jour et révision espacée
 
 Séance › Séance guidée › « Du jour · 30 min » (par défaut) compose chaque jour une séance à partir du suivi : échauffement main gauche (4 min, un exercice différent chaque jour), révision espacée (5 min), mesures difficiles (6 min), déchiffrer 2 mesures (6 min), jouer ce qu'on a lu (5 min), oreille (2 min), pour le plaisir (2 min). Un bloc sans objet cède son temps à « Jouer ». Chaque bloc ouvre la bonne mesure au Coach.
