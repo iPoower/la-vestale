@@ -2516,8 +2516,12 @@ const BK_NAME='la-vestale-sauvegarde.json';
 async function exportData(){const d=new Date();const name=BK_NAME;
   const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf,settings:{a4:S.meta.a4,noms:NOMS,bk:S.meta.bk}}});
   const file=new File([body],name,{type:'application/json'});
-  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});}
-    else{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+  const dl=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);};
+  // Partage seulement sur téléphone (iPhone : « Enregistrer dans Fichiers »). Sur ordinateur, Chrome et Edge savent aussi partager
+  // un fichier, mais le partage de Windows n'enregistre rien : on télécharge directement (dossier Téléchargements).
+  const mobile=IOS||/Android/i.test(navigator.userAgent);
+  try{if(mobile&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});}catch(e){if(e&&e.name==='AbortError')throw e;dl();}}
+    else dl();
     S.meta=Object.assign({},S.meta,{lastBackup:Date.now()});delete S.meta.remindAfter;saveLocal();updateBackupChip();hideRemind();toast('Sauvegarde exportée');return true;}
   catch(e){if(e&&e.name==='AbortError')return false;toast('Export impossible');return false;}}
 async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}

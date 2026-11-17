@@ -77,3 +77,37 @@ test('B4. une seule sauvegarde : toujours le même nom (l’iPhone propose « Re
   expect(noms).toEqual(['la-vestale-sauvegarde.json', 'la-vestale-sauvegarde.json']);
   expect(tailles[0]).toBeLessThan(20000);
 });
+
+// Partage simulé : on note s'il est appelé ; `mode` = 'ok' (partage réussi) ou 'refus' (erreur autre qu'une annulation).
+const PARTAGE = mode => { window.__shared = 0;
+  // @ts-ignore
+  navigator.canShare = () => true;
+  // @ts-ignore
+  navigator.share = async () => { window.__shared++; if (mode === 'refus') throw new DOMException('refusé', 'NotAllowedError'); }; };
+
+test('B5. sur ordinateur (Chrome, Edge, Brave) : même si le navigateur sait partager, la sauvegarde se télécharge', async ({ page }) => {
+  await page.addInitScript(PARTAGE, 'ok');
+  await page.goto('./#journal');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-export').click()]);
+  expect(dl.suggestedFilename()).toBe('la-vestale-sauvegarde.json');
+  // @ts-ignore
+  expect(await page.evaluate(() => window.__shared)).toBe(0);                       // pas de fenêtre de partage Windows
+  await expect(page.locator('#sync')).toHaveText('sauvegardé aujourd’hui');
+});
+
+test.describe('sur iPhone', () => {
+  test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+test('B6. sur iPhone : la feuille de partage s’ouvre (Enregistrer dans Fichiers) ; si elle échoue, le fichier se télécharge', async ({ page }) => {
+  await page.addInitScript(PARTAGE, 'ok');
+  await page.goto('./#journal');
+  await page.locator('#bk-export').click();
+  // @ts-ignore
+  await expect.poll(() => page.evaluate(() => window.__shared)).toBe(1);
+  await expect(page.locator('#sync')).toHaveText('sauvegardé aujourd’hui');
+  await page.evaluate(() => { localStorage.clear(); });
+  await page.addInitScript(PARTAGE, 'refus');
+  await page.reload();
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#bk-export').click()]);
+  expect(dl.suggestedFilename()).toBe('la-vestale-sauvegarde.json');
+});
+});
