@@ -53,6 +53,10 @@ Importer **fusionne** : pour chaque exercice, on garde le meilleur des deux (com
 
 L'onglet Coach reprend « Travailler un morceau » avec l'écoute au micro : chaque mesure jouée avec une faute se rejoue jusqu'à ce qu'elle soit propre, un conseil s'affiche à chaque erreur (demi-ton, note voisine, octave, doigté, accord incomplet), et l'app retient, par morceau, les mesures difficiles, les hésitations (plus de 4 s) et les confusions fréquentes. Ce suivi reste sur l'appareil et dans l'export.
 
+### Depuis le début
+
+Sous la portée, « 1 mesure / 2 mesures / Depuis le début ». « Depuis le début » garde les mesures déjà vues affichées en petit au-dessus de la mesure en cours, et « Écouter 1 → N » les joue d'un coup. « Rejouer 1 → N au micro » repart de la mesure 1 et écoute jusqu'à la mesure en cours, d'affilée : une faute ne fait pas rejouer la mesure, le bilan donne à la fin les mesures à reprendre ; tout propre, on passe à la mesure suivante. Le choix est gardé d'une séance à l'autre.
+
 ### S'enregistrer et se réécouter
 
 Bouton « Enregistrer » sous « Écoute-moi » (Séance et Coach), en même temps que l'écoute ou seul ; 5 minutes au plus. Les enregistrements restent sur l'appareil (IndexedDB), ne sont jamais envoyés ni inclus dans l'export JSON ; les 12 derniers sont gardés, ★ pour en garder un plus longtemps, « Télécharger » pour le conserver ailleurs. Chacun se réécoute et se compare au « modèle » (la mesure jouée par l'app).
