@@ -9,4 +9,9 @@ async function aller(page, v) {
   await page.locator(`#tabs a[data-g="${GROUP[v]}"]`).click();
   if (GROUP[v] === 'apprendre' || GROUP[v] === 'plus') await page.locator(`#subtabs a[data-v="${v}"]`).click();
 }
-module.exports = { aller, GROUP };
+/** Morceaux : ouvre chaque niveau replié en touchant son en-tête, comme au doigt. @param {import('@playwright/test').Page} page */
+async function niveaux(page) {
+  const closed = page.locator('#pieces details.pc-grp:not([open]) > summary');
+  while (await closed.count()) await closed.first().click();
+}
+module.exports = { aller, GROUP, niveaux };

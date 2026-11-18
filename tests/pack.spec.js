@@ -1,6 +1,7 @@
 // @ts-check
 // Pack libre de droits : chansons traditionnelles, Bach (domaine public), Alkan (Mutopia, CC BY-SA), chemin vers Alkan.
 const { test, expect } = require('@playwright/test');
+const { niveaux } = require('./aller');
 
 /** Notes de la main droite d'une mesure (1 = première), en hauteurs MIDI. */
 // @ts-ignore
@@ -68,12 +69,13 @@ test('K5. chaque partition du pack se joue en entier aux deux mains (son mesuré
 
 test('K6. chemin vers Alkan : 5 étapes, une étape avance quand ses morceaux sont prêts', async ({ page }) => {
   await page.goto('./#morceaux');
+  await niveaux(page);
   await expect(page.locator('#path li')).toHaveCount(5);
   await expect(page.locator('#path li').nth(2)).toContainText('La chanson de la folle au bord de la mer');
   await expect(page.locator('#path li').nth(4)).toContainText('Le Festin d’Ésope');
   await expect(page.locator('#path li').nth(1)).toContainText('0/5 prêts');
   const card = page.locator('article.piece', { hasText: 'Menuet en la mineur' });
-  for (let i = 0; i < 5; i++) await card.locator('button[data-act="up"]').click();
+  for (let i = 0; i < 5; i++) { await card.locator('button[data-act="up"]').click(); await page.locator('#dlg-ok').click(); }   // chaque étape est confirmée
   await expect(page.locator('#path li').nth(1)).toContainText('1/5 prêts');
   await expect(page.locator('article.piece', { hasText: 'La chanson de la folle' })).toContainText('Creative Commons BY-SA 4.0');
 });

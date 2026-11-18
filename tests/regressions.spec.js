@@ -1,7 +1,7 @@
 // @ts-check
 // Tests de non-régression : un test par bug corrigé (rapport de test du 11 novembre 2026).
 const { test, expect } = require('@playwright/test');
-const { aller, GROUP } = require('./aller');
+const { aller, GROUP, niveaux } = require('./aller');
 const { spawn } = require('child_process');
 
 const LS = 'vestale-studio-v1';
@@ -154,6 +154,7 @@ test('R4. clé de fa : les deux points encadrent la 4e ligne', async ({ page }) 
 test('R5. Orientale : le métronome prend son préréglage et garde le tempo', async ({ page }) => {
   await trackToasts(page);
   await page.goto('./#morceaux');
+  await niveaux(page);
   await page.locator('button[data-act="metro"][data-id="orientale"]').click();
   await expect(page.locator('#v-tempo')).toBeVisible();
   await expect(page.locator('#mt-preset')).toHaveValue('orientale');
