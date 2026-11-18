@@ -47,7 +47,7 @@ test('F2. leçon : 10 questions, une erreur expliquée, 9/10 = acquise ; gardée
   await page.locator('#sf-lessons button[data-les="sol"]').click();
   await expect(page.locator('#sf-run')).toBeVisible();
   await expect(page.locator('#sf-title')).toHaveText('Leçon · La clé de sol');
-  await expect(page.locator('#sf-clock')).toHaveText('1/10');
+  await expect(page.locator('#sf-clock')).toHaveText('Question 1/10');
   await expect(page.locator('#sf-ans button')).toHaveCount(7);
   await repondre(page, true);
   await expect(page.locator('#sf-fb')).toHaveText(/^Non\. (Do|Ré|Mi|Fa|Sol|La|Si)\d : /);
@@ -162,7 +162,7 @@ test('F6. culture musicale : 8 chapitres, faits datés, quiz complet, acquis ; c
   await expect(page.locator('#sf-cult details[data-id="cmod"]')).toContainText('Suite bergamasque');
   await piano.locator('button[data-cul]').click();
   await expect(page.locator('#sf-title')).toHaveText('Culture · Le piano');
-  await expect(page.locator('#sf-clock')).toHaveText('1/6');
+  await expect(page.locator('#sf-clock')).toHaveText('Question 1/6');
   await expect(page.locator('#sf-staff')).toBeHidden();                         // pas de portée vide pour une question de culture
   const seen = new Set();
   for (let i = 0; i < 6; i++) { await expect(page.locator('#sf-ans button:not([disabled])')).toHaveCount(4); seen.add(await page.locator('#sf-q').textContent()); await repondre(page, i === 0); }

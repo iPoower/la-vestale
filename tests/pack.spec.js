@@ -73,7 +73,7 @@ test('K6. chemin vers Alkan : 5 étapes, une étape avance quand ses morceaux so
   await expect(page.locator('#path li').nth(4)).toContainText('Le Festin d’Ésope');
   await expect(page.locator('#path li').nth(1)).toContainText('0/5 prêts');
   const card = page.locator('article.piece', { hasText: 'Menuet en la mineur' });
-  for (let i = 0; i < 5; i++) await card.locator('button[data-act="up"]').click();
+  for (let i = 0; i < 5; i++) { await card.locator('button[data-act="up"]').click(); await page.locator('#dlg-ok').click(); }   // chaque étape est confirmée
   await expect(page.locator('#path li').nth(1)).toContainText('1/5 prêts');
   await expect(page.locator('article.piece', { hasText: 'La chanson de la folle' })).toContainText('Creative Commons BY-SA 4.0');
 });

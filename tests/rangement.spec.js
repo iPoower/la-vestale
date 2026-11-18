@@ -18,7 +18,7 @@ test('R2. Enchaînements, Répertoire et Tempo suivent le même rangement', asyn
   expect(await page.$$eval('#prog-sel .grp', s => s.map(x => x.textContent))).toEqual(['Grilles d’accords', 'Partitions complètes']);
   expect(await page.locator('#prog-sel button', { hasText: '· partition' }).count()).toBe(0);
   await page.goto('./#morceaux');
-  expect(await page.$$eval('#pieces .grp-h', s => s.map(x => x.textContent))).toEqual(['Niveau 1 · Débutant', 'Niveau 2 · Facile', 'Niveau 3 · Intermédiaire', 'Niveau 4 · Avancé', 'Niveau 5 · Objectif']);
+  expect(await page.$$eval('#pieces .grp-h > span:first-child', s => s.map(x => x.textContent))).toEqual(['Niveau 1 · Débutant', 'Niveau 2 · Facile', 'Niveau 3 · Intermédiaire', 'Niveau 4 · Avancé', 'Niveau 5 · Objectif']);
   await expect(page.locator('#pieces article.piece')).toHaveCount(31);
   await page.goto('./#tempo');
   expect(await page.$$eval('#mt-preset > option', o => o.map(x => x.value))).toEqual(['libre']);
