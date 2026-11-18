@@ -1,6 +1,7 @@
 // @ts-check
 // Séance › Travailler un morceau : mesure par mesure, main droite et main gauche.
 const { test, expect } = require('@playwright/test');
+const { niveaux } = require('./aller');
 
 const LS = 'vestale-studio-v1';
 /** Touches allumées : { nom: doigt } pour une classe donnée (hl = main droite, hl2 = main gauche). */
@@ -115,6 +116,7 @@ test('T8. depuis le répertoire, « Mesure par mesure » ouvre le bon morceau da
 
 test('T9. Odysseus : au répertoire, métronome à 3/4 et accord Cm, sans notes du morceau', async ({ page }) => {
   await page.goto('./#morceaux');
+  await niveaux(page);
   const card = page.locator('article.piece', { hasText: 'Odysseus' });
   await expect(card).toContainText('Ludwig Göransson');
   await expect(card).toContainText('cible 81');

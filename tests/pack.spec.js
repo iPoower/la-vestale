@@ -1,6 +1,7 @@
 // @ts-check
 // Pack libre de droits : chansons traditionnelles, Bach (domaine public), Alkan (Mutopia, CC BY-SA), chemin vers Alkan.
 const { test, expect } = require('@playwright/test');
+const { niveaux } = require('./aller');
 
 /** Notes de la main droite d'une mesure (1 = première), en hauteurs MIDI. */
 // @ts-ignore
@@ -68,6 +69,7 @@ test('K5. chaque partition du pack se joue en entier aux deux mains (son mesuré
 
 test('K6. chemin vers Alkan : 5 étapes, une étape avance quand ses morceaux sont prêts', async ({ page }) => {
   await page.goto('./#morceaux');
+  await niveaux(page);
   await expect(page.locator('#path li')).toHaveCount(5);
   await expect(page.locator('#path li').nth(2)).toContainText('La chanson de la folle au bord de la mer');
   await expect(page.locator('#path li').nth(4)).toContainText('Le Festin d’Ésope');

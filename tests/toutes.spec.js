@@ -1,6 +1,7 @@
 // @ts-check
 // Toutes les partitions : morceaux du domaine public travaillables mesure par mesure ; morceaux protégés signalés clairement.
 const { test, expect } = require('@playwright/test');
+const { niveaux } = require('./aller');
 
 test('Q1. « Ah ! vous dirai-je maman » et « Good King Wenceslas » : mesures justes, Sol–La–Si à la main gauche', async ({ page }) => {
   await page.goto('./#seance');
@@ -21,6 +22,7 @@ test('Q1. « Ah ! vous dirai-je maman » et « Good King Wenceslas » : mesures 
 
 test('Q2. répertoire : chaque morceau sans notes le dit, et propose « Mes partitions »', async ({ page }) => {
   await page.goto('./#morceaux');
+  await niveaux(page);
   // @ts-ignore
   const without = await page.evaluate(() => PIECES.filter(p => !WORK[p.id] && !p.mel).length);
   await expect(page.locator('#pieces .nonotes')).toHaveCount(without);
