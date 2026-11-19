@@ -36,7 +36,7 @@ test('U3. Journal : le choix du morceau est rangé par niveau et contient tout l
   // @ts-ignore
   const r = await page.evaluate(() => { openLog(30); const sel = document.querySelector('#f-piece'); return { groups: [...sel.querySelectorAll('optgroup')].map(g => g.label), n: sel.querySelectorAll('optgroup option').length, all: PIECES.every(p => [...sel.options].some(o => o.value === p.id)), extra: [...sel.options].slice(-2).map(o => o.value) }; });
   expect(r.groups).toEqual(['Niveau 1 · Débutant', 'Niveau 2 · Facile', 'Niveau 3 · Intermédiaire', 'Niveau 4 · Avancé', 'Niveau 5 · Objectif']);
-  expect(r.n).toBe(31);
+  expect(r.n).toBe(32);
   expect(r.all).toBe(true);
   expect(r.extra).toEqual(['accords', 'libre']);
 });

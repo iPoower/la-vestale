@@ -21,7 +21,7 @@ const EXPECTED = {
   'Poney : pouces sur le Do': [['Sol3', '4'], ['La3', '3'], ['Si3', '2'], ['Do4', '1']],
   'Sourire : basses Em C G D': [['Mi2', 'Em'], ['Sol2', 'G'], ['Do3', 'C'], ['Ré3', 'D']],
   'Cancan : C': [['Do3', '4'], ['Mi3', '2']],
-  'Cancan : G7': [['Si2', '5'], ['Fa3', '1']],
+  'Cancan : G': [['Si2', '5'], ['Sol3', '1']],                                  // imprimé (le Fa3 est ajouté au crayon)
 };
 
 test('M1. chaque position allume les bonnes touches avec le bon doigt', async ({ page }) => {
@@ -35,13 +35,14 @@ test('M1. chaque position allume les bonnes touches avec le bon doigt', async ({
   }
 });
 
-test('M2. statut honnête : feuille imprimée ou annotation à vérifier', async ({ page }) => {
+test('M2. statut honnête : feuille imprimée, ajouts au crayon signalés', async ({ page }) => {
   await page.goto('./#clavier');
   await pick(page, 'Hymne : G7');
   await expect(page.locator('#mg-info')).toContainText('D’après ta feuille');
   await expect(page.locator('#mg-info')).toContainText('5 → Si2 · 2 → Fa3 · 1 → Sol3');
   await pick(page, 'Cancan : C');
-  await expect(page.locator('#mg-info')).toContainText('À vérifier en cours');
+  await expect(page.locator('#mg-info')).toContainText('D’après ta feuille');
+  await expect(page.locator('#mg-info')).toContainText('Au crayon, ton prof ajoute Sol3');
 });
 
 test('M3. depuis le répertoire, « Main gauche » ouvre la bonne position, carte à l’écran', async ({ page }) => {
@@ -66,7 +67,7 @@ test('M4. morceaux sans position sûre : « à confirmer », questions ajoutées
     await expect(card, title).toContainText('À confirmer en cours');
     await expect(card.locator('button[data-act="mg"]'), title).toHaveCount(0);
   }
-  await expect(page.locator('article.piece', { hasText: 'Cancan' })).toContainText('À confirmer en cours : C = Do3 (4) + Mi3 (2)');
+  await expect(page.locator('article.piece', { hasText: 'Cancan' })).toContainText('Imprimé : C = Do3 (4) + Mi3 (2) ; G = Si2 (5) + Sol3 (1)');
   await page.goto('./#journal');
   await expect(page.locator('#q-list')).toContainText('Main gauche : position de départ');
   await expect(page.locator('#q-list')).toContainText('Cancan, main gauche');

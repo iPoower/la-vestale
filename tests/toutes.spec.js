@@ -26,7 +26,7 @@ test('Q2. répertoire : chaque morceau sans notes le dit, et propose « Mes part
   // @ts-ignore
   const without = await page.evaluate(() => PIECES.filter(p => !WORK[p.id] && !p.mel).length);
   await expect(page.locator('#pieces .nonotes')).toHaveCount(without);
-  expect(without).toBe(13);
+  expect(without).toBe(13);                                                       // Cancan : notes ajoutées ; Imagine : œuvre protégée, sans notes
   await expect(page.locator('article.piece', { hasText: 'Hymne à la joie' }).locator('.nonotes')).toHaveCount(0);
   const card = page.locator('article.piece', { hasText: 'Orientale' });
   await expect(card).toContainText('Pas de notes dans l’app');
