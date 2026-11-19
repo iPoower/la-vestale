@@ -79,6 +79,8 @@ Trois niveaux (Débutant, Intermédiaire, Avancé) : chaque thème a son niveau,
 
 ### Morceaux
 
+Le Cancan (Offenbach, travail préparatoire du cours) a ses 16 mesures dans « Mesure par mesure », d’après la feuille : mélodie et doigtés imprimés, main gauche imprimée Do–Mi (C) et Si–Sol (G) ; les notes ajoutées au crayon (Sol, Fa) sont signalées.
+
 Les morceaux sont rangés par niveau, chaque niveau replié : seuls les niveaux où un morceau est en cours s'ouvrent (le niveau 1 si rien n'est commencé). Un champ de recherche (titre, compositeur) et un sommaire par niveau mènent au bon morceau ; l'objectif, le piège et le tempo de chaque carte sont dans « Objectif, piège, tempo… ». « Étape suivante » demande confirmation.
 
 ### Séance du jour et révision espacée
@@ -115,4 +117,4 @@ Les notes sont jouées avec des enregistrements d'un piano Steinway & Sons modè
 - Burgmüller, 25 Études faciles op. 100 n° 1 « La candeur » et n° 2 « L’arabesque » (Bas Wassink) ; Schumann, Scènes d’enfants op. 15 n° 1 (Ying-Chun Liu) ; Bach, Prélude BWV 846 (Tobias Erbsland) ; Debussy, Clair de lune (Keith OHara) : domaine public, notes d’après les éditions du Mutopia Project.
 - Alkan, Préludes op. 31 n° 1 : édition du Mutopia Project (Karsten Hens), licence Creative Commons Attribution-ShareAlike 3.0 (https://creativecommons.org/licenses/by-sa/3.0/). Les données de cette pièce (`WORK.alkan311`) sont une adaptation partagée sous la même licence.
 - Liszt, Consolation S. 172 n° 3 : édition du Mutopia Project (Ryan Prince), licence Creative Commons Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/) ; données adaptées (`WORK.liszt3`).
-- Les œuvres protégées (méthodes, Let It Be, Il y a ton sourire, Odysseus, Orientale) ne figurent que par leur titre, leurs consignes et leurs grilles d’accords. Pour Il y a ton sourire, l’accompagnement suit la grille en accords plaqués, dans les positions de la partie piano de la feuille (Si-Mi-Sol, Do-Mi-Sol, Si-Ré-Sol, La-Ré-Fa♯ ; basse au 1er temps, silence en mesure 2), sur les 69 mesures de la feuille, en croches à partir de la mesure 58 ; la portée s’écrit sans armure, comme la feuille, le Fa♯ devant la note ; ni mélodie ni paroles.
+- Les œuvres protégées (méthodes, Let It Be, Imagine, Il y a ton sourire, Odysseus, Orientale) ne figurent que par leur titre, leurs consignes et leurs grilles d’accords. Pour Il y a ton sourire, l’accompagnement suit la grille en accords plaqués, dans les positions de la partie piano de la feuille (Si-Mi-Sol, Do-Mi-Sol, Si-Ré-Sol, La-Ré-Fa♯ ; basse au 1er temps, silence en mesure 2), sur les 69 mesures de la feuille, en croches à partir de la mesure 58 ; la portée s’écrit sans armure, comme la feuille, le Fa♯ devant la note ; ni mélodie ni paroles.
