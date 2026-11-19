@@ -81,6 +81,8 @@ Trois niveaux (Débutant, Intermédiaire, Avancé) : chaque thème a son niveau,
 
 Le Cancan (Offenbach, travail préparatoire du cours) a ses 16 mesures dans « Mesure par mesure », d’après la feuille : mélodie et doigtés imprimés, main gauche imprimée Do–Mi (C) et Si–Sol (G) ; les notes ajoutées au crayon (Sol, Fa) sont signalées.
 
+Good King Wenceslas suit la répartition des mains de la feuille : Sol–La–Si sous le Do central et les Do des mesures 4, 8, 12 et 17 (écrits en clé de fa) à la main gauche ; mesure 14, Si3 en blanche à la main gauche. La blanche de main gauche de la mesure 16 reste à vérifier.
+
 Les morceaux sont rangés par niveau, chaque niveau replié : seuls les niveaux où un morceau est en cours s'ouvrent (le niveau 1 si rien n'est commencé). Un champ de recherche (titre, compositeur) et un sommaire par niveau mènent au bon morceau ; l'objectif, le piège et le tempo de chaque carte sont dans « Objectif, piège, tempo… ». « Étape suivante » demande confirmation.
 
 ### Séance du jour et révision espacée
