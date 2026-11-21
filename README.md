@@ -41,7 +41,7 @@ Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous S
 
 ## Navigation : 5 onglets
 
-Aujourd'hui (séance du jour), Jouer (Coach), Apprendre (Solfège, Lecture, Oreille), Morceaux, Plus (Clavier, Tempo, Main gauche, Astuces, Journal). Apprendre et Plus ont des sous-onglets et rouvrent la dernière section visitée ; les adresses (#coach, #lecture…) restent les mêmes. « Commencer ma séance » démarre la séance du jour et ouvre chaque étape ; une barre sous les onglets suit la séance partout (Ouvrir, Suivant, pause). Une visite guidée de 5 étapes s'affiche au premier lancement (Plus › Astuces › Revoir la visite).
+Aujourd'hui (séance du jour), Jouer (Coach), Apprendre (Solfège, Lecture, Oreille, Alkan), Morceaux, Plus (Clavier, Tempo, Main gauche, Astuces, Journal). Apprendre et Plus ont des sous-onglets et rouvrent la dernière section visitée ; les adresses (#coach, #lecture…) restent les mêmes. « Commencer ma séance » démarre la séance du jour et ouvre chaque étape ; une barre sous les onglets suit la séance partout (Ouvrir, Suivant, pause). Une visite guidée de 5 étapes s'affiche au premier lancement (Plus › Astuces › Revoir la visite).
 
 ## Sauvegarde en un toucher
 
@@ -72,6 +72,10 @@ Chaque note d'un accord est comparée à ses deux voisines à un demi-ton : le p
 ### Rythme au micro
 
 Case « Vérifier aussi le rythme » (Séance et Coach) : un décompte d'une mesure au tempo choisi, puis une pulsation à l'écran (pas de clic pendant le jeu : le micro l'entendrait comme une note). L'app situe le début de chaque note dans le signal (blocs d'environ 5 ms) et le compare au temps attendu, en tenant compte de la latence de sortie : à l'heure (± 0,1 s, ou 1/5 de temps si plus large), un peu en avance ou en retard (jusqu'au double), sinon faute de rythme, comptée comme une faute de la mesure (le Coach la fait rejouer). Après une fausse note, le rythme n'est plus jugé jusqu'à la fin de la mesure. Les retards et avances fréquents s'affichent dans « Où tu bloques », avec un conseil.
+
+### Alkan à ton niveau
+
+Apprendre › Alkan : un parcours en six niveaux vers Alkan, du plus simple au texte original (écouter le Prélude op. 31 n° 1 ; ses accords de main gauche simplifiés, deux blanches par mesure ; la main gauche originale ; le chant ; mains ensemble ; La chanson de la folle). La progression vient du jeu au micro et du parcours A à Z ; le niveau recommandé est le premier non acquis. Les accords du Prélude sont nommés mesure par mesure (C/G, G7, E, Am, E7, A/C♯, D) et s'écoutent ; la version simplifiée se joue dans « Jouer » avec des doigtés proposés par l'app. Un chapitre de culture (avec quiz) présente Alkan ; il apparaît aussi dans Solfège › Culture.
 
 ### Solfège
 

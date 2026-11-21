@@ -9,7 +9,7 @@ test('N1. 5 onglets ; Apprendre et Plus ont leurs sous-onglets et rouvrent la de
   await expect(page.locator('#subtabs')).toBeHidden();
   await page.locator('#tabs a[data-g="apprendre"]').click();
   await expect(page.locator('#v-solfege')).toBeVisible();
-  await expect(page.locator('#subtabs a')).toHaveText(['Solfège', 'Lecture', 'Oreille']);
+  await expect(page.locator('#subtabs a')).toHaveText(['Solfège', 'Lecture', 'Oreille', 'Alkan']);
   await page.locator('#subtabs a[data-v="lecture"]').click();
   await expect(page.locator('#v-lecture')).toBeVisible();
   await expect(page.locator('#subtabs a.on')).toHaveText('Lecture');

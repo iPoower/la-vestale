@@ -151,9 +151,9 @@ test('F5. niveaux : les questions se durcissent, 🔒 tant que non débloqué, u
   await expect(page.locator('#sf-lvl button.on')).toHaveText('Intermédiaire');      // le chrono reprend au niveau débloqué
 });
 
-test('F6. culture musicale : 8 chapitres, faits datés, quiz complet, acquis ; chrono « Culture »', async ({ page }) => {
+test('F6. culture musicale : 9 chapitres (dont Alkan), faits datés, quiz complet, acquis ; chrono « Culture »', async ({ page }) => {
   await page.goto('./#solfege');
-  await expect(page.locator('#sf-cult details')).toHaveCount(8);
+  await expect(page.locator('#sf-cult details')).toHaveCount(9);
   const piano = page.locator('#sf-cult details[data-id="cpiano"]');
   await piano.locator('summary').click();
   await expect(piano).toContainText('Bartolomeo Cristofori');
