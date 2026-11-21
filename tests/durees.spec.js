@@ -47,3 +47,26 @@ test('D4. mesure composée (Clair de lune, 9/8) : pas de compte en noires, pas d
   await expect(page.locator('#wk-info .wk-count')).toHaveCount(0);
   await expect(page.locator('#wk-info')).not.toContainText('la noire vaut 1 temps');
 });
+
+test('D5. toutes les partitions ont le volet ; doubles croches et triolets : compte par temps', async ({ page }) => {
+  await page.goto('./#coach');
+  // @ts-ignore
+  const r = await page.evaluate(() => Object.keys(WORK).map(id => { WK.id = id; WK.bar = 0; WK.hands = 'both'; renderWork(); const w = WORK[id];
+    return { id, simple: !w.beat && Number.isInteger(w.bpb), count: !!document.querySelector('#wk-info .wk-count'), why: !!document.querySelector('#wk-info .wk-why'), txt: document.querySelector('#wk-info').textContent }; }));
+  expect(r.filter(x => !x.why).map(x => x.id)).toEqual([]);
+  expect(r.filter(x => x.simple && !x.count).map(x => x.id)).toEqual([]);
+  const alkan = r.find(x => x.id === 'alkan311');
+  expect(alkan && alkan.txt).toContain('temps 2 :');
+  expect(alkan && alkan.txt).toContain('Triolet');
+  expect(alkan && alkan.txt).not.toContain('0,333');
+});
+
+test('D6. Mes partitions : le compte apparaît aussi sur une partition saisie', async ({ page }) => {
+  await page.goto('./#morceaux');
+  await page.locator('#my-title').fill('Essai compte');
+  await page.locator('#my-new').click();
+  for (const n of ['Do4', 'Ré4', 'Mi4', 'Fa4']) await page.locator(`#kb-my .key[aria-label="${n}"]`).click();
+  await page.locator('#my-done').click();
+  await page.locator('#my-list button[data-myw]').click();
+  await expect(page.locator('#wk-info .wk-count')).toHaveText('Compte : Do4 (1) · Ré4 (2) · Mi4 (3) · Fa4 (4)');
+});
