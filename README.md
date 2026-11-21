@@ -19,6 +19,10 @@ L'app est réglée pour l'iPhone (testée au format iPhone 11 Pro Max, 414 × 89
 
 Ouvrir l'adresse de l'app dans Safari, toucher **Partager**, puis **Sur l'écran d'accueil**.
 
+## La feuille du cours fait foi
+
+Tout morceau tiré d'une feuille du cours est identique à la feuille (notes, mains, positions, doigtés imprimés, armure, altérations écrites). La tonalité et l'absence d'armure sont écrites dans la source du morceau, jamais devinées ; `tests/feuille.spec.js` le vérifie. Règles détaillées dans `CLAUDE.md`.
+
 ## Tests
 
 Les tests Playwright tournent sous Chromium et WebKit, en 390 × 844, sur un serveur local `http://localhost` (aucune dépendance côté app ; Playwright est en devDependency).
