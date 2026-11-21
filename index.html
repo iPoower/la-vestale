@@ -188,6 +188,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ak-levels li.rec{border-color:var(--laiton)}.ak-levels .ak-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.ak-levels .ak-s{font-size:.85rem;color:var(--muted);white-space:nowrap}
 .ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0}
 .key.accd{box-shadow:inset 0 0 0 4px #ff5a1f,0 0 0 2px #ff5a1f!important;z-index:2}.wk-accd{color:#e9a36b}
+.q4-t{border-collapse:collapse;margin:8px 0;font-size:.95rem}.q4-t th,.q4-t td{border:1px solid var(--ligne);padding:6px 10px;text-align:center}.q4-t tbody th{text-align:left;font-weight:600}
 .pc-grp{margin:10px 0}.pc-grp>summary.grp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:6px 12px;margin:0;border:1px solid var(--ligne);border-radius:12px;background:var(--bois2);cursor:pointer;list-style:none}
 .pc-grp>summary.grp-h::-webkit-details-marker{display:none}.pc-grp>summary.grp-h::after{content:'▸';color:var(--laiton)}.pc-grp[open]>summary.grp-h::after{content:'▾'}
 .pc-grp[open]>summary.grp-h{margin-bottom:8px}
@@ -477,6 +478,26 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
 </section>
 
 <!-- OREILLE -->
+<section class="view" id="v-accords4">
+  <div class="card">
+    <div class="row between"><h2>Les 4 accords</h2><span class="tag" id="q4-tag"></span></div>
+    <p class="small">Dans une tonalité, quatre accords portent la plupart des chansons : le <b>I</b> (le repos), le <b>IV</b>, le <b>V</b> (la tension) et le <b>vi</b> (le relatif mineur). Contrôle-les, et tu tiens une grande partie de ton répertoire.</p>
+    <table class="q4-t"><thead><tr><th></th><th>I</th><th>IV</th><th>V</th><th>vi</th></tr></thead>
+      <tbody><tr><th>En Do</th><td>C</td><td>F</td><td>G</td><td>Am</td></tr><tr><th>En Sol</th><td>G</td><td>C</td><td>D</td><td>Em</td></tr></tbody></table>
+    <p class="small muted">Let It Be : C G Am F = I V vi IV en Do. Il y a ton sourire : Em C G D = vi IV I V en Sol. La même formule, transposée. C et G servent dans les deux : six accords font toute ta pop. Hymne, Tabac, Cancan : I et V.</p>
+  </div>
+  <div class="card">
+    <h2>Enchaîner sans regarder</h2>
+    <p class="small muted">Main droite en positions proches (les doigts bougent le moins possible), basse à la main gauche. Deux accords par mesure, en boucle. Le micro vérifie chaque accord.</p>
+    <ol class="ak-levels" id="q4-list"></ol>
+  </div>
+  <div class="card">
+    <h2>Reconnaître à l’oreille</h2>
+    <p class="small">L’app joue Do (le I), puis un accord : I, IV, V ou vi ? C’est ce qui permet de trouver la grille d’une chanson.</p>
+    <div class="row"><button class="btn" id="q4-ear">S’entraîner à l’oreille</button></div>
+  </div>
+</section>
+
 <section class="view" id="v-alkan">
   <div class="card">
     <div class="row between"><h2>Alkan à ton niveau</h2><span class="tag" id="ak-tag"></span></div>
@@ -1159,6 +1180,16 @@ const TAB_LA=[['C2',4],['G2',4],['G2',4],['C2',3,null,1]],TAB_LB=[['G2',4],['C2'
 // Main gauche : la basse au 1er temps ; mesure 2 : silence, comme sur la feuille. Ni mélodie ni paroles (œuvre protégée).
 const SOUR={Em:[[59,64,67],[1,3,5],40],C:[[60,64,67],[1,3,5],48],G:[[59,62,67],[1,2,5],43],D:[[57,62,66],[1,3,5],50]};
 const SOUR_GRID=['Em',...Array(17).fill(['Em','C','G','D']).flat()],SOUR_CRO=57;
+// Les 4 accords : I, IV, V, vi en positions proches (main droite) et basse (main gauche), deux accords par mesure.
+// [nom, notes main droite, doigts, basse] ; la grille est jouée deux fois (8 mesures).
+const Q4={
+  do:{t:'Les 4 accords en Do',key:'Do majeur',deg:'I – V – vi – IV',ref:'Let It Be',ch:[['C',[60,64,67],[1,3,5],48],['G',[59,62,67],[1,2,5],43],['Am',[60,64,69],[1,2,5],45],['F',[60,65,69],[1,3,5],41]]},
+  sol:{t:'Les 4 accords en Sol',key:'Sol majeur',deg:'vi – IV – I – V',ref:'Il y a ton sourire',ch:[['Em',[59,64,67],[1,3,5],40],['C',[60,64,67],[1,3,5],48],['G',[59,62,67],[1,2,5],43],['D',[57,62,66],[1,3,5],50]]},
+  re:{t:'Les 4 accords en Ré',key:'Ré majeur',deg:'I – V – vi – IV',ref:'',ch:[['D',[62,66,69],[1,3,5],50],['A',[61,64,69],[1,2,5],45],['Bm',[62,66,71],[1,2,5],47],['G',[62,67,71],[1,3,5],43]]},
+  fa:{t:'Les 4 accords en Fa',key:'Fa majeur',deg:'I – V – vi – IV',ref:'',flats:true,ch:[['F',[60,65,69],[1,3,5],41],['C',[60,64,67],[1,3,5],48],['Dm',[62,65,69],[1,3,5],50],['B♭',[62,65,70],[1,2,5],46]]}};
+function q4Bars(k){const ch=Q4[k].ch,out=[];for(let r=0;r<2;r++)for(let i=0;i<4;i+=2){const a=ch[i],b=ch[i+1];
+    out.push({rh:[[a[1].slice(),2,a[2].slice(),a[0],null],[b[1].slice(),2,b[2].slice(),b[0],null]],lh:[[[a[3]],2,[5],a[0],null],[[b[3]],2,[5],b[0],null]]});}
+  return out;}
 // Contrôle du Fa♯ : les enchaînements G → D → Em du morceau (le Fa♯ arrive avec D et repart vers Em).
 const SOUR_FA=['G','D','Em','G','D','Em','D','Em'];
 function sourFaBars(){return SOUR_FA.map(k=>{const [n,f,b]=SOUR[k];return {rh:[0,1,2,3].map(()=>[n.slice(),1,f.slice(),k,null]),lh:[[[b],1,[5],null,null],[null,1,null,null,null],[null,2,null,null,null]]};});}
@@ -1209,6 +1240,10 @@ const WORK={
   frere:{t:'Frère Jacques',bpb:4,src:'Chanson traditionnelle (libre), en Do. Main gauche : bourdon Do3–Sol3 tenu (comme une cornemuse), écrit pour toi. Mesures 7-8 : la main gauche ne garde que le Do3 ; le Sol3 de « Do Sol Do » se joue à la main droite, en déplaçant la main.',
     rh:()=>{const a=[[60,1,1],[62,1,2],[64,1,3],[60,1,1]],b=[[64,1,3],[65,1,4],[67,2,5]],c=[[67,.5,4],[69,.5,5],[67,.5,4],[65,.5,3],[64,1,2],[60,1,1]],d=[[60,1],[55,1],[60,2]];return [...a,...a,...b,...b,...c,...c,...d,...d];},
     lh:[['Bdn',4],['Bdn',4],['Bdn',4],['Bdn',4],['Bdn',4],['Bdn',4],['Do',4],['Do',4]]},
+  q4do:{t:'Les 4 accords en Do (I V vi IV)',bpb:4,src:'Exercice de l’app, Do majeur (aucune altération à la clé) : C – G | Am – F, deux fois. Main droite en positions proches : Do–Mi–Sol, Si–Ré–Sol, Do–Mi–La, Do–Fa–La ; basse à la main gauche. C’est la grille de Let It Be.',get bars(){return q4Bars('do');}},
+  q4sol:{t:'Les 4 accords en Sol (vi IV I V)',bpb:4,src:'Exercice de l’app, Sol majeur (Fa♯ à la clé : il vaut pour tous les Fa) : Em – C | G – D, deux fois, dans les positions de ta feuille d’Il y a ton sourire (Si–Mi–Sol, Do–Mi–Sol, Si–Ré–Sol, La–Ré–Fa♯).',get bars(){return q4Bars('sol');}},
+  q4re:{t:'Les 4 accords en Ré (I V vi IV)',bpb:4,src:'Exercice de l’app, Ré majeur (Fa♯ et Do♯ à la clé) : D – A | Bm – G, deux fois. Main droite : Ré–Fa♯–La, Do♯–Mi–La, Ré–Fa♯–Si, Ré–Sol–Si.',get bars(){return q4Bars('re');}},
+  q4fa:{t:'Les 4 accords en Fa (I V vi IV)',bpb:4,flats:true,src:'Exercice de l’app, Fa majeur (Si♭ à la clé) : F – C | Dm – B♭, deux fois. Main droite : Do–Fa–La, Do–Mi–Sol, Ré–Fa–La, Ré–Fa–Si♭.',get bars(){return q4Bars('fa');}},
   sourireFa:{t:'Il y a ton sourire — contrôle du Fa♯',bpb:4,nosig:true,src:'Exercice tiré de ta feuille (Mi mineur, écrite sans armure) : G → D → Em, là où le Fa♯ arrive. Dans l’accord D (La–Ré–Fa♯), le 5 descend de Sol à Fa♯, la touche noire juste à gauche, puis remonte sur Sol pour Em. Le ♯ est écrit devant le Fa à chaque mesure : il vaut jusqu’à la barre. Lent d’abord, puis à noire = 80.',get bars(){return sourFaBars();}},
   sourire:{t:'Il y a ton sourire — accompagnement',bpb:4,nosig:true,src:'Grille de ta feuille (Mi mineur, écrite sans armure), mesures numérotées comme sur la feuille : intro d’une mesure en Em, puis Em – C – G – D dix-sept fois (mesures 2 à 69, fin sur D) ; à partir de la mesure 58 (« en croches »), l’accord en croches. Main droite : l’accord en noires, dans les positions de ta feuille (Si-Mi-Sol, Do-Mi-Sol, Si-Ré-Sol, La-Ré-Fa♯) ; main gauche : la basse au 1er temps (mesure 2 : silence, comme sur la feuille). La mélodie et les paroles sont protégées : lis-les sur ta feuille. Doigtés proposés par l’app.',bars:sourBars()},
   twinkle:{t:'Ah ! vous dirai-je maman',bpb:4,src:'Air traditionnel (domaine public), version courante en Do majeur, main droite. Sur ta feuille (n° 54), la mélodie passe d’une main à l’autre : elle fait foi.',get bars(){return melWork('twinkle',4);}},
@@ -1376,14 +1411,17 @@ const EAR={
   tension:{t:'Repos ou tension',q:'Repos (C) ou tension (G7) ? Écoute si l’accord demande une suite.',opts:[['C','Repos · C'],['G7','Tension · G7']]},
   mode:{t:'Majeur ou mineur',q:'Couleur claire (majeur) ou plus sombre (mineur) ?',pool:['C','F','G','Am','Dm','Em'],ans:c=>/m$/.test(c)?'min':'maj',opts:[['maj','Majeur'],['min','Mineur']]},
   e:{t:'Em ou E',q:'Sol naturel (Em, mineur) ou Sol♯ (E, majeur) ?',opts:[['Em','Em · mineur'],['E','E · majeur']]},
-  nom:{t:'Quel accord',q:'Nomme l’accord parmi ceux de ta feuille d’accords.',opts:[['C','C'],['F','F'],['G','G'],['Am','Am'],['Dm','Dm'],['Em','Em']]}
+  nom:{t:'Quel accord',q:'Nomme l’accord parmi ceux de ta feuille d’accords.',opts:[['C','C'],['F','F'],['G','G'],['Am','Am'],['Dm','Dm'],['Em','Em']]},
+  degre:{t:'I, IV, V ou vi',q:'D’abord Do (le I), puis un accord : lequel des 4 accords est-ce ?',ref:'C',pool:['C','F','G','Am'],ans:c=>({C:'I',F:'IV',G:'V',Am:'vi'})[c],opts:[['I','I · C'],['IV','IV · F'],['V','V · G'],['vi','vi · Am']]}
 };
 let earMode='tension',earCur=null,earAnswered=false,earStreak=0;
 function earPool(){const e=EAR[earMode];return e.pool||e.opts.map(o=>o[0]);}
 function earNew(){const pool=earPool();let c;do{c=pool[Math.floor(Math.random()*pool.length)];}while(pool.length>1&&earCur&&c===earCur.c&&Math.random()<.5);
   const inv=$('#ear-inv').checked?Math.floor(Math.random()*3):0;earCur={c,inv};earAnswered=false;$('#ear-fb').textContent='';$('#ear-fb').className='fb';
   $$('#ear-ans button').forEach(b=>{b.className='btn';b.disabled=false;});earPlay();}
-function earPlay(){if(!earCur)return earNew();const a=ac();if(!a)return;const bus=newBus();const t=a.currentTime+.05;const c=CH[earCur.c];playNote(c.b,t,2.2,.7,bus);voicing(earCur.c,earCur.inv).forEach(m=>playNote(m,t,2,.65,bus));}
+function earPlay(){if(!earCur)return earNew();const a=ac();if(!a)return;const bus=newBus();let t=a.currentTime+.05;const r=EAR[earMode].ref;
+  if(r){playNote(CH[r].b,t,1.2,.6,bus);voicing(r,0).forEach(m=>playNote(m,t,1.1,.55,bus));t+=1.4;}
+  const c=CH[earCur.c];playNote(c.b,t,2.2,.7,bus);voicing(earCur.c,earCur.inv).forEach(m=>playNote(m,t,2,.65,bus));}
 function earRenderOpts(){const e=EAR[earMode];$('#ear-q').textContent=e.q;$('#ear-ans').innerHTML=e.opts.map(o=>`<button class="btn" data-a="${esc(o[0])}">${esc(o[1])}</button>`).join('');earUpdateScore();}
 function earUpdateScore(){const s=S.stats.oreille[earMode]||{ok:0,ko:0};const tot=s.ok+s.ko;$('#ear-rate').textContent=tot?Math.round(100*s.ok/tot)+' % sur '+tot:'–';$('#ear-streak').textContent=earStreak;}
 function earAnswer(btn){if(!earCur||earAnswered)return;const e=EAR[earMode];const right=e.ans?e.ans(earCur.c):earCur.c;const ok=btn.dataset.a===right;earAnswered=true;
@@ -2411,7 +2449,7 @@ function renderTips(){const i=(tipIndex(new Date())+tipShift)%TIPS.length,[c,x]=
 /* ---------- Rangement des morceaux ---------- */
 // Même ordre partout : Séance, Enchaînements, Répertoire, Tempo.
 const GROUPS=[
-  ['Niveau 1 · Débutant',['melodies','poney','jig','playtune','hymne','fontaine','tabac','clair','frere','twinkle','wenceslas','sourire','sourireFa']],
+  ['Niveau 1 · Débutant',['melodies','poney','jig','playtune','hymne','fontaine','tabac','clair','frere','twinkle','wenceslas','sourire','sourireFa','q4do','q4sol','q4re','q4fa']],
   ['Niveau 2 · Facile',['allegretto','divertissement','lapin','tambourin','chantmodal','cancan','orientale','letitbe','imagine','bebe','candeur','bach120']],
   ['Niveau 3 · Intermédiaire',['arabesqueb','schumann1','bach846']],
   ['Niveau 4 · Avancé',['alkan311g','alkan311','alkan8','liszt3','odysseus']],
@@ -2684,7 +2722,18 @@ function importSummary(){const so=S.solf||{les:{}},lec=Object.values(S.stats.lec
   return `Import réussi · progression reprise : ${S.seances.length} séance${S.seances.length>1?'s':''} · ${lec} notes lues · ${les} leçon${les>1?'s':''} de solfège acquise${les>1?'s':''} · ${bars} mesure${bars>1?'s':''} déchiffrée${bars>1?'s':''}`+(ns&&(ns.ok+ns.ko)?` · Do Ré Mi ⇄ C D E : ${ns.ok} justes`:'');}
 
 /* ---------- Navigation ---------- */
-const VIEWS=['seance','coach','clavier','oreille','lecture','solfege','alkan','tempo','morceaux','gauche','astuces','journal'];
+const VIEWS=['seance','coach','clavier','oreille','lecture','solfege','accords4','alkan','tempo','morceaux','gauche','astuces','journal'];
+/* ---------- Les 4 accords ---------- */
+const Q4_ORDER=[['q4do','do'],['q4sol','sol'],['q4re','re'],['q4fa','fa']];
+function q4Prog(id){const c=(S.coach&&S.coach[id])||{},b=c.b||{},n=workBars(id).length;let ok=0;for(let i=0;i<n;i++)if(b[i]&&b[i][1]>0)ok++;return [ok,n];}
+function renderQ4(){const box=$('#q4-list');if(!box)return;let rec=-1,done=0;const P=Q4_ORDER.map(([id])=>q4Prog(id));P.forEach(([a,n],i)=>{if(a>=n)done++;else if(rec<0)rec=i;});
+  box.innerHTML=Q4_ORDER.map(([id,k],i)=>{const q=Q4[k],[a,n]=P[i],ok=a>=n;return `<li class="${ok?'done':''}${i===rec?' rec':''}"><div class="ak-h"><b>${esc(q.t)}</b><span class="ak-s">${ok?'✓ acquis':i===rec?'recommandé · '+a+'/'+n:a+'/'+n}</span></div>
+    <p class="small">${esc(q.deg)} : ${q.ch.map(c=>`<b>${esc(c[0])}</b> (${c[1].map(m=>q.flats?nmb(m):nm(m)).join('–')})`).join(' → ')}</p>
+    <p class="small muted">${esc(q.key)}${q.ref?' · comme '+esc(q.ref):''}</p>
+    <div class="row"><button class="btn${i===rec?' primary':''}" data-q4="${id}">${ok?'Revoir':a?'Continuer':'Jouer au micro'}</button><button class="btn ghost" data-q4l="${id}">▶ Écouter</button></div></li>`;}).join('');
+  $('#q4-tag').textContent=`${done}/${Q4_ORDER.length} tonalités`;}
+function q4Open(id){stopBus();location.hash='#coach';WK.hands='both';if(WK.id!==id)wkSelect(id);setTimeout(()=>handleExtra('bar:'+id+':0'),60);}
+
 /* ---------- Alkan à ton niveau ---------- */
 // Nom d'un accord de main gauche, d'après ses notes : C/G, G7, Am… ; null si aucun modèle ne convient.
 const AK_T=[[[0,4,7],''],[[0,3,7],'m'],[[0,4,7,10],'7'],[[0,4,10],'7'],[[0,7,10],'7'],[[4,10],'7'],[[0,4],''],[[0,3],'m'],[[0,7],'']];
@@ -2718,8 +2767,8 @@ function renderAlkan(){const box=$('#ak-levels');if(!box)return;let rec=-1,done=
   const c=SF_CULT.find(x=>x[0]==='calkan');if(c)$('#ak-cult').innerHTML=c[2].split('|').map(x=>`<p>${x}</p>`).join('');}
 function akOpen(i){const L=AK_LV[i];if(!L)return;stopBus();location.hash='#coach';WK.hands=L.h;if(WK.id!==L.id)wkSelect(L.id);setTimeout(()=>handleExtra('bar:'+L.id+':0'),60);}
 /* ---------- Navigation : 5 onglets ; Apprendre et Plus ont des sous-onglets ---------- */
-const NAV={seance:'aujourdhui',coach:'jouer',solfege:'apprendre',lecture:'apprendre',oreille:'apprendre',alkan:'apprendre',morceaux:'morceaux',clavier:'plus',tempo:'plus',gauche:'plus',astuces:'plus',journal:'plus'};
-const NAV_SUB={apprendre:[['solfege','Solfège'],['lecture','Lecture'],['oreille','Oreille'],['alkan','Alkan']],plus:[['clavier','Clavier'],['tempo','Tempo'],['gauche','Main gauche'],['astuces','Astuces'],['journal','Journal']]};
+const NAV={seance:'aujourdhui',coach:'jouer',solfege:'apprendre',lecture:'apprendre',oreille:'apprendre',accords4:'apprendre',alkan:'apprendre',morceaux:'morceaux',clavier:'plus',tempo:'plus',gauche:'plus',astuces:'plus',journal:'plus'};
+const NAV_SUB={apprendre:[['solfege','Solfège'],['lecture','Lecture'],['oreille','Oreille'],['accords4','4 accords'],['alkan','Alkan']],plus:[['clavier','Clavier'],['tempo','Tempo'],['gauche','Main gauche'],['astuces','Astuces'],['journal','Journal']]};
 const NAV_LAST={apprendre:'solfege',plus:'clavier'};
 // L'onglet d'un groupe rouvre la dernière section visitée ; la barre de sous-onglets montre les autres.
 function navSync(v){const g=NAV[v]||'aujourdhui';if(NAV_SUB[g])NAV_LAST[g]=v;
@@ -2736,6 +2785,7 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   if(v==='seance'){setTimeout(wkScroll,30);if(!RUN.on&&!RUN.acc&&!RUN.idx)renderBlocks();}   // séance du jour à jour (Coach, Solfège, date)
   if(v==='lecture'&&!lecCur)lecNew();
   if(v==='alkan')renderAlkan();
+  if(v==='accords4')renderQ4();
   window.scrollTo(0,0);}
 function handleExtra(x){if(!x)return;const [k,v,w]=x.split(':');if(k==='preset')applyPreset(v);
   if(k==='sf'&&SF_GEN[v]||k==='sf'&&v==='mix'){$$('#sf-dur button').forEach(b=>b.classList.toggle('on',b.dataset.d==='1'));sfSelType(v);
@@ -2807,6 +2857,9 @@ function init(){
   $('#pz-act').addEventListener('click',e=>{const b=e.target.closest('button[data-pa]');if(b)pzAct(b.dataset.pa);});
   $('#ak-levels').addEventListener('click',e=>{const b=e.target.closest('button[data-ak]');if(b)akOpen(+b.dataset.ak);});
   $('#ak-go').onclick=()=>akOpen(1);
+  $('#q4-list').addEventListener('click',e=>{const b=e.target.closest('button[data-q4]');if(b){q4Open(b.dataset.q4);return;}
+    const l=e.target.closest('button[data-q4l]');if(l){const id=l.dataset.q4l;if(WK.id!==id)wkSelect(id);WK.hands='both';WK.range=[0,workBars(id).length-1];playWork();}});
+  $('#q4-ear').onclick=()=>{earMode='degre';location.hash='#oreille';setTimeout(()=>{$$('#ear-mode button').forEach(b=>b.classList.toggle('on',b.dataset.m==='degre'));earRenderOpts();earCur=null;earNew();},80);};
   $('#ak-play').onclick=()=>{if(WK.id!=='alkan311g')wkSelect('alkan311g');WK.hands='lh';WK.range=[0,workBars('alkan311g').length-1];playWork();};
   $('#ak-quiz').onclick=()=>{location.hash='#solfege';setTimeout(()=>sfStart('les','culture','calkan'),80);};
   $('#pz-map').addEventListener('click',e=>{const b=e.target.closest('button[data-pz]');if(!b)return;PZ.sel=+b.dataset.pz;PZ.run=0;PZ.live=null;pzFb('','');renderPz();pzScroll();});

@@ -81,6 +81,10 @@ Case « Vérifier aussi le rythme » (Séance et Coach) : un décompte d'une mes
 
 Dans « Jouer », les notes qui portent une altération écrite dans la mesure (♯, ♭ ou ♮ devant la note, hors armure) sont entourées en orange sur le clavier, avec un rappel « À contrôler : Fa♯4… ». Au micro, une note naturelle jouée à la place d'une note altérée donne un conseil précis (« Fa♯4, pas Fa4 : le ♯ vaut jusqu'à la barre. Touche noire juste à droite. »). Pour Il y a ton sourire (sans armure), l'exercice « contrôle du Fa♯ » enchaîne G → D → Em, là où le Fa♯ arrive et repart.
 
+### Les 4 accords
+
+Apprendre › 4 accords : les accords I, IV, V et vi (en Do : C F G Am ; en Sol : G C D Em), base de la plupart des chansons de ton répertoire (Let It Be, Il y a ton sourire…). Quatre exercices jouables au micro (Do, Sol, Ré, Fa), en positions proches à la main droite et basse à la main gauche, deux accords par mesure ; tonalité et armure écrites (Sol : positions de la feuille d'Il y a ton sourire). Progression d'après les mesures jouées propres ; la première tonalité non acquise est recommandée. Oreille › « I, IV, V ou vi » : Do de référence, puis un accord à reconnaître.
+
 ### Alkan à ton niveau
 
 Apprendre › Alkan : un parcours en six niveaux vers Alkan, du plus simple au texte original (écouter le Prélude op. 31 n° 1 ; ses accords de main gauche simplifiés, deux blanches par mesure ; la main gauche originale ; le chant ; mains ensemble ; La chanson de la folle). La progression vient du jeu au micro et du parcours A à Z ; le niveau recommandé est le premier non acquis. Les accords du Prélude sont nommés mesure par mesure (C/G, G7, E, Am, E7, A/C♯, D) et s'écoutent ; la version simplifiée se joue dans « Jouer » avec des doigtés proposés par l'app. Un chapitre de culture (avec quiz) présente Alkan ; il apparaît aussi dans Solfège › Culture.
