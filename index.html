@@ -187,6 +187,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ak-levels{padding-left:0;list-style:none;margin:8px 0}.ak-levels li{border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;margin:8px 0}
 .ak-levels li.rec{border-color:var(--laiton)}.ak-levels .ak-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.ak-levels .ak-s{font-size:.85rem;color:var(--muted);white-space:nowrap}
 .ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0}
+.key.accd{box-shadow:inset 0 0 0 4px #ff5a1f,0 0 0 2px #ff5a1f!important;z-index:2}.wk-accd{color:#e9a36b}
 .pc-grp{margin:10px 0}.pc-grp>summary.grp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:6px 12px;margin:0;border:1px solid var(--ligne);border-radius:12px;background:var(--bois2);cursor:pointer;list-style:none}
 .pc-grp>summary.grp-h::-webkit-details-marker{display:none}.pc-grp>summary.grp-h::after{content:'▸';color:var(--laiton)}.pc-grp[open]>summary.grp-h::after{content:'▾'}
 .pc-grp[open]>summary.grp-h{margin-bottom:8px}
@@ -1158,6 +1159,9 @@ const TAB_LA=[['C2',4],['G2',4],['G2',4],['C2',3,null,1]],TAB_LB=[['G2',4],['C2'
 // Main gauche : la basse au 1er temps ; mesure 2 : silence, comme sur la feuille. Ni mélodie ni paroles (œuvre protégée).
 const SOUR={Em:[[59,64,67],[1,3,5],40],C:[[60,64,67],[1,3,5],48],G:[[59,62,67],[1,2,5],43],D:[[57,62,66],[1,3,5],50]};
 const SOUR_GRID=['Em',...Array(17).fill(['Em','C','G','D']).flat()],SOUR_CRO=57;
+// Contrôle du Fa♯ : les enchaînements G → D → Em du morceau (le Fa♯ arrive avec D et repart vers Em).
+const SOUR_FA=['G','D','Em','G','D','Em','D','Em'];
+function sourFaBars(){return SOUR_FA.map(k=>{const [n,f,b]=SOUR[k];return {rh:[0,1,2,3].map(()=>[n.slice(),1,f.slice(),k,null]),lh:[[[b],1,[5],null,null],[null,1,null,null,null],[null,2,null,null,null]]};});}
 function sourBars(){return SOUR_GRID.map((k,i)=>{const [n,f,b]=SOUR[k],cr=i>=SOUR_CRO;return {rh:Array(cr?8:4).fill(0).map(()=>[n.slice(),cr?.5:1,f.slice(),k,null]),lh:i===1?[[null,4,null,null,null]]:[[[b],1,[5],null,null],[null,1,null,null,null],[null,2,null,null,null]]};});}
 // Good King Wenceslas comme la feuille : les Do4 des mesures 4, 8, 12 et 17 sont écrits en clé de fa (main gauche) ;
 // mesure 14 : Si3 en blanche à la main gauche sous le Ré (temps 3-4).
@@ -1205,6 +1209,7 @@ const WORK={
   frere:{t:'Frère Jacques',bpb:4,src:'Chanson traditionnelle (libre), en Do. Main gauche : bourdon Do3–Sol3 tenu (comme une cornemuse), écrit pour toi. Mesures 7-8 : la main gauche ne garde que le Do3 ; le Sol3 de « Do Sol Do » se joue à la main droite, en déplaçant la main.',
     rh:()=>{const a=[[60,1,1],[62,1,2],[64,1,3],[60,1,1]],b=[[64,1,3],[65,1,4],[67,2,5]],c=[[67,.5,4],[69,.5,5],[67,.5,4],[65,.5,3],[64,1,2],[60,1,1]],d=[[60,1],[55,1],[60,2]];return [...a,...a,...b,...b,...c,...c,...d,...d];},
     lh:[['Bdn',4],['Bdn',4],['Bdn',4],['Bdn',4],['Bdn',4],['Bdn',4],['Do',4],['Do',4]]},
+  sourireFa:{t:'Il y a ton sourire — contrôle du Fa♯',bpb:4,nosig:true,src:'Exercice tiré de ta feuille (Mi mineur, écrite sans armure) : G → D → Em, là où le Fa♯ arrive. Dans l’accord D (La–Ré–Fa♯), le 5 descend de Sol à Fa♯, la touche noire juste à gauche, puis remonte sur Sol pour Em. Le ♯ est écrit devant le Fa à chaque mesure : il vaut jusqu’à la barre. Lent d’abord, puis à noire = 80.',get bars(){return sourFaBars();}},
   sourire:{t:'Il y a ton sourire — accompagnement',bpb:4,nosig:true,src:'Grille de ta feuille (Mi mineur, écrite sans armure), mesures numérotées comme sur la feuille : intro d’une mesure en Em, puis Em – C – G – D dix-sept fois (mesures 2 à 69, fin sur D) ; à partir de la mesure 58 (« en croches »), l’accord en croches. Main droite : l’accord en noires, dans les positions de ta feuille (Si-Mi-Sol, Do-Mi-Sol, Si-Ré-Sol, La-Ré-Fa♯) ; main gauche : la basse au 1er temps (mesure 2 : silence, comme sur la feuille). La mélodie et les paroles sont protégées : lis-les sur ta feuille. Doigtés proposés par l’app.',bars:sourBars()},
   twinkle:{t:'Ah ! vous dirai-je maman',bpb:4,src:'Air traditionnel (domaine public), version courante en Do majeur, main droite. Sur ta feuille (n° 54), la mélodie passe d’une main à l’autre : elle fait foi.',get bars(){return melWork('twinkle',4);}},
   wenceslas:{t:'Good King Wenceslas',bpb:4,src:'Chant ancien (domaine public), en Do comme ta feuille. Sol–La–Si sous le Do central passent à la main gauche (les pointillés de ta feuille), et aussi les Do des mesures 4, 8, 12 et 17, écrits en clé de fa. Mesure 14 : Si3 en blanche à la main gauche avec le Ré. Mesure 16 : la blanche de main gauche reste à vérifier sur ta feuille. Ta feuille fait foi.',get bars(){return wencBars();}},
@@ -1253,13 +1258,20 @@ function wkScroll(){if(!WKKB)return;const b=workBars(WK.id)[WK.bar];const ms=[];
 function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0,Math.min(bars.length-1,WK.bar));const b=bars[WK.bar];
   $('#wk-pos').textContent=`Mesure ${WK.bar+1}/${bars.length}`;$('#wk-src').textContent=w.src;$('#wk-pdf').innerHTML=PDF[WK.id]?pdfLink(WK.id):'';
   $$('#wk-hands button').forEach(x=>x.classList.toggle('on',x.dataset.h===WK.hands));
-  WKKB.clear();WKKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
+  WKKB.clear();WKKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));WKKB.el.querySelectorAll('.accd').forEach(k=>k.classList.remove('accd'));
   const mark=(evs,cls)=>{const done={};evs.forEach(e=>{if(!e[0])return;e[0].forEach((m,i)=>{const k=WKKB.keys[m];if(!k)return;k.classList.add(cls);if(e[2]&&!done[m]){done[m]=1;const s=document.createElement('span');s.className='fg';s.textContent=e[2][i];k.appendChild(s);}});});};
   if(WK.hands!=='lh')mark(b.rh,'hl');if(WK.hands!=='rh')mark(b.lh,'hl2');
+  const acc=wkAccd(b);acc.forEach(m=>{const k=WKKB.keys[m];if(k)k.classList.add('accd');});
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
+  if(acc.length)h+=`<p class="wk-accd">À contrôler : ${acc.map(m=>`<b>${esc(wkNm(m))}</b>`).join(', ')} (altération écrite devant la note, valable jusqu’à la barre).</p>`;
   $('#wk-info').innerHTML=h;$('#wk-key').textContent=keyLine(dcKey(WK.id));wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);wkHist();$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
   $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach()){renderCoach();renderDc();renderPz();}}
+// Notes de la mesure qui portent une altération écrite (♯, ♭ ou ♮ devant la note), pour les mains affichées.
+function wkAccd(b){const key=dcKey(WK.id),out=new Set();['rh','lh'].forEach(hd=>{if(WK.hands!=='both'&&WK.hands!==hd)return;const A=staffAcc(b[hd],key);
+    b[hd].forEach((e,i)=>{if(e[0])e[0].forEach((m,j)=>{if(A[i]&&A[i][j])out.add(m);});});});
+  // une altération vaut jusqu'à la barre : les mêmes notes plus loin dans la mesure sont aussi à contrôler
+  return [...out].sort((x,y)=>x-y);}
 function wkGo(bar){stopBus();WK.range=null;WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
@@ -1498,7 +1510,7 @@ const PIECES=[
   {id:'playtune',t:'Play Tune',a:'Méthode en anglais',focus:'4/4, partie de duo optionnelle',obj:'Garder ta pulsation pendant que le prof joue la partie de duo.',piege:'Suivre l’autre partie au lieu de compter.'},
   {id:'letitbe',t:'Let It Be',a:'Beatles, arrangement du cours',focus:'Grille C, F, G, Am, E, Dm, avec F7M et F/C',obj:'La grille de l’intro en accords tenus, sans arrêt aux changements, à noire = 72.',piege:'Regarder les mains à chaque changement : prépare l’accord suivant pendant le précédent.',tip:'Écoute la grille dans Clavier › Enchaînements › Let It Be (intro).'},
   {id:'imagine',t:'Imagine',a:'Lennon, arrangement du cours',focus:'Grille C, CM7, F, puis Dm7, G, E7',obj:'L’intro au piano : C – CM7 | F en croches régulières à la main droite, la basse tenue, à noire = 72.',piege:'Presser les croches : compte « 1 et 2 et ».',tip:'Écoute la grille dans Clavier › Enchaînements › Imagine (début).'},
-  {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches. Séance › Travailler un morceau : les 69 mesures, numérotées comme ta feuille.',piege:'Ralentir au passage C → G ou G → D.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'},
+  {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches. Séance › Travailler un morceau : les 69 mesures, numérotées comme ta feuille.',piege:'Ralentir au passage C → G ou G → D, et oublier le Fa♯ de l’accord D : pas d’armure, le ♯ est écrit devant la note. Exercice « contrôle du Fa♯ » dans Jouer.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'},
   {id:'clair',t:'Au clair de la lune',a:'Chanson traditionnelle',focus:'Position Do, puis déplacement en position Sol pour le pont',obj:'Les 16 mesures sans arrêt, déplacement de main préparé à la mesure 9.',piege:'Oublier de redescendre la main droite au pont (Ré Ré Ré Ré, La La).'},
   {id:'frere',t:'Frère Jacques',a:'Chanson traditionnelle',focus:'Croches de la mesure 5, bourdon à la main gauche',obj:'Les croches égales à noire = 96, bourdon tenu sans bouger.',piege:'Accélérer sur les croches.'},
   {id:'bebe',t:'Bébé s’endort',a:'Hedwige Chrétien, 6 Petits Préludes récréatifs n° 2',focus:'Mélodie liée en Sol majeur sur une basse tenue',obj:'Premier « vrai » morceau à deux voix : la main gauche tient, la main droite chante. Mains séparées, puis ensemble.',piege:'Lâcher le Sol grave de la main gauche : il doit tenir sous toute la phrase.',tip:'Domaine public (Hedwige Chrétien, 1859–1944). Notes relevées pour l’app ; doigtés à valider avec ton prof.'},
@@ -1864,6 +1876,7 @@ function ecHes(){if(EC.shownAt&&performance.now()-EC.shownAt>4000){coachRec().b[
 // Conseil immédiat, selon l'écart entre la note jouée et la note attendue.
 function ecTip(want,got,x){const d=Math.abs(got-want),fg=x&&x.fg&&x.fg[0];
   if((EC.same[want]||0)>=3)return 'Isole ce passage : joue la note d’avant et celle-ci, lentement, cinq fois.';
+  if(d===1&&isBlack(want)){const nw=wkNm(want),sg=nw.includes('♭')?'♭':'♯';return `${nw}, pas ${wkNm(got)} : le ${sg} vaut jusqu’à la barre. Touche noire juste à ${got<want?'droite':'gauche'}.`;}
   if(d===1)return 'Un demi-ton à côté : regarde le ♯ ou le ♭, à la clé ou devant la note.';
   if(d===2)return 'La note voisine : ligne ou interligne ? Relis-la sur la portée.';
   return `Vérifie la position de ta main${fg?` : doigt ${fg} sur ${wkNm(want)}`:''}.`;}
@@ -2398,7 +2411,7 @@ function renderTips(){const i=(tipIndex(new Date())+tipShift)%TIPS.length,[c,x]=
 /* ---------- Rangement des morceaux ---------- */
 // Même ordre partout : Séance, Enchaînements, Répertoire, Tempo.
 const GROUPS=[
-  ['Niveau 1 · Débutant',['melodies','poney','jig','playtune','hymne','fontaine','tabac','clair','frere','twinkle','wenceslas','sourire']],
+  ['Niveau 1 · Débutant',['melodies','poney','jig','playtune','hymne','fontaine','tabac','clair','frere','twinkle','wenceslas','sourire','sourireFa']],
   ['Niveau 2 · Facile',['allegretto','divertissement','lapin','tambourin','chantmodal','cancan','orientale','letitbe','imagine','bebe','candeur','bach120']],
   ['Niveau 3 · Intermédiaire',['arabesqueb','schumann1','bach846']],
   ['Niveau 4 · Avancé',['alkan311g','alkan311','alkan8','liszt3','odysseus']],
