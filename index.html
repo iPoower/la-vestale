@@ -1213,6 +1213,22 @@ function wkEvLabel(e,hand){if(!e[0])return 'silence ('+durName(e[1])+')';
   return (e[3]&&e[0].length>1?(hand==='lh'&&LHNAME[e[3]]||'accord '+e[3])+' : ':'')+notes+fg+' ('+durName(e[1])+')';}
 function wkJoin(evs,hand){const out=[];evs.map(e=>wkEvLabel(e,hand)).forEach(s=>{const l=out[out.length-1];if(l&&l.s===s)l.n++;else out.push({s,n:1});});return out.map(o=>esc(o.s)+(o.n>1?' ×'+o.n:'')).join(' · ');}
 function wkScroll(){if(!WKKB)return;const b=workBars(WK.id)[WK.bar];const ms=[];if(WK.hands!=='lh')b.rh.forEach(e=>e[0]&&ms.push(...e[0]));if(WK.hands!=='rh')b.lh.forEach(e=>e[0]&&ms.push(...e[0]));if(ms.length)WKKB.scrollTo(Math.round((Math.min(...ms)+Math.max(...ms))/2));}
+// Comptage et « pourquoi » des durées (mesures simples : la noire vaut 1 temps).
+const DUR_WHY=[[4,'Ronde','tête blanche, sans hampe','4 temps'],[3,'Blanche pointée','blanche suivie d’un point : le point ajoute la moitié, 2 + 1','3 temps'],[2,'Blanche','tête blanche avec une hampe','2 temps'],[1.5,'Noire pointée','noire suivie d’un point : 1 + ½','1 temps et demi'],[1,'Noire','tête noire avec une hampe','1 temps'],[.75,'Croche pointée','croche suivie d’un point : ½ + ¼','¾ de temps'],[.5,'Croche','noire avec un crochet, ou reliée à sa voisine par une barre','½ temps, on compte « 1 et »'],[.25,'Double croche','deux crochets ou deux barres','¼ de temps']];
+const near=(a,b)=>Math.abs(a-b)<1e-6;
+const beatTxt=d=>{const w=DUR_WHY.find(x=>near(x[0],d));return w?w[3]:String(+d.toFixed(3)).replace('.',',')+' temps';};
+function wkEvShort(e,hand){if(!e[0])return 'silence';if(hand==='lh'&&e[3]&&e[0].length>1)return LHNAME[e[3]]||'accord '+e[3];const fl=WORK[WK.id].flats;return e[0].map(m=>(fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m)).join(' + ');}
+function wkCount(evs,hand,off){const w=WORK[WK.id];if(w.beat||!Number.isInteger(w.bpb))return '';
+  const all=[off,...evs.map(e=>e[1])];const step=all.every(x=>near(x,Math.round(x)))?1:all.every(x=>near(x*2,Math.round(x*2)))?.5:0;if(!step)return '';
+  let t=off;const parts=evs.map(e=>{const syl=[];for(let p=t;p<t+e[1]-1e-6;p+=step)syl.push(near(p,Math.round(p))?String(Math.round(p)+1):'et');t+=e[1];return esc(wkEvShort(e,hand))+' ('+syl.join(' ')+')';});
+  return `<p class="wk-count"><b>Compte</b> : ${parts.join(' · ')}</p>`;}
+function wkWhy(b,off){const w=WORK[WK.id],evs=[...(WK.hands!=='lh'?b.rh:[]),...(WK.hands!=='rh'?b.lh:[])];
+  const seen=DUR_WHY.filter(x=>evs.some(e=>e[0]&&near(e[1],x[0])));const rest=evs.some(e=>!e[0]);if(!seen.length&&!rest)return '';
+  let h=seen.map(x=>`<li><b>${x[1]}</b> : ${x[2]}. Elle dure ${x[3]}.</li>`).join('');
+  if(rest)h+='<li><b>Silence</b> : on ne joue pas, mais on continue de compter.</li>';
+  let m='';if(!w.beat&&Number.isInteger(w.bpb)){const ev=WK.hands!=='lh'?b.rh:b.lh,sum=ev.reduce((a,e)=>a+e[1],0);
+    m=`<p>Chaque mesure contient ${w.bpb} temps : c’est le chiffre du haut au début de la partition, et la noire vaut 1 temps.`+(ev.length?` Ici : ${ev.map(e=>String(+e[1].toFixed(3)).replace('.',',')).join(' + ')} = ${String(+sum.toFixed(3)).replace('.',',')}`+(near(sum,w.bpb)?', la mesure est complète.':off?', mesure incomplète (anacrouse) : la musique commence sur un temps de levée.':'.'):'')+'</p>';}
+  return `<details class="wk-why"${WK.why?' open':''}><summary>Pourquoi ces durées ?</summary>${m}<ul>${h}</ul></details>`;}
 function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0,Math.min(bars.length-1,WK.bar));const b=bars[WK.bar];
   $('#wk-pos').textContent=`Mesure ${WK.bar+1}/${bars.length}`;$('#wk-src').textContent=w.src;$('#wk-pdf').innerHTML=PDF[WK.id]?pdfLink(WK.id):'';
   $$('#wk-hands button').forEach(x=>x.classList.toggle('on',x.dataset.h===WK.hands));
@@ -1221,7 +1237,8 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   if(WK.hands!=='lh')mark(b.rh,'hl');if(WK.hands!=='rh')mark(b.lh,'hl2');
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
-  $('#wk-info').innerHTML=h;$('#wk-key').textContent=keyLine(dcKey(WK.id));wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);wkHist();$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
+  {const off=WK.bar===0&&w.pickup?w.bpb-w.pickup:0;h+=WK.hands!=='lh'?wkCount(b.rh,'rh',off):wkCount(b.lh,'lh',off);h+=wkWhy(b,off);}
+  $('#wk-info').innerHTML=h;{const d=$('#wk-info .wk-why');if(d)d.addEventListener('toggle',()=>{WK.why=d.open;});}$('#wk-key').textContent=keyLine(dcKey(WK.id));wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);wkHist();$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
   $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach()){renderCoach();renderDc();renderPz();}}
 function wkGo(bar){stopBus();WK.range=null;WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
