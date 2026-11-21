@@ -7,7 +7,7 @@ test('S1. sept morceaux libres, rangés et attribués ; Clair de lune en 9/8 (tr
   // @ts-ignore
   const r = await page.evaluate(() => ['candeur', 'arabesqueb', 'schumann1', 'bach846', 'alkan311', 'liszt3', 'clairlune'].map(id => [id, workBars(id).length, WORK[id].bpb, /Mutopia/.test(WORK[id].src)]));
   expect(r).toEqual([['candeur', 23, 4, true], ['arabesqueb', 33, 2, true], ['schumann1', 22, 2, true], ['bach846', 35, 4, true], ['alkan311', 10, 4, true], ['liszt3', 61, 4, true], ['clairlune', 72, 4.5, true]]);
-  await expect(page.locator('#wk-piece optgroup[label="Niveau 4 · Avancé"] option')).toHaveText(['Prélude op. 31 n° 1 — Alkan', 'La chanson de la folle — Alkan', 'Consolation n° 3 — Liszt']);
+  await expect(page.locator('#wk-piece optgroup[label="Niveau 4 · Avancé"] option')).toHaveText(['Les accords d’Alkan (Prélude n° 1, simplifié)', 'Prélude op. 31 n° 1 — Alkan', 'La chanson de la folle — Alkan', 'Consolation n° 3 — Liszt']);
   await expect(page.locator('#wk-piece optgroup[label="Niveau 5 · Objectif"] option')).toHaveText(['Clair de lune — Debussy']);
   await page.locator('#wk-piece').selectOption('liszt3');
   await expect(page.locator('#wk-src')).toContainText('Creative Commons BY 3.0');
