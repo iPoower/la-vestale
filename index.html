@@ -189,6 +189,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0}
 .key.accd{box-shadow:inset 0 0 0 4px #ff5a1f,0 0 0 2px #ff5a1f!important;z-index:2}.wk-accd{color:#e9a36b}
 .q4-t{border-collapse:collapse;margin:8px 0;font-size:.95rem}.q4-t th,.q4-t td{border:1px solid var(--ligne);padding:6px 10px;text-align:center}.q4-t tbody th{text-align:left;font-weight:600}
+.wk-lad{margin-top:6px}.go-resume{width:100%;margin-top:8px;min-height:44px}
 .pc-grp{margin:10px 0}.pc-grp>summary.grp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:6px 12px;margin:0;border:1px solid var(--ligne);border-radius:12px;background:var(--bois2);cursor:pointer;list-style:none}
 .pc-grp>summary.grp-h::-webkit-details-marker{display:none}.pc-grp>summary.grp-h::after{content:'▸';color:var(--laiton)}.pc-grp[open]>summary.grp-h::after{content:'▾'}
 .pc-grp[open]>summary.grp-h{margin-bottom:8px}
@@ -323,6 +324,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div class="card hero">
     <div class="eyebrow" id="today-date">Aujourd’hui</div>
     <button class="btn primary go-big" id="go-seance" type="button">▶ Commencer ma séance · 30 min</button>
+    <button class="btn go-resume" id="go-resume" type="button"></button>
     <h1 id="today-title">Plan du jour</h1>
     <p id="today-desc" class="muted"></p>
     <div class="row" id="today-actions"></div>
@@ -380,6 +382,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div id="wk-thru-row" hidden><p class="small muted">« Depuis le début » : les mesures déjà vues restent affichées au-dessus, et « Écouter » les joue d’un coup jusqu’à la mesure en cours. Au micro, joue-les d’affilée : on ne s’arrête pas sur une faute, le bilan vient à la fin.</p><div class="row"><button class="btn" id="wk-thru">🎤 Tout rejouer au micro</button></div></div>
     <label class="field">Tempo : noire = <b id="wk-bpm-v">60</b><input type="range" id="wk-bpm" min="40" max="100" value="60"></label>
     <div class="row between"><div class="ladder" id="wk-dots"><i></i><i></i><i></i></div><span class="small muted" id="wk-msg">Joue la mesure, puis dis-moi si c’était propre.</span></div>
+    <div class="row wk-lad" id="wk-lad" hidden><button class="btn primary" id="wk-lad-yes"></button><button class="btn" id="wk-lad-no">Non, je reste</button></div>
+    <p class="small muted" id="wk-keys">Mains sur le piano : Espace, → ou ↓ (pédale droite) = Propre · ← ou ↑ (pédale gauche) = Raté.</p>
     <div class="row"><button class="btn primary" id="wk-ok">Propre</button><button class="btn" id="wk-ko">Raté</button></div>
   </div>
   <div class="card">
@@ -1282,7 +1286,7 @@ function workBars(id){const w=WORK[id];if(w.bars)return w.bars.map(b=>({rh:b.rh.
 const DUR={4:'ronde',3:'blanche pointée',2:'blanche',1.5:'noire pointée',1:'noire',.75:'croche pointée',.5:'croche',.25:'double croche',.125:'triple croche'};
 const durName=d=>DUR[d]||(String(+d.toFixed(3)).replace('.',',')+' temps');
 const LHNAME={F2:'accord F',Gb:'accord G (grave)',Do:'Do',Bdn:'bourdon Do–Sol',C:'accord C',G7:'accord G7',D:'D (Ré–Fa♯)',C2:'accord C',G2:'accord G',Sol:'Sol',FaD:'Fa♯',Cdm:'accord C (Do–Mi)',Gsg:'accord G (Si–Sol)'};
-let WKKB=null;const WK={id:'hymne',bar:0,hands:'both',okRun:0,span:1};
+let WKKB=null;const WK={id:'hymne',bar:0,hands:'both',okRun:0,koRun:0,prop:null,span:1};
 const FRB=['Do','Ré♭','Ré','Mi♭','Mi','Fa','Sol♭','Sol','La♭','La','Si♭','Si'],ENB=['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
 const nmb=m=>NOMS==='both'?nm1(FRB,m,true)+' ('+nm1(ENB,m,true)+')':nm1(useEN?ENB:FRB,m,true);
 function wkEvLabel(e,hand){if(!e[0])return 'silence ('+durName(e[1])+')';
@@ -1301,18 +1305,56 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
   if(acc.length)h+=`<p class="wk-accd">À contrôler : ${acc.map(m=>`<b>${esc(wkNm(m))}</b>`).join(', ')} (altération écrite devant la note, valable jusqu’à la barre).</p>`;
   $('#wk-info').innerHTML=h;$('#wk-key').textContent=keyLine(dcKey(WK.id));wkStaff(b,WK.bar===0&&w.pickup?w.bpb-w.pickup:0);wkHist();$('#wk-prev').disabled=WK.bar===0;$('#wk-next').disabled=WK.bar===bars.length-1;
-  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach()){renderCoach();renderDc();renderPz();}}
+  $$('#wk-dots i').forEach((d,i)=>d.classList.toggle('on',i<WK.okRun));wkLadShow();wkScroll();if(EC.on&&EC.mode==='play')ecPrep();if(inCoach()){renderCoach();renderDc();renderPz();}}
 // Notes de la mesure qui portent une altération écrite (♯, ♭ ou ♮ devant la note), pour les mains affichées.
 function wkAccd(b){const key=dcKey(WK.id),out=new Set();['rh','lh'].forEach(hd=>{if(WK.hands!=='both'&&WK.hands!==hd)return;const A=staffAcc(b[hd],key);
     b[hd].forEach((e,i)=>{if(e[0])e[0].forEach((m,j)=>{if(A[i]&&A[i][j])out.add(m);});});});
   // une altération vaut jusqu'à la barre : les mêmes notes plus loin dans la mesure sont aussi à contrôler
   return [...out].sort((x,y)=>x-y);}
-function wkGo(bar){stopBus();WK.range=null;WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
+// Échelle de tempo : 3 fois propre → l'app propose +4 (jamais au-delà du tempo cible) ; 3 ratés d'affilée → −4 (jamais
+// sous 40). Une proposition en attente se tranche avec les mêmes gestes : Propre = oui, Raté = non.
+const WK_TARGET={q4do:72,q4sol:80,q4re:80,q4fa:80,sourireFa:80,alkan311g:54};
+function wkTarget(id){const pr=PRESETS.find(x=>x.id===id),t=WK_TARGET[id]||(pr&&pr.max)||(REAL[id]&&REAL[id].tempo)||100;return Math.max(40,Math.min(100,t));}
+const wkBpm=()=>+$('#wk-bpm').value;
+function wkSetBpm(v){const r=$('#wk-bpm');r.value=String(v);$('#wk-bpm-v').textContent=r.value;$('#ec-rz-bpm').textContent=r.value;}
+function wkLadReset(){WK.okRun=0;WK.koRun=0;WK.prop=null;}
+function wkLadShow(){const box=$('#wk-lad');if(!box)return;box.hidden=!WK.prop;if(WK.prop)$('#wk-lad-yes').textContent=`Oui, noire = ${WK.prop.to}`;}
+function wkOk(){if(WK.prop){const to=WK.prop.to;wkSetBpm(to);wkLadReset();$('#wk-msg').textContent=`Tempo : noire = ${to}. Trois fois propre pour aller plus loin.`;renderWork();return;}
+  WK.koRun=0;WK.okRun=Math.min(3,WK.okRun+1);const cur=wkBpm(),tg=wkTarget(WK.id);
+  if(WK.okRun>=3){const c=S.coach=S.coach||{},r=c[WK.id]=c[WK.id]||{b:{},c:{}};r.bpm=Math.max(r.bpm||0,cur);r.t=Date.now();saveLocal();
+    if(cur<tg){WK.prop={to:Math.min(cur+4,tg),dir:'up'};$('#wk-msg').textContent=`Trois fois propre à ${cur}. Passer à ${WK.prop.to} ? Propre (ou pédale droite) = oui · Raté (ou pédale gauche) = non.`;}
+    else $('#wk-msg').textContent=`Trois fois propre au tempo cible (${tg}) : ${WK.bar<workBars(WK.id).length-1?'passe à la mesure suivante, puis enchaîne avec « Depuis le début ».':'rejoue tout le morceau.'}`;}
+  else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre à noire = ${cur}.`;
+  renderWork();}
+function wkKo(){if(WK.prop){const cur=wkBpm();wkLadReset();$('#wk-msg').textContent=`On reste à noire = ${cur}.`;renderWork();return;}
+  WK.okRun=0;WK.koRun=(WK.koRun||0)+1;const cur=wkBpm();
+  if(WK.koRun>=3&&cur>40){WK.prop={to:Math.max(40,cur-4),dir:'down'};$('#wk-msg').textContent=`Trois ratés d’affilée à ${cur}. Redescendre à ${WK.prop.to} ? Propre = oui · Raté = non.`;}
+  else $('#wk-msg').textContent=WK.koRun>=3?'Raté : main par main, au plus lent, puis les deux mains.':'Raté : main par main, plus lent, puis les deux mains.';
+  renderWork();}
+// Raccourcis : Espace, →, ↓, Page suivante = Propre ; ←, ↑, Page précédente = Raté ; Entrée / Échap tranchent une proposition.
+// Ignorés dans un champ de saisie ou une liste, en dialogue ouvert, en appui maintenu, et à moins de 350 ms d'intervalle.
+const WK_OK_KEYS=[' ','ArrowRight','ArrowDown','PageDown'],WK_KO_KEYS=['ArrowLeft','ArrowUp','PageUp'];let wkKeyAt=0;
+function wkKeysOn(){const v=(location.hash||'#seance').slice(1)||'seance',card=$('#wk-card');if(v!=='coach'&&v!=='seance')return false;if(!card||!card.offsetParent)return false;
+  const dlg=$('#dlg');if(dlg&&dlg.open)return false;const a=document.activeElement;
+  if(a&&(a.isContentEditable||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||(a.tagName==='INPUT'&&a.type!=='range'&&a.type!=='checkbox')))return false;return true;}
+function wkKey(e){if(e.altKey||e.ctrlKey||e.metaKey)return;const k=e.key,ok=WK_OK_KEYS.includes(k),ko=WK_KO_KEYS.includes(k),dec=(k==='Enter'||k==='Escape')&&WK.prop;
+  if(!ok&&!ko&&!dec)return;if(!wkKeysOn())return;if(typeof RY!=='undefined'&&RY.listening&&k===' ')return;
+  e.preventDefault();if(e.repeat)return;const now=performance.now();if(now-wkKeyAt<350)return;wkKeyAt=now;
+  if(ok||k==='Enter')wkOk();else wkKo();}
+// Reprendre : la prochaine révision due, sinon le dernier morceau travaillé à son dernier tempo propre, sinon les 4 accords en Sol à 50.
+function resumeTarget(){const due=dueBars()[0];if(due)return {id:due.id,b:due.b,bpm:(S.coach[due.id]||{}).bpm||null,why:'révision du jour'};
+  let best=null,bt=0;Object.entries(S.coach||{}).forEach(([id,c])=>{if(WORK[id]&&(c.t||0)>bt){bt=c.t;best=id;}});
+  if(best){const n=workBars(best).length,rp=S.rep[best]||{};return {id:best,b:Math.min(n-1,rp.m||0),bpm:S.coach[best].bpm||rp.bpm||null,why:'là où tu t’es arrêté'};}
+  return {id:'q4sol',b:0,bpm:50,why:'pour commencer'};}
+function renderResume(){const b=$('#go-resume');if(!b)return;const r=resumeTarget(),w=WORK[r.id];if(!w){b.hidden=true;return;}b.hidden=false;
+  b.textContent=`↻ Reprendre ${r.why === 'révision du jour' ? '(révision du jour)' : ''} : ${w.t.replace(/ —.*$/,'')} · mesure ${r.b+1}${r.bpm?' · noire = '+r.bpm:''}`.replace('Reprendre  :','Reprendre :');}
+function goResume(){const r=resumeTarget();if(!WORK[r.id])return;stopBus();location.hash='#coach';WK.hands='both';if(WK.id!==r.id)wkSelect(r.id);if(r.bpm)wkSetBpm(Math.max(40,Math.min(100,r.bpm)));wkLadReset();setTimeout(()=>handleExtra('bar:'+r.id+':'+r.b),60);}
+function wkGo(bar){stopBus();WK.range=null;WK.bar=bar;wkLadReset();$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
   if(!ms.length)ms.push(60,72);let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
   WKKB=makeKeyboard($('#kb-wk'),lo,hi,{fit:'always'});WKKB.labels();}
-function wkSelect(id){if(!WORK[id])return;stopBus();WK.thru=null;WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;wkBuild();renderWork();}
+function wkSelect(id){if(!WORK[id])return;stopBus();WK.thru=null;WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;wkLadReset();wkBuild();renderWork();}
 // Mesures jouées : la mesure courante, ou elle et la suivante (« 2 mesures »).
 function wkSeg(){const bars=workBars(WK.id);if(WK.range)return bars.slice(WK.range[0],WK.range[1]+1);if(WK.span===0)return bars.slice(0,WK.bar+1);return bars.slice(WK.bar,WK.bar+(WK.span===2&&WK.bar<bars.length-1?2:1));}
 // « Depuis le début » : les mesures déjà vues, en petit, au-dessus de la mesure en cours.
@@ -2573,7 +2615,7 @@ const PLAN={
   0:{t:'Tambourin, Poney ou Chant modal',d:'Facultatif. Choisis une difficulté et termine sur une réussite.',piece:'tambourin',pass:'Une cellule de croches au tempo qui reste propre',go:[['Métronome','#tempo','preset:tambourin']]}
 };
 function today(){return PLAN[new Date().getDay()];}
-function renderToday(){const d=new Date(),p=today();$('#today-date').textContent=`${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;$('#today-title').textContent=p.t;$('#today-desc').textContent=p.d;
+function renderToday(){renderResume();const d=new Date(),p=today();$('#today-date').textContent=`${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;$('#today-title').textContent=p.t;$('#today-desc').textContent=p.d;
   $('#today-actions').innerHTML=`<a class="btn" style="text-decoration:none" href="#seance" data-extra="jour">Voir le programme</a>`+p.go.map(g=>`<a class="btn" style="text-decoration:none" href="${g[1]}" data-extra="${g[2]||''}">${esc(g[0])}</a>`).join('');
   const w=weekMinutes();$('#k-week').textContent=w;$('#k-week-bar').style.width=Math.min(100,w/180*100)+'%';$('#k-streak').textContent=streak();$('#k-total').textContent=S.seances.length;}
 
@@ -2782,7 +2824,7 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   $('#wk-card h2').textContent=v==='coach'?'2. Jouer':'Travailler un morceau';if(v==='coach'){renderDc();renderPz();}else dcStop();
   if(v==='seance'&&$('#wk-card').previousElementSibling!==$('#wk-home'))$('#wk-home').after($('#wk-card'));
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
-  if(v==='seance'){setTimeout(wkScroll,30);if(!RUN.on&&!RUN.acc&&!RUN.idx)renderBlocks();}   // séance du jour à jour (Coach, Solfège, date)
+  if(v==='seance'){renderResume();setTimeout(wkScroll,30);if(!RUN.on&&!RUN.acc&&!RUN.idx)renderBlocks();}   // séance du jour à jour (Coach, Solfège, date)
   if(v==='lecture'&&!lecCur)lecNew();
   if(v==='alkan')renderAlkan();
   if(v==='accords4')renderQ4();
@@ -2870,10 +2912,14 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)lockSync();});
   $('#wk-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();renderWork();});
   $('#wk-prev').onclick=()=>wkGo(WK.bar-1);$('#wk-next').onclick=()=>wkGo(WK.bar+1);$('#wk-play').onclick=()=>{WK.range=null;playWork();};$('#wk-stop').onclick=wkStop;
-  $('#wk-bpm').addEventListener('input',e=>{$('#wk-bpm-v').textContent=e.target.value;$('#ec-rz-bpm').textContent=e.target.value;});
+  $('#wk-bpm').addEventListener('input',e=>{$('#wk-bpm-v').textContent=e.target.value;$('#ec-rz-bpm').textContent=e.target.value;wkLadReset();wkLadShow();$$('#wk-dots i').forEach(d=>d.classList.remove('on'));});
+  $('#wk-bpm').addEventListener('change',e=>e.target.blur());
   $('#ec-rz').addEventListener('change',e=>{RZ.on=e.target.checked&&EC.on&&EC.mode==='play';if(EC.on&&EC.mode==='play'){RZ.adv=false;ecPrep();}if(!RZ.on)$('#ec-beat').classList.add('hidden');});
-  $('#wk-ok').onclick=()=>{WK.okRun++;if(WK.okRun>=3){WK.okRun=3;$('#wk-msg').textContent=WK.bar<workBars(WK.id).length-1?'Trois fois propre : passe à la mesure suivante, puis choisis « 2 mesures » pour les enchaîner.':'Trois fois propre sur la dernière mesure : rejoue tout le morceau, lentement.';}else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre.`;renderWork();};
-  $('#wk-ko').onclick=()=>{WK.okRun=0;$('#wk-msg').textContent='Raté : main par main, plus lent, puis les deux mains.';renderWork();};
+  $('#wk-ok').onclick=e=>{e.currentTarget.blur();wkOk();};
+  $('#wk-ko').onclick=e=>{e.currentTarget.blur();wkKo();};
+  $('#wk-lad-yes').onclick=e=>{e.currentTarget.blur();wkOk();};$('#wk-lad-no').onclick=e=>{e.currentTarget.blur();wkKo();};
+  addEventListener('keydown',wkKey);
+  $('#go-resume').onclick=goResume;
   $('#mg-sel').innerHTML=Object.entries(MG).map(([k,x])=>`<button data-g="${k}">${esc(x.t)}</button>`).join('');selectMg(curMg);
   $('#mg-sel').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(b)selectMg(b.dataset.g);});$('#mg-play').onclick=playMg;
   $('#chord-chips').innerHTML=CHORD_LIST.map(c=>`<button class="chip${c===curChord?' on':''}" data-c="${c}">${c}</button>`).join('');

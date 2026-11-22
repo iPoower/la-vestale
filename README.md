@@ -81,6 +81,10 @@ Case « Vérifier aussi le rythme » (Séance et Coach) : un décompte d'une mes
 
 Dans « Jouer », les notes qui portent une altération écrite dans la mesure (♯, ♭ ou ♮ devant la note, hors armure) sont entourées en orange sur le clavier, avec un rappel « À contrôler : Fa♯4… ». Au micro, une note naturelle jouée à la place d'une note altérée donne un conseil précis (« Fa♯4, pas Fa4 : le ♯ vaut jusqu'à la barre. Touche noire juste à droite. »). Pour Il y a ton sourire (sans armure), l'exercice « contrôle du Fa♯ » enchaîne G → D → Em, là où le Fa♯ arrive et repart.
 
+### Échelle de tempo, raccourcis et « Reprendre »
+
+Dans Jouer, trois fois « Propre » d'affilée : l'app propose +4 au tempo (jamais au-delà du tempo cible du morceau, 100 au plus) et retient ton dernier tempo propre ; trois « Raté » d'affilée : elle propose −4 (jamais sous 40). Elle propose sans imposer : « Propre » accepte, « Raté » refuse ; changer le tempo à la main, de mesure ou de morceau remet les séries à zéro. Raccourcis, mains sur le piano : Espace, →, ↓ ou Page suivante = Propre ; ←, ↑ ou Page précédente = Raté (pédales tourne-page Bluetooth) ; appui maintenu et doubles appuis à moins de 350 ms ignorés ; inactifs dans un champ ou une liste. Aujourd'hui › « Reprendre » ouvre la révision due, sinon le dernier morceau travaillé à son dernier tempo propre, sinon les 4 accords en Sol à 50. L'échelle du métronome (Plus › Tempo) reste automatique (+4 après 3 réussites, −4 après 2 ratés).
+
 ### Les 4 accords
 
 Apprendre › 4 accords : les accords I, IV, V et vi (en Do : C F G Am ; en Sol : G C D Em), base de la plupart des chansons de ton répertoire (Let It Be, Il y a ton sourire…). Quatre exercices jouables au micro (Do, Sol, Ré, Fa), en positions proches à la main droite et basse à la main gauche, deux accords par mesure ; tonalité et armure écrites (Sol : positions de la feuille d'Il y a ton sourire). Progression d'après les mesures jouées propres ; la première tonalité non acquise est recommandée. Oreille › « I, IV, V ou vi » : Do de référence, puis un accord à reconnaître.

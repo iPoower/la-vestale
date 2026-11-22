@@ -92,14 +92,16 @@ test('T6. écouter la mesure, en boucle : le son revient au tour suivant', async
   await expect(page.locator('#kb-wk .key.next')).toHaveCount(0);
 });
 
-test('T7. trois fois « Propre » : conseil d’enchaîner ; « Raté » remet à zéro', async ({ page }) => {
+test('T7. trois fois « Propre » : l’app propose +4 (sans l’imposer) ; « Raté » refuse et remet à zéro', async ({ page }) => {
   await page.goto('./#seance');
-  for (let i = 1; i <= 2; i++) { await page.locator('#wk-ok').click(); await expect(page.locator('#wk-msg')).toHaveText(`${i}/3 fois propre.`); }
+  for (let i = 1; i <= 2; i++) { await page.locator('#wk-ok').click(); await expect(page.locator('#wk-msg')).toHaveText(`${i}/3 fois propre à noire = 60.`); }
   await page.locator('#wk-ok').click();
-  await expect(page.locator('#wk-msg')).toContainText('passe à la mesure suivante');
+  await expect(page.locator('#wk-msg')).toContainText('Passer à 64 ?');
   await expect(page.locator('#wk-dots i.on')).toHaveCount(3);
-  await page.locator('#wk-ko').click();
+  await page.locator('#wk-ko').click();                                            // « non, je reste »
+  await expect(page.locator('#wk-msg')).toHaveText('On reste à noire = 60.');
   await expect(page.locator('#wk-dots i.on')).toHaveCount(0);
+  await expect(page.locator('#wk-bpm')).toHaveValue('60');
 });
 
 test('T8. depuis le répertoire, « Mesure par mesure » ouvre le bon morceau dans Séance', async ({ page }) => {
