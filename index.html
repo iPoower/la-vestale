@@ -189,6 +189,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0}
 .key.accd{box-shadow:inset 0 0 0 4px #ff5a1f,0 0 0 2px #ff5a1f!important;z-index:2}.wk-accd{color:#e9a36b}
 .q4-t{border-collapse:collapse;margin:8px 0;font-size:.95rem}.q4-t th,.q4-t td{border:1px solid var(--ligne);padding:6px 10px;text-align:center}.q4-t tbody th{text-align:left;font-weight:600}
+.wk-steps{align-items:center;justify-content:center;gap:12px;margin-top:6px}.wk-steps .btn{min-width:56px}#wk-step-lbl{min-width:7.5em;text-align:center}
 .pc-grp{margin:10px 0}.pc-grp>summary.grp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:6px 12px;margin:0;border:1px solid var(--ligne);border-radius:12px;background:var(--bois2);cursor:pointer;list-style:none}
 .pc-grp>summary.grp-h::-webkit-details-marker{display:none}.pc-grp>summary.grp-h::after{content:'▸';color:var(--laiton)}.pc-grp[open]>summary.grp-h::after{content:'▾'}
 .pc-grp[open]>summary.grp-h{margin-bottom:8px}
@@ -341,6 +342,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <p class="small" id="wk-pdf"></p>
     <div class="seg" id="wk-hands"><button data-h="rh">Main droite</button><button data-h="lh">Main gauche</button><button data-h="both" class="on">Deux mains</button></div>
     <div class="kb-wrap" id="kb-wk"></div>
+    <div class="row wk-steps"><button class="btn" id="wk-step-prev" aria-label="Accord précédent">◀</button><span class="small" id="wk-step-lbl"></span><button class="btn" id="wk-step-next" aria-label="Accord suivant">▶</button></div>
     <div class="small" id="wk-info" aria-live="polite"></div>
     <div class="listen" id="ec-box">
       <div class="row"><button class="btn" id="ec-go">Écoute-moi</button><button class="btn ghost hidden" id="ec-skip">Passer la note</button><span class="score hidden" id="ec-score"></span></div>
@@ -1294,8 +1296,7 @@ function renderWork(){const w=WORK[WK.id],bars=workBars(WK.id);WK.bar=Math.max(0
   $('#wk-pos').textContent=`Mesure ${WK.bar+1}/${bars.length}`;$('#wk-src').textContent=w.src;$('#wk-pdf').innerHTML=PDF[WK.id]?pdfLink(WK.id):'';
   $$('#wk-hands button').forEach(x=>x.classList.toggle('on',x.dataset.h===WK.hands));
   WKKB.clear();WKKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));WKKB.el.querySelectorAll('.accd').forEach(k=>k.classList.remove('accd'));
-  const mark=(evs,cls)=>{const done={};evs.forEach(e=>{if(!e[0])return;e[0].forEach((m,i)=>{const k=WKKB.keys[m];if(!k)return;k.classList.add(cls);if(e[2]&&!done[m]){done[m]=1;const s=document.createElement('span');s.className='fg';s.textContent=e[2][i];k.appendChild(s);}});});};
-  if(WK.hands!=='lh')mark(b.rh,'hl');if(WK.hands!=='rh')mark(b.lh,'hl2');
+  wkMarkStep();
   const acc=wkAccd(b);acc.forEach(m=>{const k=WKKB.keys[m];if(k)k.classList.add('accd');});
   let h='';if(WK.hands!=='lh')h+=`<p><b>Main droite</b> (touches laiton) : ${wkJoin(b.rh,'rh')}</p>`;
   if(WK.hands!=='rh')h+=`<p><b>Main gauche</b> (touches vertes) : ${wkJoin(b.lh,'lh')}</p>`;
@@ -1307,12 +1308,26 @@ function wkAccd(b){const key=dcKey(WK.id),out=new Set();['rh','lh'].forEach(hd=>
     b[hd].forEach((e,i)=>{if(e[0])e[0].forEach((m,j)=>{if(A[i]&&A[i][j])out.add(m);});});});
   // une altération vaut jusqu'à la barre : les mêmes notes plus loin dans la mesure sont aussi à contrôler
   return [...out].sort((x,y)=>x-y);}
-function wkGo(bar){stopBus();WK.range=null;WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
+// Le clavier n'allume que ce qui se joue ensuite : un « pas » = les notes attaquées au même instant (les notes liées,
+// déjà tenues, ne se rallument pas). Au repos : le pas en cours (◀ ▶) ; pendant l'écoute ou au micro : la note jouée.
+function wkSteps(b){const w=WORK[WK.id],t0=WK.bar===0&&w.pickup?w.bpb-w.pickup:0,map=new Map();
+  ['rh','lh'].forEach(hd=>{if(WK.hands!=='both'&&WK.hands!==hd)return;let t=t0;b[hd].forEach(e=>{if(e[0])e[0].forEach((m,j)=>{if(e[4]&&e[4][j]===0)return;
+      const k=Math.round(t*1e4);if(!map.has(k))map.set(k,{t,rh:[],lh:[]});map.get(k)[hd].push([m,e[2]?e[2][j]:null]);});t+=e[1];});});
+  return [...map.values()].sort((x,y)=>x.t-y.t);}
+function wkMarkStep(){if(!WKKB||!WORK[WK.id])return;const b=workBars(WK.id)[WK.bar];if(!b)return;
+  WKKB.el.querySelectorAll('.key.hl,.key.hl2').forEach(k=>k.classList.remove('hl','hl2'));WKKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
+  const st=wkSteps(b),n=st.length;WK.step=Math.max(0,Math.min(n-1,WK.step||0));const busy=WK.playing||(EC.on&&EC.mode==='play');
+  const lbl=$('#wk-step-lbl');if(lbl)lbl.textContent=n?`Accord ${WK.step+1}/${n}`:'Silence';
+  const pv=$('#wk-step-prev'),nx=$('#wk-step-next');if(pv)pv.disabled=busy||WK.step<=0;if(nx)nx.disabled=busy||WK.step>=n-1;
+  if(busy||!n)return;const cur=st[WK.step];
+  [['rh','hl'],['lh','hl2']].forEach(([hd,cls])=>cur[hd].forEach(([m,f])=>{const k=WKKB.keys[m];if(!k)return;k.classList.add(cls);
+    if(f!=null&&!k.querySelector('.fg')){const sp=document.createElement('span');sp.className='fg';sp.textContent=f;k.appendChild(sp);}}));}
+function wkGo(bar){stopBus();WK.playing=false;WK.step=0;WK.range=null;WK.bar=bar;WK.okRun=0;$('#wk-msg').textContent='Joue la mesure, puis dis-moi si c’était propre.';
   S.rep[WK.id]=Object.assign({stage:0},S.rep[WK.id],{m:WK.bar});saveRep();renderWork();}
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
   if(!ms.length)ms.push(60,72);let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
   WKKB=makeKeyboard($('#kb-wk'),lo,hi,{fit:'always'});WKKB.labels();}
-function wkSelect(id){if(!WORK[id])return;stopBus();WK.thru=null;WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;wkBuild();renderWork();}
+function wkSelect(id){if(!WORK[id])return;stopBus();WK.playing=false;WK.step=0;WK.thru=null;WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;wkBuild();renderWork();}
 // Mesures jouées : la mesure courante, ou elle et la suivante (« 2 mesures »).
 function wkSeg(){const bars=workBars(WK.id);if(WK.range)return bars.slice(WK.range[0],WK.range[1]+1);if(WK.span===0)return bars.slice(0,WK.bar+1);return bars.slice(WK.bar,WK.bar+(WK.span===2&&WK.bar<bars.length-1?2:1));}
 // « Depuis le début » : les mesures déjà vues, en petit, au-dessus de la mesure en cours.
@@ -1332,11 +1347,11 @@ function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=W
   let tb0=start;seg.forEach((b,bi)=>{const tb=tb0;tb0+=b.rh.reduce((a,e)=>a+e[1],0)*spb;if(clicks){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(tb+k*bt*spb,k===0?'acc':'beat',bus);}
     hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0)playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);});const ms=e[0];at(t-a.currentTime,()=>{wkClear();ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));});}t+=e[1]*spb;});});});
   const end=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
-  at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{wkClear();awake('wk',false);});}});}
-function playWork(){ecStop();const a=ac();if(!a)return;const bus=newBus();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
+  at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{wkClear();awake('wk',false);WK.playing=false;wkMarkStep();});}});}
+function playWork(){ecStop();const a=ac();if(!a)return;const bus=newBus();WK.playing=true;wkMarkStep();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
   if($('#wk-click').checked){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(start+k*bt*spb,k===0?'acc':'beat',bus);start+=bpb*spb;}   // décompte d'une mesure
   awake('wk',$('#wk-loop').checked);wkSchedule(bus,start);}
-function wkStop(){stopBus();wkClear();awake('wk',false);}
+function wkStop(){stopBus();wkClear();awake('wk',false);WK.playing=false;wkMarkStep();}
 
 /* ---------- Main gauche ---------- */
 // Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:'notes' = notes imprimées, doigts déduits ;
@@ -1719,7 +1734,7 @@ function ecSeq(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];let t=WK.bar===0&
     return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null,at}:null;}).filter(Boolean);}
 // Réglage du La à plus de 50 cents de 440 Hz : presque toujours une erreur (piano droit ancien : 438 à 442).
 function calFar(){const f=a4(),c=Math.round(1200*Math.log2(f/440));return Math.abs(c)>50?`Ton réglage du La est à ${String(f).replace('.',',')} Hz (${Math.abs(c)} cents ${c<0?'plus bas':'plus haut'} que 440) : s’il est faux, aucune note ne passe. Vérifie « Régler sur mon piano », ou saisis 438 ou 440.`:'';}
-function ecShow(){wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();if(EC.cfI!==EC.i+'|'+WK.bar){EC.cf=0;EC.cfI=EC.i+'|'+WK.bar;}x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
+function ecShow(){wkMarkStep();wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();if(EC.cfI!==EC.i+'|'+WK.bar){EC.cf=0;EC.cfI=EC.i+'|'+WK.bar;}x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
   $('#ec-msg').textContent=(x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`)+(RZ.on?' · '+rzBeat(x.at):'');}
 function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.rzOff=false;EC.rzOk=0;EC.rzN=0;
   if(RZ.on){if(RZ.adv){RZ.adv=false;rzNext();}else rzStart();}EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
@@ -1795,7 +1810,7 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
   $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
   if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();
   const far=calFar();if(far)ecFb(far,'ko');}
-function ecStop(msg){EC.tok++;RZ.on=false;if(REC.on&&!REC.own)recStop();$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
+function ecStop(msg){setTimeout(()=>{if(WKKB&&!(EC.on&&EC.mode==='play'))wkMarkStep();},0);EC.tok++;RZ.on=false;if(REC.on&&!REC.own)recStop();$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
   try{EC.stream.getTracks().forEach(tr=>tr.stop());}catch(e){}try{EC.src.disconnect();}catch(e){}
   EC.on=false;EC_ON=false;EC.mode='';try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   awake('ec',false);wkClear();$('#ec-box').classList.remove('on');$('#kb-wk').classList.remove('ecoute');$('#ec-go').textContent='Écoute-moi';$('#ec-cal-go').textContent='Écouter mon La';$('#ec-skip').classList.add('hidden');
@@ -2869,6 +2884,7 @@ function init(){
   $('#wk-span').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b)return;WK.span=+b.dataset.n;WK.thru=null;S.meta=Object.assign({},S.meta,{span:WK.span});saveLocal();$$('#wk-span button').forEach(x=>x.classList.toggle('on',x===b));wkStop();renderWork();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)lockSync();});
   $('#wk-hands').addEventListener('click',e=>{const b=e.target.closest('button[data-h]');if(!b)return;WK.hands=b.dataset.h;wkStop();renderWork();});
+  $('#wk-step-prev').onclick=()=>{WK.step--;wkMarkStep();};$('#wk-step-next').onclick=()=>{WK.step++;wkMarkStep();};
   $('#wk-prev').onclick=()=>wkGo(WK.bar-1);$('#wk-next').onclick=()=>wkGo(WK.bar+1);$('#wk-play').onclick=()=>{WK.range=null;playWork();};$('#wk-stop').onclick=wkStop;
   $('#wk-bpm').addEventListener('input',e=>{$('#wk-bpm-v').textContent=e.target.value;$('#ec-rz-bpm').textContent=e.target.value;});
   $('#ec-rz').addEventListener('change',e=>{RZ.on=e.target.checked&&EC.on&&EC.mode==='play';if(EC.on&&EC.mode==='play'){RZ.adv=false;ecPrep();}if(!RZ.on)$('#ec-beat').classList.add('hidden');});

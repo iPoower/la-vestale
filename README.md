@@ -81,6 +81,10 @@ Case « Vérifier aussi le rythme » (Séance et Coach) : un décompte d'une mes
 
 Dans « Jouer », les notes qui portent une altération écrite dans la mesure (♯, ♭ ou ♮ devant la note, hors armure) sont entourées en orange sur le clavier, avec un rappel « À contrôler : Fa♯4… ». Au micro, une note naturelle jouée à la place d'une note altérée donne un conseil précis (« Fa♯4, pas Fa4 : le ♯ vaut jusqu'à la barre. Touche noire juste à droite. »). Pour Il y a ton sourire (sans armure), l'exercice « contrôle du Fa♯ » enchaîne G → D → Em, là où le Fa♯ arrive et repart.
 
+### Le clavier, accord par accord
+
+Dans « Jouer », le clavier n'allume que ce qui se joue ensuite : au repos, l'accord en cours de la mesure (main droite en laiton, main gauche en vert, avec les doigtés), et « ◀ ▶ » passe d'un accord à l'autre (« Accord 2/7 ») ; les notes tenues ne se rallument pas. Pendant l'écoute et au micro, seule la note jouée ou attendue s'allume ; à l'arrêt, l'accord en cours revient.
+
 ### Les 4 accords
 
 Apprendre › 4 accords : les accords I, IV, V et vi (en Do : C F G Am ; en Sol : G C D Em), base de la plupart des chansons de ton répertoire (Let It Be, Il y a ton sourire…). Quatre exercices jouables au micro (Do, Sol, Ré, Fa), en positions proches à la main droite et basse à la main gauche, deux accords par mesure ; tonalité et armure écrites (Sol : positions de la feuille d'Il y a ton sourire). Progression d'après les mesures jouées propres ; la première tonalité non acquise est recommandée. Oreille › « I, IV, V ou vi » : Do de référence, puis un accord à reconnaître.
