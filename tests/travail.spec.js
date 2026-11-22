@@ -23,8 +23,11 @@ test('T1. données : chaque mesure fait juste 4 temps aux deux mains, nombre de 
 test('T2. Hymne, mesure 1 : notes et doigts des deux mains sur le clavier', async ({ page }) => {
   await page.goto('./#seance');
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 1/16');
-  expect(await keys(page, 'hl')).toEqual({ Mi5: '3', Fa5: '', Sol5: '5' });      // octave du Do5, comme sur la feuille
+  expect(await keys(page, 'hl')).toEqual({ Mi5: '3' });                         // seul le 1er accord est allumé (octave du Do5)
   expect(await keys(page, 'hl2')).toEqual({ Do3: '5', Mi3: '3', Sol3: '1' });
+  for (let i = 0; i < 3; i++) await page.locator('#wk-step-next').click();          // 4e note : Sol5 avec le 5 ; la ronde de main gauche, tenue, ne se rallume pas
+  expect(await keys(page, 'hl')).toEqual({ Sol5: '5' });
+  expect(await keys(page, 'hl2')).toEqual({});
   await expect(page.locator('#wk-info')).toContainText('Main droite');
   await expect(page.locator('#wk-info')).toContainText('accord C : Do3 + Mi3 + Sol3 · doigts 5-3-1 (ronde)');
   await expect(page.locator('#wk-prev')).toBeDisabled();
@@ -34,8 +37,11 @@ test('T3. navigation : mesure 12 de l’Hymne (D puis G7), dernière mesure, bou
   await page.goto('./#seance');
   for (let i = 0; i < 11; i++) await page.locator('#wk-next').click();
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 12/16');
-  expect(await keys(page, 'hl2')).toEqual({ Si2: '5', 'Ré3': '4', Fa3: '2', 'Fa♯3': '2', Sol3: '1' });
-  expect(await keys(page, 'hl')).toEqual({ Do5: '1', 'Ré5': '2', Sol4: '1' });    // pouce qui redescend sur Sol4
+  expect(await keys(page, 'hl2')).toEqual({ 'Ré3': '4', 'Fa♯3': '2' });             // 1er temps : D à gauche, Do5 à droite
+  expect(await keys(page, 'hl')).toEqual({ Do5: '1' });
+  await page.locator('#wk-step-next').click(); await page.locator('#wk-step-next').click();
+  expect(await keys(page, 'hl2')).toEqual({ Si2: '5', Fa3: '2', Sol3: '1' });        // 3e temps : G7, et le pouce qui redescend sur Sol4
+  expect(await keys(page, 'hl')).toEqual({ Sol4: '1' });
   await expect(page.locator('#wk-info')).toContainText('D (Ré–Fa♯) : Ré3 + Fa♯3 · doigts 4-2 (blanche)');
   for (let i = 0; i < 4; i++) await page.locator('#wk-next').click();
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 16/16');
@@ -109,7 +115,7 @@ test('T8. depuis le répertoire, « Mesure par mesure » ouvre le bon morceau da
   await expect(page.locator('#v-seance')).toBeVisible();
   await expect(page.locator('#wk-piece')).toHaveValue('fontaine');
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 1/12');
-  expect(await keys(page, 'hl')).toEqual({ Sol4: '1', Si4: '' });
+  expect(await keys(page, 'hl')).toEqual({ Sol4: '1' });                            // 1er accord seulement
   expect(await keys(page, 'hl2')).toEqual({ Sol3: '2' });
   await expect.poll(async () => { const b = await page.locator('#wk-card h2').boundingBox(); return !!b && b.y > 0 && b.y < 844; }).toBe(true);
 });

@@ -17,7 +17,8 @@ test('Q1. « Ah ! vous dirai-je maman » et « Good King Wenceslas » : mesures 
   await page.locator('#wk-next').click(); await page.locator('#wk-next').click();
   await expect(page.locator('#wk-info')).toContainText('Main gauche');
   await expect(page.locator('#wk-info')).toContainText('Si3');
-  expect(await page.locator('#kb-wk .key.hl2').count()).toBe(3);         // La3, Sol3, Si3
+  expect(await page.locator('#kb-wk .key.hl2').count()).toBe(1);         // seul le 1er son : La3 (puis Sol3, La3, Si3 avec ▶)
+  await expect(page.locator('#kb-wk .key.hl2')).toHaveAttribute('aria-label', 'La3');
 });
 
 test('Q2. répertoire : chaque morceau sans notes le dit, et propose « Mes partitions »', async ({ page }) => {
