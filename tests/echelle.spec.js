@@ -78,6 +78,7 @@ test('EC2. descente : 3 ratés → « Redescendre à 50 ? » ; Raté = non ; jam
 
 test('EC3. raccourcis : Espace/→/↓/Page suivante = Propre, ←/↑/Page précédente = Raté ; appui maintenu et rebond ignorés ; rien dans une liste ; le curseur ne bouge pas', async ({ page }) => {
   await ouvrir(page, 'q4sol', 50);
+  await page.locator('#wk-staff').scrollIntoViewIfNeeded();                      // on regarde la portée : la carte de travail est à l'écran
   const press = async (key, opts = {}) => { await page.keyboard.press(key, opts); await page.waitForTimeout(400); };
   await press('Space'); await expect(page.locator('#wk-dots i.on')).toHaveCount(1);
   await press('ArrowLeft'); await expect(page.locator('#wk-dots i.on')).toHaveCount(0);
@@ -160,4 +161,43 @@ test('EC5. micro, piano simulé : l’accord de D juste passe ; avec Fa au lieu 
   await expect(page.locator('#ec-fb')).toContainText('Mesure 2 : 1 faute. On la rejoue');   // la faute est comptée : la mesure se rejoue
   // @ts-ignore
   expect(await page.evaluate(() => [WK.bar, EC.i])).toEqual([1, 0]);
+});
+
+test('EC6. garde-fous : clavier libre quand Propre/Raté sont hors de l’écran ; liste sans focus après choix ; question visible ; refus sans relance ; au-dessus de la cible ; tempo du métronome par morceau', async ({ page }) => {
+  // a) Aujourd'hui, carte de travail hors de l'écran : Page suivante fait défiler, rien n'est compté
+  await page.goto('./#seance');
+  // @ts-ignore
+  await page.evaluate(() => { S.meta.tour = 1; renderTour && renderTour(); window.scrollTo(0, 0); });
+  // @ts-ignore
+  expect(await page.evaluate(() => { const r = $('#wk-card').getBoundingClientRect(); return r.top >= innerHeight - 120; })).toBe(true);
+  await page.keyboard.press('PageDown'); await page.waitForTimeout(300);
+  // @ts-ignore
+  expect(await page.evaluate(() => [window.scrollY > 0, WK.okRun])).toEqual([true, 0]);
+  // b) choisir un morceau : la liste rend le focus
+  await page.goto('./#coach');
+  await page.locator('#dc-piece').selectOption('q4sol');
+  // @ts-ignore
+  await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.id)).not.toBe('dc-piece');
+  // c) question visible sur les boutons eux-mêmes ; refus = pas de relance au passage suivant
+  // @ts-ignore
+  await page.evaluate(() => { wkSetBpm(50); wkLadReset(); renderWork(); });
+  for (let i = 0; i < 3; i++) await page.locator('#wk-ok').click();
+  await expect(page.locator('#wk-ok')).toHaveText('Oui → 54');
+  await expect(page.locator('#wk-ko')).toHaveText('Non, je reste');
+  await page.locator('#wk-ko').click();
+  await expect(page.locator('#wk-ok')).toHaveText('Propre');
+  await page.locator('#wk-ok').click();
+  await expect(page.locator('#wk-lad')).toBeHidden();
+  await expect(page.locator('#wk-msg')).toHaveText('1/3 fois propre à noire = 50.');
+  // d) au-dessus du tempo cible (84 > 80) : aucune proposition, message juste
+  // @ts-ignore
+  await page.evaluate(() => { wkSetBpm(84); wkLadReset(); renderWork(); });
+  for (let i = 0; i < 3; i++) await page.locator('#wk-ok').click();
+  await expect(page.locator('#wk-lad')).toBeHidden();
+  await expect(page.locator('#wk-msg')).toContainText('à 84, au-dessus du tempo cible (80)');
+  // e) tempo gardé au métronome : celui du morceau repris, jamais celui d'un autre
+  // @ts-ignore
+  await page.evaluate(() => { S.coach = { cancan: { b: {}, c: {}, t: Date.now() } }; S.rep.cancan = { stage: 1, m: 0, bpm: 66 }; S.rep.hymne = { stage: 1, bpm: 95 }; saveLocal(); });
+  await page.goto('./#seance');
+  await expect(page.locator('#go-resume')).toHaveText('↻ Reprendre : Cancan (travail préparatoire) · mesure 1 · noire = 66');
 });

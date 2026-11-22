@@ -189,7 +189,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0}
 .key.accd{box-shadow:inset 0 0 0 4px #ff5a1f,0 0 0 2px #ff5a1f!important;z-index:2}.wk-accd{color:#e9a36b}
 .q4-t{border-collapse:collapse;margin:8px 0;font-size:.95rem}.q4-t th,.q4-t td{border:1px solid var(--ligne);padding:6px 10px;text-align:center}.q4-t tbody th{text-align:left;font-weight:600}
-.wk-lad{margin-top:6px}.go-resume{width:100%;margin-top:8px;min-height:44px}
+.wk-lad{margin-top:6px}.row.ask{outline:3px solid var(--laiton);outline-offset:4px;border-radius:12px}.go-resume{width:100%;margin-top:8px;min-height:44px}
 .pc-grp{margin:10px 0}.pc-grp>summary.grp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:6px 12px;margin:0;border:1px solid var(--ligne);border-radius:12px;background:var(--bois2);cursor:pointer;list-style:none}
 .pc-grp>summary.grp-h::-webkit-details-marker{display:none}.pc-grp>summary.grp-h::after{content:'▸';color:var(--laiton)}.pc-grp[open]>summary.grp-h::after{content:'▾'}
 .pc-grp[open]>summary.grp-h{margin-bottom:8px}
@@ -1318,12 +1318,13 @@ function wkTarget(id){const pr=PRESETS.find(x=>x.id===id),t=WK_TARGET[id]||(pr&&
 const wkBpm=()=>+$('#wk-bpm').value;
 function wkSetBpm(v){const r=$('#wk-bpm');r.value=String(v);$('#wk-bpm-v').textContent=r.value;$('#ec-rz-bpm').textContent=r.value;}
 function wkLadReset(){WK.okRun=0;WK.koRun=0;WK.prop=null;}
-function wkLadShow(){const box=$('#wk-lad');if(!box)return;box.hidden=!WK.prop;if(WK.prop)$('#wk-lad-yes').textContent=`Oui, noire = ${WK.prop.to}`;}
+function wkLadShow(){const box=$('#wk-lad');if(!box)return;const p=WK.prop;box.hidden=!p;if(p)$('#wk-lad-yes').textContent=`Oui, noire = ${p.to}`;
+  const ok=$('#wk-ok'),ko=$('#wk-ko');ok.textContent=p?`Oui → ${p.to}`:'Propre';ko.textContent=p?'Non, je reste':'Raté';ok.parentNode.classList.toggle('ask',!!p);}
 function wkOk(){if(WK.prop){const to=WK.prop.to;wkSetBpm(to);wkLadReset();$('#wk-msg').textContent=`Tempo : noire = ${to}. Trois fois propre pour aller plus loin.`;renderWork();return;}
   WK.koRun=0;WK.okRun=Math.min(3,WK.okRun+1);const cur=wkBpm(),tg=wkTarget(WK.id);
   if(WK.okRun>=3){const c=S.coach=S.coach||{},r=c[WK.id]=c[WK.id]||{b:{},c:{}};r.bpm=Math.max(r.bpm||0,cur);r.t=Date.now();saveLocal();
     if(cur<tg){WK.prop={to:Math.min(cur+4,tg),dir:'up'};$('#wk-msg').textContent=`Trois fois propre à ${cur}. Passer à ${WK.prop.to} ? Propre (ou pédale droite) = oui · Raté (ou pédale gauche) = non.`;}
-    else $('#wk-msg').textContent=`Trois fois propre au tempo cible (${tg}) : ${WK.bar<workBars(WK.id).length-1?'passe à la mesure suivante, puis enchaîne avec « Depuis le début ».':'rejoue tout le morceau.'}`;}
+    else $('#wk-msg').textContent=`Trois fois propre ${cur>tg?`à ${cur}, au-dessus du tempo cible (${tg})`:`au tempo cible (${tg})`} : ${WK.bar<workBars(WK.id).length-1?'passe à la mesure suivante, puis enchaîne avec « Depuis le début ».':'rejoue tout le morceau.'}`;}
   else $('#wk-msg').textContent=`${WK.okRun}/3 fois propre à noire = ${cur}.`;
   renderWork();}
 function wkKo(){if(WK.prop){const cur=wkBpm();wkLadReset();$('#wk-msg').textContent=`On reste à noire = ${cur}.`;renderWork();return;}
@@ -1335,6 +1336,7 @@ function wkKo(){if(WK.prop){const cur=wkBpm();wkLadReset();$('#wk-msg').textCont
 // Ignorés dans un champ de saisie ou une liste, en dialogue ouvert, en appui maintenu, et à moins de 350 ms d'intervalle.
 const WK_OK_KEYS=[' ','ArrowRight','ArrowDown','PageDown'],WK_KO_KEYS=['ArrowLeft','ArrowUp','PageUp'];let wkKeyAt=0;
 function wkKeysOn(){const v=(location.hash||'#seance').slice(1)||'seance',card=$('#wk-card');if(v!=='coach'&&v!=='seance')return false;if(!card||!card.offsetParent)return false;
+  const r=card.getBoundingClientRect(),vis=Math.min(r.bottom,innerHeight)-Math.max(r.top,0);if(vis<120)return false;   // carte de travail hors de l'écran : le clavier fait défiler la page
   const dlg=$('#dlg');if(dlg&&dlg.open)return false;const a=document.activeElement;
   if(a&&(a.isContentEditable||a.tagName==='TEXTAREA'||a.tagName==='SELECT'||(a.tagName==='INPUT'&&a.type!=='range'&&a.type!=='checkbox')))return false;return true;}
 function wkKey(e){if(e.altKey||e.ctrlKey||e.metaKey)return;const k=e.key,ok=WK_OK_KEYS.includes(k),ko=WK_KO_KEYS.includes(k),dec=(k==='Enter'||k==='Escape')&&WK.prop;
@@ -2914,6 +2916,7 @@ function init(){
   $('#wk-prev').onclick=()=>wkGo(WK.bar-1);$('#wk-next').onclick=()=>wkGo(WK.bar+1);$('#wk-play').onclick=()=>{WK.range=null;playWork();};$('#wk-stop').onclick=wkStop;
   $('#wk-bpm').addEventListener('input',e=>{$('#wk-bpm-v').textContent=e.target.value;$('#ec-rz-bpm').textContent=e.target.value;wkLadReset();wkLadShow();$$('#wk-dots i').forEach(d=>d.classList.remove('on'));});
   $('#wk-bpm').addEventListener('change',e=>e.target.blur());
+  ['#dc-piece','#wk-piece'].forEach(q=>$(q).addEventListener('change',e=>setTimeout(()=>e.target.blur(),0)));
   $('#ec-rz').addEventListener('change',e=>{RZ.on=e.target.checked&&EC.on&&EC.mode==='play';if(EC.on&&EC.mode==='play'){RZ.adv=false;ecPrep();}if(!RZ.on)$('#ec-beat').classList.add('hidden');});
   $('#wk-ok').onclick=e=>{e.currentTarget.blur();wkOk();};
   $('#wk-ko').onclick=e=>{e.currentTarget.blur();wkKo();};
