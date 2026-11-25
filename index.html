@@ -194,9 +194,11 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .grp-h{font-size:1.15rem;color:var(--laiton);margin:12px 4px 0}
 .ak-levels{padding-left:0;list-style:none;margin:8px 0}.ak-levels li{border:1px solid var(--ligne);border-radius:12px;padding:10px 12px;margin:8px 0}
 .ak-levels li.rec{border-color:var(--laiton)}.ak-levels .ak-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.ak-levels .ak-s{font-size:.85rem;color:var(--muted);white-space:nowrap}
-.ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0}
+.ak-levels li.done .ak-s{color:var(--vert,#7fb07f)}.ak-chords{padding-left:1.4em;margin:8px 0}.ak-chords li{margin:4px 0;padding:4px 8px;border-radius:8px;cursor:pointer;transition:background .15s}.ak-chords li:hover{background:var(--bois2)}.ak-chords li.now{background:#2a2219;outline:1px solid var(--laiton);color:var(--ivoire)}
 .key.accd{box-shadow:inset 0 0 0 4px #ff5a1f,0 0 0 2px #ff5a1f!important;z-index:2}.wk-accd{color:#e9a36b}
 .q4-t{border-collapse:collapse;margin:8px 0;font-size:.95rem}.q4-t th,.q4-t td{border:1px solid var(--ligne);padding:6px 10px;text-align:center}.q4-t tbody th{text-align:left;font-weight:600}
+.qf-q{font-family:var(--display);font-size:2.1rem;text-align:center;color:var(--ivoire);margin:6px 0 2px;line-height:1.15}
+.qf-pivot{font-size:.85rem;color:var(--laiton);text-align:center;min-height:1.3em}
 .wk-steps{align-items:center;justify-content:center;gap:12px;margin-top:6px}.wk-steps .btn{min-width:56px}#wk-step-lbl{min-width:7.5em;text-align:center}
 .pc-grp{margin:10px 0}.pc-grp>summary.grp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;padding:6px 12px;margin:0;border:1px solid var(--ligne);border-radius:12px;background:var(--bois2);cursor:pointer;list-style:none}
 .pc-grp>summary.grp-h::-webkit-details-marker{display:none}.pc-grp>summary.grp-h::after{content:'▸';color:var(--laiton)}.pc-grp[open]>summary.grp-h::after{content:'▾'}
@@ -495,13 +497,31 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <div class="row between"><h2>Les 4 accords</h2><span class="tag" id="q4-tag"></span></div>
     <p class="small">Dans une tonalité, quatre accords portent la plupart des chansons : le <b>I</b> (le repos), le <b>IV</b>, le <b>V</b> (la tension) et le <b>vi</b> (le relatif mineur). Contrôle-les, et tu tiens une grande partie de ton répertoire.</p>
     <table class="q4-t"><thead><tr><th></th><th>I</th><th>IV</th><th>V</th><th>vi</th></tr></thead>
-      <tbody><tr><th>En Do</th><td>C</td><td>F</td><td>G</td><td>Am</td></tr><tr><th>En Sol</th><td>G</td><td>C</td><td>D</td><td>Em</td></tr></tbody></table>
+      <tbody><tr><th>En Do</th><td>C</td><td>F</td><td>G</td><td>Am</td></tr><tr><th>En Sol</th><td>G</td><td>C</td><td>D</td><td>Em</td></tr><tr><th>En Ré</th><td>D</td><td>G</td><td>A</td><td>Bm</td></tr><tr><th>En Fa</th><td>F</td><td>B♭</td><td>C</td><td>Dm</td></tr></tbody></table>
     <p class="small muted">Let It Be : C G Am F = I V vi IV en Do. Il y a ton sourire : Em C G D = vi IV I V en Sol. La même formule, transposée. C et G servent dans les deux : six accords font toute ta pop. Hymne, Tabac, Cancan : I et V.</p>
+  </div>
+  <div class="card" id="qf-card">
+    <div class="row between"><h2>Flash accords · anglais ⇄ classique</h2><span class="tag" id="qf-tag">0/10</span></div>
+    <p class="small muted">2 minutes par jour pour automatiser tes accords par cœur dans les deux systèmes : dis le nom à voix haute puis plaque-le au piano (ou touche ses notes sur le clavier ci-dessous).</p>
+    <div class="seg" id="qf-set"><button data-s="do" class="on">En Do (C F G Am)</button><button data-s="sol">En Sol (Em C G D)</button><button data-s="cours">Cours (C G7 D)</button><button data-s="pop">6 accords pop</button></div>
+    <div class="seg" id="qf-lang"><button data-l="mix" class="on">Mélange FR ⇄ EN</button><button data-l="en">Anglais (C, Am)</button><button data-l="fr">Classique (Do, La m)</button></div>
+    <div class="qf-q" id="qf-q" aria-live="polite"></div>
+    <div class="qf-pivot" id="qf-pivot" aria-live="polite"></div>
+    <div class="kb-wrap" id="kb-qf"></div>
+    <div class="fb" id="qf-fb" aria-live="polite"></div>
+    <div class="row">
+      <button class="btn primary" id="qf-ok" type="button">✓ Plaqué au piano</button>
+      <button class="btn" id="qf-hear" type="button">▶ Entendre</button>
+      <button class="btn" id="qf-hint" type="button">Indice</button>
+      <button class="btn ghost" id="qf-reset" type="button">Nouvelle série</button>
+    </div>
+    <p class="small muted" id="qf-stat"></p>
   </div>
   <div class="card">
     <h2>Enchaîner sans regarder</h2>
     <p class="small muted">Main droite en positions proches (les doigts bougent le moins possible), basse à la main gauche. Deux accords par mesure, en boucle. Le micro vérifie chaque accord.</p>
     <ol class="ak-levels" id="q4-list"></ol>
+    <div class="row"><button class="btn ghost" id="q4-stop" type="button">■ Stop</button></div>
   </div>
   <div class="card">
     <h2>Reconnaître à l’oreille</h2>
@@ -524,7 +544,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <h2>Les accords d’Alkan</h2>
     <p class="small muted">Prélude op. 31 n° 1, main gauche : deux accords par mesure. Les mêmes familles que dans tes morceaux, en position haute.</p>
     <ol class="ak-chords" id="ak-chords"></ol>
-    <div class="row"><button class="btn primary" id="ak-play">▶ Écouter les accords</button><button class="btn" id="ak-go">Les jouer (version simplifiée)</button></div>
+    <p class="small muted">Touche une mesure pour l’écouter seule. Mesure 9 (A/C♯ et D) : accord d’une octave complète — si la main tire, roule-le doucement de bas en haut ou commence sans la note du haut.</p>
+    <div class="row"><button class="btn primary" id="ak-play">▶ Écouter les accords</button><button class="btn ghost" id="ak-stop" type="button">■ Stop</button><button class="btn" id="ak-go">Les jouer (version simplifiée)</button></div>
   </div>
   <div class="card">
     <h2>Qui était Alkan ?</h2>
@@ -534,8 +555,8 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   <div class="card">
     <h3>À écouter</h3>
     <ul class="small">
-      <li><b>Prélude op. 31 n° 1</b> : lent et chanté, ton premier Alkan (dans l’app).</li>
-      <li><b>La chanson de la folle au bord de la mer</b>, op. 31 n° 8 : la main gauche tout en bas du clavier, la mélodie tout en haut (dans l’app).</li>
+      <li><b>Prélude op. 31 n° 1</b> : lent et chanté, ton premier Alkan. <button class="btn ghost" type="button" data-aklisten="alkan311">▶ Écouter</button></li>
+      <li><b>La chanson de la folle au bord de la mer</b>, op. 31 n° 8 : la main gauche tout en bas du clavier, la mélodie tout en haut. <button class="btn ghost" type="button" data-aklisten="alkan8">▶ Écouter</button></li>
       <li><b>Le chemin de fer</b>, op. 27 (1844) : un train lancé à toute vapeur, l’une des premières musiques sur le chemin de fer.</li>
       <li><b>Esquisse op. 63 n° 4, « Les cloches »</b> : courte, pour ta 3e étape du chemin.</li>
       <li><b>Le Festin d’Ésope</b>, étude op. 39 n° 12 : un thème et 25 variations. L’objectif à long terme.</li>
@@ -576,14 +597,14 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
   </div>
   <div class="card" id="tr-card">
     <div class="row between"><h2>Do Ré Mi ⇄ C D E</h2><span class="tag" id="tr-streak">Série 0</span></div>
-    <p class="small muted">Les deux façons de nommer les notes : Do Ré Mi (France, tes cours) et C D E (anglais : grilles d’accords, Em, G7…). Astuce : <b>La = A</b>, puis on avance dans l’ordre : Si = B, Do = C, Ré = D, Mi = E, Fa = F, Sol = G.</p>
-    <div class="seg" id="tr-lvl"><button data-l="1" class="on">Les 7 notes</button><button data-l="2">Avec ♯ et ♭</button></div>
+    <p class="small muted">Les deux façons de nommer les notes et les accords : Do Ré Mi (classique, tes cours) et C D E (anglais : grilles Am, G7, CM7…). Astuce : <b>La = A</b>, puis tout suit dans l’ordre (Si = B, Do = C, Ré = D, Mi = E, Fa = F, Sol = G).</p>
+    <div class="seg" id="tr-lvl"><button data-l="1" class="on">Les 7 notes</button><button data-l="2">Avec ♯ et ♭</button><button data-l="3">Accords (Am, G7…)</button></div>
     <div class="big" id="tr-q" style="text-align:center;font-size:2rem;margin:10px 0" aria-live="polite"></div>
     <div class="answers" id="tr-ans"></div>
     <div class="fb" id="tr-fb" aria-live="polite"></div>
-    <div class="row between"><div class="score">Juste <b id="tr-ok">0</b> Erreurs <b id="tr-ko">0</b></div><button class="btn" id="tr-next">Suivant</button></div>
+    <div class="row between"><div class="score">Juste <b id="tr-ok">0</b> Erreurs <b id="tr-ko">0</b></div><div class="row"><button class="btn ghost" id="tr-both" type="button">Afficher « Do / C » partout</button><button class="btn" id="tr-next">Suivant</button></div></div>
     <p class="small muted" id="tr-tot"></p>
-    <details class="small"><summary>Tableau des 7 notes</summary><p>Do = C · Ré = D · Mi = E · Fa = F · Sol = G · La = A · Si = B<br>Le dièse et le bémol ne changent pas : Fa♯ = F♯, Si♭ = B♭. Un accord « m » est mineur : Em = Mi mineur.</p></details>
+    <details class="small"><summary>Mémo : 3 ancres et décodeur d’accords</summary><p><b>Les 3 ancres</b> : <b>A = La</b> (diapason), <b>C = Do</b> (Do central C4), <b>F = Fa</b>. Les 3 pièges : <b>G = Sol</b>, <b>B = Si</b>, <b>D / E = Ré / Mi</b>.<br><b>Décodeur d’accords</b> : lettre seule = <b>Majeur</b> (C = Do majeur) · <b>m</b> = <b>mineur</b> (Am = La mineur) · <b>7</b> = septième (G7 = Sol 7) · <b>7M / M7</b> = septième majeure (C7M = Do maj7) · <b>/</b> = basse (F/C = Fa basse Do).</p></details>
   </div>
   <div class="card" id="ry-card">
     <div class="row between"><h2>Rythme</h2><span class="tag" id="ry-tag">Niveau 1</span></div>
@@ -2432,8 +2453,13 @@ function dayPlan(){const id=coachFocus(),w=WORK[id],n=workBars(id).length,day=da
   const dcBars=nx!==null?[nx,nx+1].filter(b=>b<n):[];
   if(nx!==null)out.push(['Déchiffrer 2 mesures',6,`${w.t} : ${listBars(dcBars)}. Nomme les notes, trouve les touches.`,'#coach',`dc:${id}:${nx}`,{k:'dc',piece:id,bars:dcBars}]);else spare+=6;
   out.push([nx!==null?'Jouer ce que tu as lu':'Enchaîner',5+spare,nx!==null?`${w.t} à partir de la mesure ${nx+1}, avec « Écoute-moi », jusqu’à propre.`:`${w.t} en entier, avec « Écoute-moi », sans t’arrêter.`,'#coach',`bar:${id}:${nx!==null?nx:0}`,{k:'play',piece:id,bars:dcBars}]);
-  const sft=sfWeakType(),sfn=(SF_TYPES.find(x=>x[0]===sft)||[0,'mélange'])[1].toLowerCase();
-  out.push(day%2===0?['Solfège',2,`Chrono 1 min : ${sfn}${sft==='mix'?'':' (ton point faible)'}.`,'#solfege','sf:'+sft,{k:'sf'}]:['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille','',{k:'ear'}],pzPlaisir());
+  const sft=sfWeakType(),sfn=(SF_TYPES.find(x=>x[0]===sft)||[0,'mélange'])[1].toLowerCase(),rot=((day%3)+3)%3;
+  const q4Next=(Q4_ORDER.find(([qid])=>q4Prog(qid)[0]<q4Prog(qid)[1])||Q4_ORDER[0])[1];
+  const qfKey=q4Next==='do'||q4Next==='sol'?q4Next:'pop';
+  const bonus=rot===2?['Solfège',2,`Chrono 1 min : ${sfn}${sft==='mix'?'':' (ton point faible)'}.`,'#solfege','sf:'+sft,{k:'sf'}]
+    :rot===1?['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille','',{k:'ear'}]
+    :['Accords & FR⇄EN',2,`Flash accords (${qfKey==='sol'?'Em C G D':qfKey==='do'?'C F G Am':'6 accords pop'}) : 10 accords bilingues sans hésiter.`,'#accords4','qf:'+qfKey,{k:'q4'}];
+  out.push(bonus,pzPlaisir());
   return out;}
 
 /* ---------- Visite guidée : 5 étapes, une fois ---------- */
@@ -2588,21 +2614,30 @@ function myWork(id){const x=S.mine.find(y=>y.id===id);if(!x)return;mineSync();lo
 /* ---------- Noms des notes : Do Ré Mi, C D E ou les deux ---------- */
 function setNoms(n,remember){if(!['fr','en','both'].includes(n))n='fr';NOMS=n;useEN=n==='en';
   $$('#noms button').forEach(x=>x.classList.toggle('on',x.dataset.n===n));
+  const tb=$('#tr-both');if(tb)tb.textContent=n==='both'?'Mode « Do / C » actif ✓':'Afficher « Do / C » partout';
   if(remember)try{localStorage.setItem('vestale-noms',n);}catch(e){}
-  KB.labels();MINI.labels();if(FKB)FKB.labels();MGKB.labels();selectMg(curMg);WKKB.labels();renderWork();renderChordInfo();renderLecAns();if(MYKB){MYKB.labels();myRender();}}
-// Exercice de traduction : une note dans un système, la réponse dans l'autre.
+  KB.labels();MINI.labels();if(FKB)FKB.labels();MGKB.labels();WKKB.labels();if(QFKB)QFKB.labels();selectMg(curMg);renderWork();renderChordInfo();renderLecAns();if(MYKB){MYKB.labels();myRender();}}
+// Exercice de traduction : une note ou un accord dans un système, la réponse dans l'autre.
 const TR_FR=['Do','Ré','Mi','Fa','Sol','La','Si'],TR_EN=['C','D','E','F','G','A','B'];
+const TR_CHORDS=[['C','Do majeur'],['F','Fa majeur'],['G','Sol majeur'],['D','Ré majeur'],['E','Mi majeur'],['A','La majeur'],['B♭','Si♭ majeur'],
+  ['Am','La mineur'],['Dm','Ré mineur'],['Em','Mi mineur'],['Bm','Si mineur'],['G7','Sol 7'],['E7','Mi 7'],['C7M','Do maj7'],['F7M','Fa maj7'],['C/G','Do basse Sol'],['F/C','Fa basse Do']];
 const TR={lvl:1,cur:null,done:false,ok:0,ko:0,run:0};
 // Totaux gardés (et sauvegardés) : depuis le début, pas seulement la séance en cours.
 function renderTrTot(){const n=S.stats.noms,el=$('#tr-tot');if(!el)return;el.textContent=n&&(n.ok+n.ko)?`Depuis le début : ${n.ok} juste${n.ok>1?'s':''} sur ${n.ok+n.ko} · meilleure série ${n.best}`:'';}
 function renderLecTot(){const el=$('#lec-tot');if(!el)return;let ok=0,ko=0;Object.values(S.stats.lecture||{}).forEach(x=>{ok+=x.ok||0;ko+=x.ko||0;});const sp=S.stats.sprint;
   el.textContent=(ok+ko?`Depuis le début : ${ok+ko} notes lues, ${Math.round(100*ok/(ok+ko))} % justes`:'')+(sp&&sp.n?`${ok+ko?' · ':''}meilleur sprint : ${sp.best}/20 en ${sp.sec} s`:'');}
-function trNew(){const i=Math.floor(Math.random()*7),toEN=Math.random()<.5;let acc='';
-  if(TR.lvl===2&&Math.random()<.6)acc=Math.random()<.5?'♯':'♭';
-  const q=(toEN?TR_FR:TR_EN)[i]+acc,good=(toEN?TR_EN:TR_FR)[i]+acc;let opts;
-  if(TR.lvl===1)opts=(toEN?TR_EN:TR_FR).slice();
-  else{const pool=[];(toEN?TR_EN:TR_FR).forEach(n=>['','♯','♭'].forEach(a=>pool.push(n+a)));opts=[good];while(opts.length<6){const c=pool[Math.floor(Math.random()*pool.length)];if(!opts.includes(c))opts.push(c);}opts.sort(()=>Math.random()-.5);}
-  TR.cur={q,good,toEN};TR.done=false;$('#tr-q').textContent=`${q} = ?`;$('#tr-fb').textContent=toEN?'Réponds en anglais (C D E)':'Réponds en Do Ré Mi';$('#tr-fb').className='fb';
+function trNew(){const toEN=Math.random()<.5;let q,good,opts;
+  if(TR.lvl===3){const p=TR_CHORDS[Math.floor(Math.random()*TR_CHORDS.length)];
+    q=toEN?p[1]:p[0];good=toEN?p[0]:p[1];opts=[good];
+    const pool=TR_CHORDS.map(x=>toEN?x[0]:x[1]);
+    while(opts.length<6){const c=pool[Math.floor(Math.random()*pool.length)];if(!opts.includes(c))opts.push(c);}
+    opts.sort(()=>Math.random()-.5);}
+  else{const i=Math.floor(Math.random()*7);let acc='';
+    if(TR.lvl===2&&Math.random()<.6)acc=Math.random()<.5?'♯':'♭';
+    q=(toEN?TR_FR:TR_EN)[i]+acc;good=(toEN?TR_EN:TR_FR)[i]+acc;
+    if(TR.lvl===1)opts=(toEN?TR_EN:TR_FR).slice();
+    else{const pool=[];(toEN?TR_EN:TR_FR).forEach(n=>['','♯','♭'].forEach(a=>pool.push(n+a)));opts=[good];while(opts.length<6){const c=pool[Math.floor(Math.random()*pool.length)];if(!opts.includes(c))opts.push(c);}opts.sort(()=>Math.random()-.5);}}
+  TR.cur={q,good,toEN};TR.done=false;$('#tr-q').textContent=`${q} = ?`;$('#tr-fb').textContent=toEN?'Réponds en anglais (C, Am, G7…)':'Réponds en classique (Do, La mineur…)';$('#tr-fb').className='fb';
   $('#tr-ans').innerHTML=opts.map((o,k)=>`<button class="btn" data-i="${k}" data-v="${esc(o)}">${esc(o)}</button>`).join('');}
 function trAnswer(btn){if(!TR.cur||TR.done)return;TR.done=true;const ok=btn.dataset.v===TR.cur.good;
   $$('#tr-ans button').forEach(b=>{b.disabled=true;if(b.dataset.v===TR.cur.good)b.classList.add('ok');});if(!ok)btn.classList.add('ko');
@@ -2648,7 +2683,7 @@ function renderToday(){const d=new Date(),p=today();$('#today-date').textContent
 
 /* ---------- Séance guidée ---------- */
 const RUN_LS='vestale-seance-v1';
-const emptyRunLog=()=>({piece:'',read:[],played:[],bpms:[],ex:[]});
+const emptyRunLog=()=>({piece:'',read:[],played:[],bpms:[],ex:[],q4:0});
 const runActive=()=>!RUN.done&&(RUN.on||RUN.acc>0||RUN.idx>0);
 function runSave(){try{if(!runActive()){localStorage.removeItem(RUN_LS);return;}
   const bEl=RUN.blockAcc+(RUN.on?(Date.now()-RUN.blockStart)/1000:0);
@@ -2665,16 +2700,19 @@ function runRestore(){try{const j=JSON.parse(localStorage.getItem(RUN_LS)||'null
     read:Array.isArray(lg.read)?lg.read.filter(x=>isObj(x)&&typeof x.id==='string'&&Number.isInteger(x.b)).slice(-80):[],
     played:Array.isArray(lg.played)?lg.played.filter(x=>isObj(x)&&typeof x.id==='string'&&Number.isInteger(x.b)).slice(-80):[],
     bpms:Array.isArray(lg.bpms)?lg.bpms.map(Number).filter(n=>n>=20&&n<=240).slice(-40):[],
-    ex:Array.isArray(lg.ex)?lg.ex.filter(x=>typeof x==='string').slice(-20):[]};
+    ex:Array.isArray(lg.ex)?lg.ex.filter(x=>typeof x==='string').slice(-20):[],
+    q4:intIn(lg.q4,0,500)||0};
   $$('#fmt button').forEach(b=>b.classList.toggle('on',b.dataset.f===FMT));
   $('#t-start').textContent='Reprendre';renderBlocks();tick();}catch(e){}}
 function runLog(kind,val){if(!runActive())return;const lg=RUN.log;
   if(kind==='ex'){if(!lg.ex.includes(val))lg.ex.push(val);}
+  else if(kind==='q4'){lg.q4=Math.max(lg.q4||0,+val||0);}
   else if(kind==='dc'&&WORK[WK.id]&&!WORK[WK.id].ex){if(!lg.piece)lg.piece=WK.id;if(!lg.read.some(x=>x.id===WK.id&&x.b===val))lg.read.push({id:WK.id,b:val});}
   else if(kind==='play'&&WORK[WK.id]&&!WORK[WK.id].ex){if(!lg.piece)lg.piece=WK.id;if(!lg.played.some(x=>x.id===WK.id&&x.b===val))lg.played.push({id:WK.id,b:val});const bpm=+$('#wk-bpm').value;if(bpm>=20&&bpm<=240)lg.bpms.push(bpm);}
   runSave();renderRunBar();}
 function runGoalDone(b){const m=b&&b[5];if(!m)return '';
   if(m.k==='ex')return RUN.log.ex.includes(m.id)?'Exercice lancé ✓':'';
+  if(m.k==='q4')return RUN.log.q4>=10?'10/10 accords ✓':RUN.log.q4?`${RUN.log.q4}/10 accords`:'';
   if(m.k==='dc'&&m.bars&&m.bars.length){const d=(S.coach&&S.coach[m.piece]&&S.coach[m.piece].d)||{};const ok=m.bars.filter(i=>d[i]).length;return ok>=m.bars.length?`${ok}/${m.bars.length} mesures déchiffrées ✓`:'';}
   if((m.k==='play'||m.k==='hard'||m.k==='rev')&&m.piece){const n=RUN.log.played.filter(x=>x.id===m.piece).length;return n?`${n} mesure${n>1?'s':''} jouée${n>1?'s':''} propre${n>1?'s':''} ✓`:'';}
   return '';}
@@ -2834,13 +2872,58 @@ const VIEWS=['seance','coach','clavier','oreille','lecture','solfege','accords4'
 /* ---------- Les 4 accords ---------- */
 const Q4_ORDER=[['q4do','do'],['q4sol','sol'],['q4re','re'],['q4fa','fa']];
 function q4Prog(id){const c=(S.coach&&S.coach[id])||{},b=c.b||{},n=workBars(id).length;let ok=0;for(let i=0;i<n;i++)if(b[i]&&b[i][1]>0)ok++;return [ok,n];}
+function q4Pivots(q){const out=[];for(let i=0;i<q.ch.length;i++){const a=q.ch[i],b=q.ch[(i+1)%q.ch.length];
+  const common=a[1].filter(m=>b[1].includes(m));if(common.length)out.push(`${a[0]}→${b[0]} (${common.map(m=>q.flats?nmb(m):nm(m)).join(', ')})`);}return out;}
 function renderQ4(){const box=$('#q4-list');if(!box)return;let rec=-1,done=0;const P=Q4_ORDER.map(([id])=>q4Prog(id));P.forEach(([a,n],i)=>{if(a>=n)done++;else if(rec<0)rec=i;});
-  box.innerHTML=Q4_ORDER.map(([id,k],i)=>{const q=Q4[k],[a,n]=P[i],ok=a>=n;return `<li class="${ok?'done':''}${i===rec?' rec':''}"><div class="ak-h"><b>${esc(q.t)}</b><span class="ak-s">${ok?'✓ acquis':i===rec?'recommandé · '+a+'/'+n:a+'/'+n}</span></div>
+  box.innerHTML=Q4_ORDER.map(([id,k],i)=>{const q=Q4[k],[a,n]=P[i],ok=a>=n,piv=q4Pivots(q);return `<li class="${ok?'done':''}${i===rec?' rec':''}"><div class="ak-h"><b>${esc(q.t)}</b><span class="ak-s">${ok?'✓ acquis':i===rec?'recommandé · '+a+'/'+n:a+'/'+n}</span></div>
     <p class="small">${esc(q.deg)} : ${q.ch.map(c=>`<b>${esc(c[0])}</b> (${c[1].map(m=>q.flats?nmb(m):nm(m)).join('–')})`).join(' → ')}</p>
-    <p class="small muted">${esc(q.key)}${q.ref?' · comme '+esc(q.ref):''}</p>
+    <p class="small muted">${esc(q.key)}${q.ref?' · comme '+esc(q.ref):''}${piv.length?' · notes pivots : '+esc(piv.join(' ; ')):''}</p>
     <div class="row"><button class="btn${i===rec?' primary':''}" data-q4="${id}">${ok?'Revoir':a?'Continuer':'Jouer au micro'}</button><button class="btn ghost" data-q4l="${id}">▶ Écouter</button></div></li>`;}).join('');
   $('#q4-tag').textContent=`${done}/${Q4_ORDER.length} tonalités`;}
 function q4Open(id){stopBus();location.hash='#coach';WK.hands='both';if(WK.id!==id)wkSelect(id);setTimeout(()=>handleExtra('bar:'+id+':0'),60);}
+
+/* ---------- Flash accords bilingue (FR ⇄ EN) ---------- */
+const QF_DB={
+  C:['C','Do majeur',[60,64,67],[1,3,5]],F:['F','Fa majeur',[60,65,69],[1,3,5]],G:['G','Sol majeur',[59,62,67],[1,2,5]],
+  Am:['Am','La mineur',[60,64,69],[1,2,5]],Dm:['Dm','Ré mineur',[62,65,69],[1,3,5]],Em:['Em','Mi mineur',[59,64,67],[1,3,5]],
+  D:['D','Ré majeur',[57,62,66],[1,3,5]],G7:['G7','Sol 7 (main gauche)',[47,53,55],[5,2,1]]};
+const QF_SETS={do:['C','F','G','Am'],sol:['Em','C','G','D'],cours:['C','G7','D'],pop:['C','F','G','Am','Dm','Em']};
+const QF={set:'do',lang:'mix',cur:null,prev:null,done:0,goal:10,t0:0,times:[],tapped:new Set(),asFR:false,finished:false};
+let QFKB=null,QF_TM=0;
+function qfInit(){if(!QFKB&&$('#kb-qf'))QFKB=makeKeyboard($('#kb-qf'),47,72,{small:true,fit:'always',onKey:qfTap});if(!QF.cur)qfReset();}
+function qfNext(){clearTimeout(QF_TM);QF_TM=0;const pool=QF_SETS[QF.set]||QF_SETS.do;let pick=pool[Math.floor(Math.random()*pool.length)];
+  if(pool.length>1)for(let k=0;k<8&&pick===QF.cur;k++)pick=pool[Math.floor(Math.random()*pool.length)];
+  QF.prev=QF.cur;QF.cur=pick;QF.tapped=new Set();QF.t0=performance.now();
+  QF.asFR=QF.lang==='fr'||(QF.lang==='mix'&&Math.random()<.5);
+  const c=QF_DB[pick],prev=QF.prev?QF_DB[QF.prev]:null;
+  if(QFKB){QFKB.clear();QFKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));}
+  $('#qf-q').textContent=QF.asFR?c[1]:c[0];
+  $('#qf-fb').textContent=QF.asFR?'Dis le symbole anglais puis plaque l’accord.':'Dis le nom français à voix haute puis plaque l’accord.';
+  $('#qf-fb').className='fb';
+  if(prev){const piv=c[2].filter(m=>prev[2].includes(m));
+    $('#qf-pivot').textContent=piv.length?`Note${piv.length>1?'s':''} pivot${piv.length>1?'s':''} depuis ${prev[0]} : ${piv.map(nm).join(', ')} reste${piv.length>1?'nt':''} en place`:`Depuis ${prev[0]} : déplace toute la main avant d’appuyer`;}
+  else $('#qf-pivot').textContent='Touche « Indice » si tu hésites, ou « ▶ Entendre » pour l’oreille.';
+  qfUpdateTag();}
+function qfUpdateTag(){$('#qf-tag').textContent=`${QF.done}/${QF.goal}`;
+  const avg=QF.times.length?(QF.times.reduce((a,x)=>a+x,0)/QF.times.length/1000).toFixed(1).replace('.',','):null;
+  $('#qf-stat').textContent=QF.finished?`Série terminée · ${QF.goal}/${QF.goal}${avg?` · temps moyen ${avg} s par accord`:''}. Bravo !`:(avg?`Temps moyen : ${avg} s par accord`:'Objectif : 10 accords propres d’affilée.');}
+function qfReset(){clearTimeout(QF_TM);QF_TM=0;QF.done=0;QF.times=[];QF.prev=null;QF.cur=null;QF.finished=false;$('#qf-ok').disabled=false;qfNext();}
+function qfPlay(id){const c=QF_DB[id||QF.cur];if(!c)return;const a=ac();if(!a)return;const bus=newBus(),t=a.currentTime+.04;c[2].forEach(m=>playNote(m,t,1.1,.7,bus));}
+function qfShowHint(){const c=QF_DB[QF.cur];if(!c)return;
+  if(QFKB){QFKB.clear();QFKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
+    c[2].forEach((m,i)=>{const k=QFKB.keys[m];if(!k)return;k.classList.add('hl');const sp=document.createElement('span');sp.className='fg';sp.textContent=c[3][i];k.appendChild(sp);});}
+  $('#qf-fb').textContent=`${c[0]} = ${c[1]} · notes : ${c[2].map(nm).join(' – ')} (doigts ${c[3].join('-')})`;$('#qf-fb').className='fb';qfPlay();}
+function qfMarkOk(){if(!QF.cur||QF.finished)return;const c=QF_DB[QF.cur];
+  const dt=Math.min(30000,Math.max(100,performance.now()-QF.t0));QF.times.push(dt);QF.done++;runLog('q4',QF.done);
+  $('#qf-fb').textContent=`Juste ! ${c[0]} = ${c[1]} (${c[2].map(nm).join('–')})`;$('#qf-fb').className='fb ok';
+  if(QF.done>=QF.goal){QF.finished=true;$('#qf-ok').disabled=true;$('#qf-q').textContent='✓ 10/10';$('#qf-pivot').textContent='';qfUpdateTag();return;}
+  qfUpdateTag();clearTimeout(QF_TM);QF_TM=setTimeout(()=>{if(!QF.finished)qfNext();},450);}
+function qfTap(m){if(!QF.cur||QF.finished)return;const c=QF_DB[QF.cur],want=new Set(c[2].map(x=>x%12));
+  playNote(m,ac().currentTime,.6,.65);
+  if(want.has(m%12)){QF.tapped.add(m%12);if(QFKB)QFKB.mark([m],'ok');
+    if([...want].every(pc=>QF.tapped.has(pc)))qfMarkOk();
+    else $('#qf-fb').textContent=`Bien (${nm(m)}) — encore ${want.size-QF.tapped.size} note${want.size-QF.tapped.size>1?'s':''} de l’accord.`;
+  }else{if(QFKB){QFKB.mark([m],'ko');setTimeout(()=>QFKB&&QFKB.clear('ko'),450);}$('#qf-fb').textContent=`${nm(m)} n’est pas dans ${QF.asFR?c[1]:c[0]}. Touche « Indice » si besoin.`;$('#qf-fb').className='fb ko';}}
 
 /* ---------- Alkan à ton niveau ---------- */
 // Nom d'un accord de main gauche, d'après ses notes : C/G, G7, Am… ; null si aucun modèle ne convient.
@@ -2866,14 +2949,25 @@ const AK_LV=[
   {t:'La chanson de la folle',d:'Écouter, puis la main gauche grave : accords tenus tout en bas du clavier.',id:'alkan8',h:'lh',k:['ecoute','lh'],first:2}];
 function akProg(L){if(L.bars){const c=(S.coach&&S.coach[L.id])||{},b=c.b||{},n=workBars(L.id).length;let ok=0;for(let i=0;i<n;i++)if(b[i]&&b[i][1]>0)ok++;return [ok,n];}
   let st=pzSteps(L.id).filter(x=>L.k.includes(x.k));if(L.first)st=st.filter(x=>x.s==null||x.s<L.first-1);return [st.filter(pzDone).length,st.length];}
+let AK_ON=false;
+function akStop(){AK_ON=false;stopBus();$$('#ak-chords li').forEach(l=>l.classList.remove('now'));}
+function akHi(i){$$('#ak-chords li').forEach((l,k)=>l.classList.toggle('now',k===i));}
+function akPlayBar(i){const bs=akBars(),b=bs[i];if(!b)return;const a=ac();if(!a)return;const bus=newBus(),spb=60/54;let t=a.currentTime+.05;
+  AK_ON=true;akHi(i);b.lh.forEach(e=>{if(e[0])e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,.7,bus));t+=e[1]*spb;});
+  at(t-a.currentTime,()=>{if(BUS===bus){AK_ON=false;akHi(-1);}});}
+function akPlayAll(){const bs=akBars(),a=ac();if(!a)return;const bus=newBus(),spb=60/54;let t=a.currentTime+.08;
+  AK_ON=true;bs.forEach((b,i)=>{const s=t;if(i===0)akHi(0);else at(s-a.currentTime,()=>{if(BUS===bus)akHi(i);});
+    b.lh.forEach(e=>{if(e[0])e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,.7,bus));t+=e[1]*spb;});});
+  at(t-a.currentTime,()=>{if(BUS===bus){AK_ON=false;akHi(-1);}});}
 function renderAlkan(){const box=$('#ak-levels');if(!box)return;let rec=-1,done=0;
   const P=AK_LV.map(akProg);P.forEach(([a,n],i)=>{if(a>=n)done++;else if(rec<0)rec=i;});
   box.innerHTML=AK_LV.map((L,i)=>{const [a,n]=P[i],ok=a>=n;return `<li class="${ok?'done':''}${i===rec?' rec':''}"><div class="ak-h"><b>${i+1}. ${esc(L.t)}</b><span class="ak-s">${ok?'✓ acquis':i===rec?'recommandé · '+a+'/'+n:a+'/'+n}</span></div>
     <p class="small muted">${esc(L.d)}</p><div class="row"><button class="btn${i===rec?' primary':''}" data-ak="${i}">${ok?'Revoir':a?'Continuer':'Commencer'}</button></div></li>`;}).join('');
   $('#ak-tag').textContent=`Niveau ${Math.min(done+1,AK_LV.length)}/${AK_LV.length}`;
-  $('#ak-chords').innerHTML=akBars().map((b,i)=>`<li>${b.lh.map(e=>e[0]?`<b>${esc(e[3]||'accord')}</b> (${e[0].map(wkNm).join('–')})`:'silence').join(' → ')}</li>`).join('');
+  $('#ak-chords').innerHTML=akBars().map((b,i)=>`<li data-akbar="${i}" role="button" tabindex="0" aria-label="Écouter la mesure ${i+1}">${b.lh.map(e=>e[0]?`<b>${esc(e[3]||'accord')}</b> (${e[0].map(wkNm).join('–')})`:'silence').join(' → ')}</li>`).join('');
   const c=SF_CULT.find(x=>x[0]==='calkan');if(c)$('#ak-cult').innerHTML=c[2].split('|').map(x=>`<p>${x}</p>`).join('');}
-function akOpen(i){const L=AK_LV[i];if(!L)return;stopBus();location.hash='#coach';WK.hands=L.h;if(WK.id!==L.id)wkSelect(L.id);setTimeout(()=>handleExtra('bar:'+L.id+':0'),60);}
+function akOpen(i){const L=AK_LV[i];if(!L)return;akStop();location.hash='#coach';WK.hands=L.h;if(WK.id!==L.id)wkSelect(L.id);
+  const top=L.k&&L.k.length===1&&L.k[0]==='ecoute';setTimeout(()=>handleExtra((top?'pz:':'bar:')+L.id+':0'),60);}
 /* ---------- Navigation : 5 onglets ; Apprendre et Plus ont des sous-onglets ---------- */
 const NAV={seance:'aujourdhui',coach:'jouer',solfege:'apprendre',lecture:'apprendre',oreille:'apprendre',accords4:'apprendre',alkan:'apprendre',morceaux:'morceaux',clavier:'plus',tempo:'plus',gauche:'plus',astuces:'plus',journal:'plus'};
 const NAV_SUB={apprendre:[['solfege','Solfège'],['lecture','Lecture'],['oreille','Oreille'],['accords4','4 accords'],['alkan','Alkan']],plus:[['clavier','Clavier'],['tempo','Tempo'],['gauche','Main gauche'],['astuces','Astuces'],['journal','Journal']]};
@@ -2884,7 +2978,7 @@ function navSync(v){const g=NAV[v]||'aujourdhui';if(NAV_SUB[g])NAV_LAST[g]=v;
   const sub=$('#subtabs');if(NAV_SUB[g]){sub.innerHTML=NAV_SUB[g].map(([k,l])=>`<a href="#${k}" data-v="${k}"${k===v?' class="on" aria-current="page"':''}>${esc(l)}</a>`).join('');sub.hidden=false;}else{sub.hidden=true;sub.innerHTML='';}}
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));navSync(v);
-  mtChip();if(v!=='seance'&&v!=='coach')ecStop();if(v!=='solfege'&&SF.on)sfStop();if(v==='solfege')renderSolf();
+  mtChip();if(v!=='seance'&&v!=='coach')ecStop();if(v!=='solfege'&&SF.on)sfStop();if(v!=='alkan'&&AK_ON)akStop();if(v==='solfege')renderSolf();
   // Une seule carte « Travailler un morceau » : elle passe dans le Coach, puis revient dans Séance.
   if(v==='coach'&&$('#wk-card').parentNode!==$('#co-slot')){$('#co-slot').appendChild($('#wk-card'));renderCoach();setTimeout(wkScroll,30);}
   $('#wk-card h2').textContent=v==='coach'?'2. Jouer':'Travailler un morceau';if(v==='coach'){renderDc();renderPz();}else dcStop();
@@ -2893,14 +2987,19 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   if(v==='seance'){setTimeout(wkScroll,30);if(!RUN.on&&!RUN.acc&&!RUN.idx){renderToday();renderBlocks();}}   // séance du jour à jour (Coach, Solfège, date)
   if(v==='lecture'&&!lecCur)lecNew();
   if(v==='alkan')renderAlkan();
-  if(v==='accords4')renderQ4();
+  if(v==='accords4'){renderQ4();qfInit();}
   window.scrollTo(0,0);}
 function handleExtra(x){if(!x)return;const [k,v,w]=x.split(':');if(k==='preset')applyPreset(v);
   if(k==='sf'&&SF_GEN[v]||k==='sf'&&v==='mix'){$$('#sf-dur button').forEach(b=>b.classList.toggle('on',b.dataset.d==='1'));sfSelType(v);
     setTimeout(()=>{const c=$('#sf-chrono'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
   if(k==='jour'){if(!RUN.on&&!RUN.acc){FMT='jour';$$('#fmt button').forEach(b=>b.classList.toggle('on',b.dataset.f==='jour'));runReset();}const c=$('#blocks').closest('.card'),nav=$('nav');window.scrollTo(0,c.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);}
-  if((k==='bar'||k==='dc')&&WORK[v]){if(WK.id!==v)wkSelect(v);wkGo(Math.max(0,Math.min(workBars(v).length-1,+w||0)));if(k==='dc')dcStart();
-    setTimeout(()=>{const card=$(k==='dc'?'#dc-card':'#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
+  if((k==='bar'||k==='dc'||k==='pz')&&WORK[v]){if(WK.id!==v)wkSelect(v);wkGo(Math.max(0,Math.min(workBars(v).length-1,+w||0)));if(k==='dc')dcStart();
+    setTimeout(()=>{const card=$(k==='dc'?'#dc-card':k==='pz'?'#pz-card':'#wk-card'),nav=$('nav');if(card)window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
+  if(k==='qf'){if(QF_SETS[v]){QF.set=v;$$('#qf-set button').forEach(b=>b.classList.toggle('on',b.dataset.s===v));qfInit();qfReset();}
+    setTimeout(()=>{const card=$('#qf-card'),nav=$('nav');if(card)window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);},120);}
+  if(k==='prog'){const pid=w?v+':'+w:v,btn=$(`#prog-sel button[data-p="${pid}"]`);if(btn){progStop();curProg=pid;if(realOn()&&pid.startsWith('w:'))progTempo();
+    $$('#prog-sel button').forEach(x=>x.classList.toggle('on',x===btn));renderProg();
+    setTimeout(()=>{const card=$('#prog-sel').closest('.card'),nav=$('nav');if(card)window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);playProg();},120);}}
   if(k==='wk'&&WORK[v]){wkSelect(v);setTimeout(()=>{const card=$('#wk-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);wkScroll();},120);}
   if(k==='mg'&&MG[v]){selectMg(v);setTimeout(()=>{const card=$('#mg-card'),nav=$('nav');window.scrollTo(0,card.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);mgScroll();},120);}
   if(k==='ex'){$$('#ex-list article').forEach(a=>a.classList.remove('ex-pick'));const btn=$(`#ex-list button[data-ex="${v}"]`),card=btn&&btn.closest('article');
@@ -2969,8 +3068,15 @@ function init(){
   $('#ak-go').onclick=()=>akOpen(1);
   $('#q4-list').addEventListener('click',e=>{const b=e.target.closest('button[data-q4]');if(b){q4Open(b.dataset.q4);return;}
     const l=e.target.closest('button[data-q4l]');if(l){const id=l.dataset.q4l;if(WK.id!==id)wkSelect(id);WK.hands='both';WK.range=[0,workBars(id).length-1];playWork();}});
+  $('#q4-stop').onclick=()=>wkStop();
   $('#q4-ear').onclick=()=>{earMode='degre';location.hash='#oreille';setTimeout(()=>{$$('#ear-mode button').forEach(b=>b.classList.toggle('on',b.dataset.m==='degre'));earRenderOpts();earCur=null;earNew();},80);};
-  $('#ak-play').onclick=()=>{if(WK.id!=='alkan311g')wkSelect('alkan311g');WK.hands='lh';WK.range=[0,workBars('alkan311g').length-1];playWork();};
+  $('#qf-set').addEventListener('click',e=>{const b=e.target.closest('button[data-s]');if(!b)return;QF.set=b.dataset.s;$$('#qf-set button').forEach(x=>x.classList.toggle('on',x===b));qfReset();});
+  $('#qf-lang').addEventListener('click',e=>{const b=e.target.closest('button[data-l]');if(!b)return;QF.lang=b.dataset.l;$$('#qf-lang button').forEach(x=>x.classList.toggle('on',x===b));qfNext();});
+  $('#qf-ok').onclick=qfMarkOk;$('#qf-hear').onclick=()=>qfPlay();$('#qf-hint').onclick=qfShowHint;$('#qf-reset').onclick=qfReset;
+  $('#ak-play').onclick=akPlayAll;$('#ak-stop').onclick=akStop;
+  $('#ak-chords').addEventListener('click',e=>{const li=e.target.closest('li[data-akbar]');if(li)akPlayBar(+li.dataset.akbar);});
+  $('#ak-chords').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('li[data-akbar]');if(li){e.preventDefault();akPlayBar(+li.dataset.akbar);}}});
+  $('#v-alkan').addEventListener('click',e=>{const b=e.target.closest('button[data-aklisten]');if(!b)return;akStop();location.hash='#clavier';setTimeout(()=>handleExtra('prog:w:'+b.dataset.aklisten),60);});
   $('#ak-quiz').onclick=()=>{location.hash='#solfege';setTimeout(()=>sfStart('les','culture','calkan'),80);};
   $('#pz-map').addEventListener('click',e=>{const b=e.target.closest('button[data-pz]');if(!b)return;PZ.sel=+b.dataset.pz;PZ.run=0;PZ.live=null;pzFb('','');renderPz();pzScroll();});
   $('#co-reset').onclick=async()=>{if(!(await ask(`Effacer le suivi de « ${WORK[WK.id].t} » (parcours compris) ?`)))return;if(S.coach)delete S.coach[WK.id];saveLocal();renderCoach();renderDc();renderPz();};
@@ -2998,6 +3104,7 @@ function init(){
   {let n='fr';try{n=localStorage.getItem('vestale-noms')||'fr';}catch(e){}if(n!=='fr')setNoms(n,false);}
   trNew();$('#tr-lvl').addEventListener('click',e=>{const b=e.target.closest('button[data-l]');if(!b)return;TR.lvl=+b.dataset.l;$$('#tr-lvl button').forEach(x=>x.classList.toggle('on',x===b));trNew();});
   $('#tr-ans').addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(b)trAnswer(b);});$('#tr-next').onclick=trNew;
+  $('#tr-both').onclick=()=>{const next=NOMS==='both'?'fr':'both';setNoms(next,true);toast(next==='both'?'Mode « Do / C » activé partout':'Retour en Do Ré Mi');};
   $('#chord-chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;curChord=b.dataset.c;$$('#chord-chips .chip').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#inv').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;curInv=+b.dataset.i;$$('#inv button').forEach(x=>x.classList.toggle('on',x===b));renderChordInfo();playChord(curChord,curInv,false);});
   $('#with-bass').addEventListener('change',renderChordInfo);

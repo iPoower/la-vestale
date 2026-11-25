@@ -1,5 +1,5 @@
 // La Vestale : fonctionne hors ligne. Changer VERSION à chaque mise à jour.
-const VERSION = 'la-vestale-v63';
+const VERSION = 'la-vestale-v64';
 const NAV_WAIT_MS = 3000;   // au-delà, la page s'ouvre depuis le cache (le réseau finit en arrière-plan)
 const FONTS = ['atkinson-hyperlegible-latin-400', 'atkinson-hyperlegible-latin-700', 'cormorant-garamond-latin-500', 'cormorant-garamond-latin-600',
   'cormorant-garamond-latin-700', 'noto-music-latin-400', 'noto-music-clefs-400'].map(f => './fonts/' + f + '.woff2');
