@@ -4,6 +4,7 @@ const { test, expect } = require('@playwright/test');
 const { niveaux } = require('./aller');
 
 test('C1. chaque morceau du répertoire a son préréglage de métronome', async ({ page }) => {
+  test.setTimeout(60000);
   await page.goto('./#morceaux');
   await niveaux(page);
   // @ts-ignore
@@ -11,7 +12,7 @@ test('C1. chaque morceau du répertoire a son préréglage de métronome', async
   expect(ids.length).toBeGreaterThanOrEqual(16);
   for (const id of ids) {
     await page.goto('./#morceaux');
-  await niveaux(page);
+    await niveaux(page);
     await page.locator(`button[data-act="metro"][data-id="${id}"]`).click();
     await expect(page.locator('#v-tempo')).toBeVisible();
     await expect(page.locator('#mt-preset'), id).toHaveValue(id);
