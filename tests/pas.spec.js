@@ -35,3 +35,27 @@ test('PA2. pendant l’écoute, rien d’allumé en fixe (seule la note jouée) 
   await expect(page.locator('#kb-wk .key.hl2')).toHaveCount(3);                    // accord de Do de l'Hymne, mesure 1
   await expect(page.locator('#kb-wk .key.hl')).toHaveCount(1);
 });
+
+test('PA3. pendant l’écoute, les touches jouées s’allument en couleur (laiton main droite, vert main gauche)', async ({ page }) => {
+  await page.goto('./#coach');
+  await page.locator('#wk-play').click();
+  // 1er temps de la mesure 1 de l'Hymne : Mi5 (main droite, laiton) + Do3, Mi3, Sol3 (main gauche, vert)
+  await expect(page.locator('#kb-wk .key.next-rh')).toHaveCount(1);
+  await expect(page.locator('#kb-wk .key.next-rh')).toHaveAttribute('aria-label', 'Mi5');
+  await expect(page.locator('#kb-wk .key.next-lh')).toHaveCount(3);
+  const bg = await page.evaluate(() => [
+    getComputedStyle(document.querySelector('#kb-wk .key.next-rh')).backgroundImage,
+    getComputedStyle(document.querySelector('#kb-wk .key.next-lh')).backgroundImage,
+  ]);
+  expect(bg[0]).toContain('243, 217, 149');                                        // dégradé laiton (main droite)
+  expect(bg[1]).toContain('214, 226, 166');                                        // dégradé vert (main gauche)
+  await page.locator('#wk-stop').click();
+  await expect(page.locator('#kb-wk .key.next, #kb-wk .key.next-rh, #kb-wk .key.next-lh')).toHaveCount(0);
+
+  // Main gauche seule : uniquement des touches vertes pendant l'écoute
+  await page.locator('#dc-hands button[data-h="lh"]').click();
+  await page.locator('#wk-play').click();
+  await expect(page.locator('#kb-wk .key.next-lh')).toHaveCount(3);
+  await expect(page.locator('#kb-wk .key.next-rh')).toHaveCount(0);
+  await page.locator('#wk-stop').click();
+});

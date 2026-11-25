@@ -174,6 +174,7 @@ textarea{min-height:70px;resize:vertical}
 .listen p{margin:0}
 /* Pendant l'écoute : la touche attendue ressort nettement ; juste = vert, y compris sur une touche noire. */
 .ecoute .key.next{background:linear-gradient(180deg,#fff,#ffe9a8)!important;box-shadow:inset 0 0 0 3px #b4432c}
+.ecoute .key.next-lh{background:linear-gradient(180deg,#e9f3cc,#a9be63)!important;box-shadow:inset 0 0 0 3px #b4432c}
 .ecoute .key.ok,.key.black.ok{background:linear-gradient(180deg,#cfe8c2,#86b872)!important}
 /* iPhone : marges de l'encoche et de la barre du bas ; pas de zoom automatique sur les champs (16 px) ni sur double appui ;
    cibles d'au moins 44 px ; pas de sélection de texte ni de menu sur appui long des touches et boutons. */
@@ -227,13 +228,14 @@ h1,h2,h3,.kpi b,.bpm b,.timer b,ol.blocks li .m,.info .big,.nextnote,.count{font
 .kl{font-size:.68rem;color:#6b6152;font-weight:700;pointer-events:none;white-space:pre-line;line-height:1.05;text-align:center}
 .kb.small .kl{font-size:.55rem}
 .key.c4 .kl{color:#7a5b1f}
-.key.white.hl{background:linear-gradient(180deg,#f3d995,#d1ab5a)}
-.key.black.hl{background:linear-gradient(180deg,#d1ab5a,#8f7238)}
-.key.white.hl2{background:linear-gradient(180deg,#d6e2a6,#93a452)}
-.key.black.hl2{background:linear-gradient(180deg,#93a452,#5d6a2c)}
+.key.white.hl,.key.white.next-rh{background:linear-gradient(180deg,#f3d995,#d1ab5a)}
+.key.black.hl,.key.black.next-rh{background:linear-gradient(180deg,#d1ab5a,#8f7238)}
+.key.white.hl2,.key.white.next-lh{background:linear-gradient(180deg,#d6e2a6,#93a452)}
+.key.black.hl2,.key.black.next-lh{background:linear-gradient(180deg,#93a452,#5d6a2c)}
 .key.white.ok{background:linear-gradient(180deg,#cfe8c2,#86b872)}
 .key.ko{background:linear-gradient(180deg,#f2b8a8,#e07a62)!important}
 .key.next{box-shadow:inset 0 0 0 3px var(--laiton)}
+.key.next-lh{box-shadow:inset 0 0 0 3px #6b8036}
 .key .fg{position:absolute;left:50%;top:10px;transform:translateX(-50%);min-width:24px;height:24px;padding:0 3px;border-radius:12px;background:#1a140c;color:var(--laiton);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;pointer-events:none;border:2px solid var(--laiton)}
 .key.white .fg{top:auto;bottom:26px}
 .key.black .fg{top:auto;bottom:8px}
@@ -1393,15 +1395,17 @@ function wkHist(){const box=$('#wk-hist');if(!box)return;const w=WORK[WK.id],bar
   $('#wk-hist-t').textContent=WK.bar===1?'Déjà vue : mesure 1. En dessous, la mesure 2.':`Déjà vues : mesures 1 à ${WK.bar}. En dessous, la mesure ${WK.bar+1}.`;
   const g=$('#wk-hist-g');g.innerHTML=bars.slice(0,WK.bar).map((b,i)=>`<figure><svg class="staff" viewBox="0 0 360 250" role="img" aria-label="Mesure ${i+1}" data-hb="${i}"></svg><figcaption>Mesure ${i+1}</figcaption></figure>`).join('');
   g.querySelectorAll('svg[data-hb]').forEach(v=>{const i=+v.dataset.hb;wkStaff(bars[i],i===0&&w.pickup?w.bpb-w.pickup:0,v);});}
-const wkClear=()=>{if(WKKB)WKKB.el.querySelectorAll('.key.next').forEach(k=>k.classList.remove('next'));};
+const wkClear=()=>{if(WKKB)WKKB.el.querySelectorAll('.key.next,.key.next-rh,.key.next-lh').forEach(k=>k.classList.remove('next','next-rh','next-lh'));};
 // Programme le passage à l'heure exacte `start` (horloge audio). La boucle suivante est programmée 0,3 s avant la fin,
 // sur le même canal, à `start + durée` : aucun décalage d'une reprise à l'autre.
 function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;const seg=wkSeg();const clicks=$('#wk-click').checked;
   const segEnd=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
   const hands=WK.hands==='both'?['rh','lh']:[WK.hands];const lit=new Map();   // un seul allumage par instant, les deux mains ensemble
   let tb0=start;seg.forEach((b,bi)=>{const tb=tb0;tb0+=b.rh.reduce((a,e)=>a+e[1],0)*spb;if(clicks){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(tb+k*bt*spb,k===0?'acc':'beat',bus);}
-    hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){const k=Math.round(t*1e4);e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0){playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);if(!lit.has(k))lit.set(k,{t,ms:[]});lit.get(k).ms.push(m);}});}t+=e[1]*spb;});});});
-  [...lit.values()].sort((x,y)=>x.t-y.t).forEach(({t,ms})=>at(t-a.currentTime,()=>{if(BUS!==bus)return;wkClear();ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));}));
+    hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){const k=Math.round(t*1e4);e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0){playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);if(!lit.has(k))lit.set(k,{t,rh:[],lh:[]});lit.get(k)[hd].push(m);}});}t+=e[1]*spb;});});});
+  [...lit.values()].sort((x,y)=>x.t-y.t).forEach(({t,rh,lh})=>at(t-a.currentTime,()=>{if(BUS!==bus)return;wkClear();
+    lh.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next','next-lh'));
+    rh.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next','next-rh'));}));
   const end=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
   at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{if(BUS!==bus)return;BUS=null;setTimeout(()=>{try{bus.disconnect();}catch(e){}},1500);wkEnd();});}});}
 function playWork(){ecStop();const a=ac();if(!a)return;const bus=newBus();WK.playing=true;wkMarkStep();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
@@ -1795,7 +1799,7 @@ function ecSeq(){const b=workBars(WK.id)[WK.bar],w=WORK[WK.id];let t=WK.bar===0&
     return keep.length?{ms:keep.map(j=>e[0][j]),fg:e[2]?keep.map(j=>e[2][j]):null,at}:null;}).filter(Boolean);}
 // Réglage du La à plus de 50 cents de 440 Hz : presque toujours une erreur (piano droit ancien : 438 à 442).
 function calFar(){const f=a4(),c=Math.round(1200*Math.log2(f/440));return Math.abs(c)>50?`Ton réglage du La est à ${String(f).replace('.',',')} Hz (${Math.abs(c)} cents ${c<0?'plus bas':'plus haut'} que 440) : s’il est faux, aucune note ne passe. Vérifie « Régler sur mon piano », ou saisis 438 ou 440.`:'';}
-function ecShow(){wkMarkStep();wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();if(EC.cfI!==EC.i+'|'+WK.bar){EC.cf=0;EC.cfI=EC.i+'|'+WK.bar;}x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));
+function ecShow(){wkMarkStep();wkClear();const x=EC.seq[EC.i];if(!x)return;EC.shownAt=performance.now();if(EC.cfI!==EC.i+'|'+WK.bar){EC.cf=0;EC.cfI=EC.i+'|'+WK.bar;}const hc=WK.hands==='lh'?'next-lh':'next-rh';x.ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next',hc));
   $('#ec-msg').textContent=(x.ms.length>1?`Joue l’accord : ${x.ms.map(wkNm).join(' + ')}`:`Joue : ${wkNm(x.ms[0])}${x.fg&&x.fg[0]?' · doigt '+x.fg[0]:''}`)+(RZ.on?' · '+rzBeat(x.at):'');}
 function ecPrep(){if(EC.tBar!==WK.bar||EC.tId!==WK.id){EC.tries=0;EC.tBar=WK.bar;EC.tId=WK.id;}EC.bErr=0;EC.same={};EC.rzOff=false;EC.rzOk=0;EC.rzN=0;
   if(RZ.on){if(RZ.adv){RZ.adv=false;rzNext();}else rzStart();}EC.seq=ecSeq();EC.i=0;EC.sm=null;EC.n=0;if(!EC.seq.length)ecNextBar();else ecShow();}
