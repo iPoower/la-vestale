@@ -1748,7 +1748,7 @@ function playOrder(id,n){const r=REAL[id]&&REAL[id].rep;if(!r||!realOn())return 
 
 /* ---------- Écoute au micro : l'app vérifie les notes jouées au piano ---------- */
 // Tout est calculé sur l'appareil : le son du micro n'est ni enregistré ni envoyé.
-const EC_MIN=.008,EC_CLEAR=.8;
+const EC_MIN=.008,EC_CLEAR=.8,EC_CHORD_MAX=7;
 // Hauteur par autocorrélation normalisée (méthode de McLeod) : {f en Hz, c netteté de 0 à 1}, f = 0 si rien de net.
 function nsdfPitch(x,n,sr,maxLag){const nsdf=new Float32Array(maxLag+2);
   for(let tau=0;tau<=maxLag+1;tau++){let acf=0,m=0;for(let i=0,e=n-tau;i<e;i++){const a=x[i],b=x[i+tau];acf+=a*b;m+=a*a+b*b;}nsdf[tau]=m>0?2*acf/m:0;}
@@ -1826,6 +1826,12 @@ function ecNextBar(){RZ.adv=true;const T=WK.thru&&WK.thru.id===WK.id&&WK.bar<=WK
 function ecAdvance(){EC.i++;if(EC.i>=EC.seq.length)ecNextBar();else ecShow();}
 function ecFlash(m,cls){const k=WKKB&&WKKB.keys[m];if(k){k.classList.add(cls);setTimeout(()=>k.classList.remove(cls),600);}}
 // Traite une trame : attend une attaque, puis trois trames de suite sur la même note avant de juger.
+// Verdict d'un accord : les notes entendues sur moins de deux trames d'affilée manquent.
+function ecChordEnd(x,big,sr,now,rms){const miss=x.ms.filter((m,k)=>EC.votes[k]<2);EC.armed=false;EC.last=null;EC.low=rms;EC.votes=null;EC.cv=0;
+    if(!miss.length){ecHes();EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + ')+rz.msg,rz.cls);ecScore();ecAdvance();}
+    else{EC.ko++;EC.rzOff=true;EC.cf=(EC.cf||0)+1;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));
+      const help=EC.cf>=3?' '+(calFar()||'Si tu l’entends juste, touche « Passer la note » : l’app avance sans compter de faute.'):inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':'';
+      ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+help,'ko');ecScore();}}
 function ecFeed(buf,sr,big,tNow){const d=detectPitch(buf,sr),now=tNow!=null?tNow:(AC?AC.currentTime:0);EC.lastNow=now;
   // Rythme : pendant le décompte, on n'écoute pas (les clics s'entendent dans le micro).
   if(EC.mode==='play'&&RZ.on&&now<RZ.grid+RZ.lat-Math.min(.25,.5*RZ.bu*RZ.spb)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=0;EC.prev=0;EC.pk=0;EC.onT=null;EC.votes=null;EC.cv=0;return;}
@@ -1837,22 +1843,23 @@ function ecFeed(buf,sr,big,tNow){const d=detectPitch(buf,sr),now=tNow!=null?tNow
       $('#ec-cal-msg').textContent=`J’écoute… ${d.f.toFixed(1).replace('.',',')} Hz (${EC.cal.length}/10). Laisse sonner.`;
       if(EC.cal.length>=10){const s=EC.cal.slice().sort((a,b)=>a-b);S.meta=Object.assign({},S.meta,{a4:Math.round((s[4]+s[5])/2*10)/10});saveLocal();ecStop();ecCalMsg();}}return;}
   const x=EC.seq[EC.i];if(!x)return;
-  if(d.rms<EC_MIN){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;EC.prev=d.rms;EC.pk=0;EC.onT=null;return;}
+  if(d.rms<EC_MIN){if(x.ms.length>1&&EC.votes&&EC.cv>0)ecChordEnd(x,big,sr,now,d.rms);EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.low=d.rms;EC.votes=null;EC.cv=0;EC.prev=d.rms;EC.pk=0;EC.onT=null;return;}
   // Le niveau remonte : nouvelle attaque, seulement si le saut est brusque (plus de 2,2 fois la trame d'avant) ou s'il revient
   // près du pic de la note (60 %). Une corde tenue « respire » (battements) : son niveau remonte doucement, ce n'est pas une frappe.
+  // Accord en attente de verdict et nouvelle frappe nette (niveau plus que doublé d'une trame à l'autre) : verdict de l'accord d'abord.
+  if(EC.armed&&EC.votes&&EC.cv>0&&x.ms.length>1&&d.rms>(EC.prev||0)*2.2){ecChordEnd(x,big,sr,now,EC.prev||d.rms);EC.low=EC.prev||d.rms;EC.pk=EC.prev||0;}
   if(!EC.armed&&d.rms>EC.low*1.35&&(d.rms>(EC.prev||0)*2.2||d.rms>(EC.pk||0)*.6)){EC.armed=true;EC.sm=null;EC.n=0;EC.loud=0;EC.votes=null;EC.cv=0;EC.pk=0;EC.onT=now;EC.onWide=false;}
   EC.low=Math.min(EC.low,d.rms);EC.loud++;EC.prev=d.rms;EC.pk=Math.max(EC.pk||0,d.rms);if(EC.armed&&EC.onT==null){EC.onT=now;EC.onWide=false;}
   const m=d.c>=EC_CLEAR&&d.f>0?Math.round(69+12*Math.log2(d.f/a4())):null;
   if(m!==null&&m===EC.sm)EC.n++;else{EC.sm=m;EC.n=m===null?0:1;}
   if(!EC.armed&&m!==null&&EC.last!==null&&m!==EC.last&&EC.n>=2){EC.armed=true;EC.onT=now;EC.onWide=true;}         // la hauteur a changé : nouvelle note
   if(!EC.armed)return;
-  // Accord : trois trames après l'attaque, chaque note doit être entendue au moins deux fois.
-  if(x.ms.length>1){if(EC.loud<2)return;const pres=chordCheck(big||buf,sr,x.ms);EC.votes=EC.votes||x.ms.map(()=>0);pres.forEach((v,k)=>{if(v)EC.votes[k]++;});
-    if(++EC.cv<3)return;const miss=x.ms.filter((m,k)=>EC.votes[k]<2);EC.armed=false;EC.last=null;EC.low=d.rms;EC.votes=null;EC.cv=0;
-    if(!miss.length){ecHes();EC.ok++;x.ms.forEach(m=>ecFlash(m,'ok'));const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Accord juste : '+x.ms.map(wkNm).join(' + ')+rz.msg,rz.cls);ecScore();ecAdvance();}
-    else{EC.ko++;EC.rzOff=true;EC.cf=(EC.cf||0)+1;miss.forEach(m=>ecFlash(m,'ko'));coachErr(miss.map(m=>[m,null]));
-      const help=EC.cf>=3?' '+(calFar()||'Si tu l’entends juste, touche « Passer la note » : l’app avance sans compter de faute.'):inCoach()?' Pose tous les doigts ensemble avant d’appuyer.':'';
-      ecFb(`Il manque ${miss.map(wkNm).join(' et ')}. Rejoue l’accord.`+help,'ko');ecScore();}return;}
+  // Accord : juste dès que chaque note est entendue sur deux trames d'affilée ; sinon, verdict après EC_CHORD_MAX trames (≈ 0,6 s)
+  // ou dès que le son s'arrête (accord lâché tôt : le verdict tombe quand même, la faute est comptée).
+  // Avant : verdict définitif à la 3e trame (≈ 0,26 s). La fenêtre d'analyse (0,34 s) contient alors encore l'accord d'avant
+  // (pédale, legato) ou du silence : les notes graves n'y ressortent qu'après 0,26 à 0,33 s, et l'accord juste était refusé.
+  if(x.ms.length>1){if(EC.loud<2)return;const pres=chordCheck(big||buf,sr,x.ms);EC.votes=EC.votes||x.ms.map(()=>0);pres.forEach((v,k)=>{EC.votes[k]=v?EC.votes[k]+1:0;});
+    if(!EC.votes.every(v=>v>=2)&&++EC.cv<EC_CHORD_MAX)return;ecChordEnd(x,big,sr,now,d.rms);return;}
   if(EC.n<3)return;
   const want=x.ms[0];EC.armed=false;EC.last=m;EC.low=d.rms;
   if(m===want){ecHes();EC.ok++;ecFlash(want,'ok');const rz=rzJudge(x,rzOnset(big,sr,now));ecFb('Juste : '+wkNm(want)+rz.msg,rz.cls);ecScore();ecAdvance();}
