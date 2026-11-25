@@ -35,7 +35,7 @@ test('C2. chaque mélodie tombe juste en mesures et reste sur le clavier', async
 });
 
 test('C3. les nouvelles mélodies se jouent pas à pas depuis le répertoire', async ({ page }) => {
-  for (const [id, title, first] of [['twinkle', 'Ah ! vous dirai-je maman', 'Do4'], ['wenceslas', 'Good King Wenceslas', 'Do4 · doigt 1']]) {
+  for (const [id, title, first] of [['twinkle', 'Ah ! vous dirai-je maman', 'Sol3 · doigt 3'], ['wenceslas', 'Good King Wenceslas', 'Do4 · doigt 1']]) {
     await page.goto('./#morceaux');
     await page.locator(`button[data-act="mel"][data-id="${id}"]`).click();
     await expect(page.locator('#mel-sel button.on')).toHaveText(title);

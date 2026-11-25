@@ -84,8 +84,14 @@ test('CA4. changer de morceau ajuste la main si la main choisie n’y joue aucun
   await page.locator('#dc-hands button[data-h="lh"]').click();
   await expect(page.locator('#dc-hands button.on')).toHaveText('Main gauche');
 
-  // Vers un morceau main droite seule : bascule sur la main droite (pas de « Silence »).
-  await page.locator('#dc-piece').selectOption('twinkle');
+  // Vers un morceau main droite seule (partition saisie sans accompagnement) : bascule sur la main droite (pas de « Silence »).
+  await page.evaluate(() => {
+    // @ts-ignore
+    S.mine.push({ id: 'u_rh', t: 'Essai MD seule', bpb: 4, acc: '', bars: [[[60, 1], [62, 1], [64, 1], [65, 1]]] });
+    // @ts-ignore
+    mineSync(); renderWork();
+  });
+  await page.locator('#dc-piece').selectOption('u_rh');
   await expect(page.locator('#dc-hands button.on')).toHaveText('Main droite');
   await expect(page.locator('#wk-step-lbl')).not.toHaveText('Silence');
 

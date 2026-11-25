@@ -22,6 +22,7 @@ const EXPECTED = {
   'Sourire : basses Em C G D': [['Mi2', 'Em'], ['Sol2', 'G'], ['Do3', 'C'], ['Ré3', 'D']],
   'Cancan : C': [['Do3', '4'], ['Mi3', '2']],
   'Cancan : G': [['Si2', '5'], ['Sol3', '1']],                                  // imprimé (le Fa3 est ajouté au crayon)
+  'Orientale : La2 et Mi3': [['La2', '5'], ['Mi3', '1']],                       // imprimé mesure 1
 };
 
 test('M1. chaque position allume les bonnes touches avec le bon doigt', async ({ page }) => {
@@ -60,13 +61,14 @@ test('M3. depuis le répertoire, « Main gauche » ouvre la bonne position, cart
   expect(errors).toEqual([]);
 });
 
-test('M4. morceaux sans position sûre : « à confirmer », questions ajoutées', async ({ page }) => {
+test('M4. morceaux sans position sûre : « à confirmer », Orientale imprimée, questions à jour', async ({ page }) => {
   await page.goto('./#morceaux');
-  for (const title of ['Orientale', 'Let It Be']) {
-    const card = page.locator('article.piece', { hasText: title });
-    await expect(card, title).toContainText('À confirmer en cours');
-    await expect(card.locator('button[data-act="mg"]'), title).toHaveCount(0);
-  }
+  const lib = page.locator('article.piece', { hasText: 'Let It Be' });
+  await expect(lib, 'Let It Be').toContainText('À confirmer en cours');
+  await expect(lib.locator('button[data-act="mg"]'), 'Let It Be').toHaveCount(0);
+  const ori = page.locator('article.piece', { hasText: 'Orientale' });
+  await expect(ori).toContainText('Imprimé mesure 1 : 5 La2, 1 Mi3');
+  await expect(ori.locator('button[data-act="mg"]')).toHaveCount(1);
   await expect(page.locator('article.piece', { hasText: 'Cancan' })).toContainText('Imprimé : C = Do3 (4) + Mi3 (2) ; G = Si2 (5) + Sol3 (1)');
   await page.goto('./#journal');
   await expect(page.locator('#q-list')).toContainText('Main gauche : position de départ');
@@ -112,7 +114,7 @@ test('M7. J’ai du bon tabac : notes de la feuille, doigts signalés comme déd
   await page.locator('#mg-sel button', { hasText: 'Tabac : accord G' }).click();
   await expect(page.locator('#mg-info')).toContainText('5 → Si2 · 1 → Sol3');
   await page.goto('./#journal');
-  await expect(page.locator('#q-list')).toContainText('position de départ (doigt et note) pour Orientale');
+  await expect(page.locator('#q-list')).toContainText('position de départ (doigt et note) pour Let It Be');
 });
 
 test('M8. Le Petit Poney : position du schéma imprimé, accessible depuis le répertoire', async ({ page }) => {

@@ -1047,7 +1047,7 @@ const PROG={
   grille:{t:'Grille de la feuille',src:'Feuille « Accords Do Maj / la min », mesures 1 à 8 : C, G, Em, Am, Dm, F, G, puis C avec F/C.',s:[['C',4],['G',4],['Em',4],['Am',4],['Dm',4],['F',4],['G',4],['C',1],['F/C',1],['C',2]]},
   i4v:{t:'C – F – G – C',src:'Le trio de base : tonique, sous-dominante, dominante.',s:[['C',4],['F',4],['G',4],['C',4]]},
   letitbe:{t:'Let It Be (intro)',src:'Grille de l’intro de ta feuille, noire = 72 : C G | Am F7M | C G | F C, deux temps par accord.',s:[['C',2],['G',2],['Am',2],['F7M',2],['C',2],['G',2],['F',2],['C',2]]},
-  imagine:{t:'Imagine (début)',src:'Grille du début de ta feuille, noire = 72 : C – CM7 | F, deux fois (le piano en croches, la mélodie sur ta feuille).',s:[['C',2],['C7M',2],['F',4],['C',2],['C7M',2],['F',4]]},
+  imagine:{t:'Imagine (début)',src:'Grille du début de ta feuille, noire = 72 : C (3 temps) – CM7 (4e temps) | F (4 temps), deux fois (le piano en croches, la mélodie sur ta feuille).',s:[['C',3],['C7M',1],['F',4],['C',3],['C7M',1],['F',4]]},
   sourire:{t:'Il y a ton sourire',src:'Grille de ta feuille, noire = 80 : Em C G D, un accord par mesure, en boucle.',s:[['Em',4],['C',4],['G',4],['D',4],['Em',4],['C',4],['G',4],['D',4]]},
   lamin:{t:'Am – Dm – E – Am',src:'La mineur : écoute la différence avec Em à la place de E.',s:[['Am',4],['Dm',4],['E',4],['Am',4]]}
 };
@@ -1202,11 +1202,31 @@ const SOUR_FA=['G','D','Em','G','D','Em','D','Em'];
 function sourFaBars(){return SOUR_FA.map(k=>{const [n,f,b]=SOUR[k];return {rh:[0,1,2,3].map(()=>[n.slice(),1,f.slice(),k,null]),lh:[[[b],1,[5],null,null],[null,1,null,null,null],[null,2,null,null,null]]};});}
 function sourBars(){return SOUR_GRID.map((k,i)=>{const [n,f,b]=SOUR[k],cr=i>=SOUR_CRO;return {rh:Array(cr?8:4).fill(0).map(()=>[n.slice(),cr?.5:1,f.slice(),k,null]),lh:i===1?[[null,4,null,null,null]]:[[[b],1,[5],null,null],[null,1,null,null,null],[null,2,null,null,null]]};});}
 // Good King Wenceslas comme la feuille : les Do4 des mesures 4, 8, 12 et 17 sont écrits en clé de fa (main gauche) ;
-// mesure 14 : Si3 en blanche à la main gauche sous le Ré (temps 3-4).
+// mesure 14 : Si3 en blanche (doigt 2) à la main gauche sous le Ré ; mesure 16 : La3 en blanche à la main gauche sous le Fa.
 function wencBars(){const bars=melWork('wenceslas',4,60),R=d=>[null,d,null,null,null];
   [3,7,11,16].forEach(i=>{const b=bars[i];if(!b)return;b.lh=b.rh.map(e=>e.slice());b.rh=[R(b.rh.reduce((a,e)=>a+e[1],0))];});
-  if(bars[13])bars[13].lh=[R(2),[[59],2,null,null,null]];
+  if(bars[13])bars[13].lh=[R(2),[[59],2,[2],null,null]];
+  if(bars[15])bars[15].lh=[R(2),[[57],2,null,null,null]];
   return bars;}
+// Deux études de Gurlitt (p. 17 du recueil, domaine public) : 2 × 8 mesures, 4/4, Do majeur, position Do aux deux mains.
+const GURLITT_BARS=[
+  {rh:[[[76],1,[3]],[[72],1,[1]],[[74],1,null],[[76],1,null]],lh:[[[48],4,[5]]]},
+  {rh:[[[77],1,[4]],[[74],1,[2]],[[76],1,null],[[77],1,null]],lh:[[[50],4,[4]]]},
+  {rh:[[[79],1,[5]],[[72],1,[1]],[[74],1,null],[[76],1,null]],lh:[[[52],4,null]]},
+  {rh:[[[74],4,[2]]],lh:[[[55],1,[1]],[[53],1,null],[[52],1,null],[[50],1,null]]},
+  {rh:[[[76],1,[3]],[[72],1,[1]],[[74],1,null],[[76],1,null]],lh:[[[48],4,[5]]]},
+  {rh:[[[77],1,[4]],[[74],1,[2]],[[76],1,null],[[77],1,null]],lh:[[[50],4,null]]},
+  {rh:[[[79],1,[5]],[[72],1,[1]],[[76],1,[3]],[[74],1,null]],lh:[[[52],2,[3]],[[55],1,[1]],[[53],1,null]]},
+  {rh:[[[72],4,null]],lh:[[[52],1,[3]],[[55],1,[1]],[[48],2,[5]]]},
+  {rh:[[[72],4,[1]]],lh:[[[52],1,[3]],[[55],1,[1]],[[53],1,null],[[52],1,null]]},
+  {rh:[[[79],4,[5]]],lh:[[[50],1,[4]],[[53],1,[2]],[[52],1,null],[[50],1,null]]},
+  {rh:[[[76],4,[3]]],lh:[[[48],1,[5]],[[52],1,[3]],[[50],1,null],[[48],1,null]]},
+  {rh:[[[74],4,[2]]],lh:[[[55],4,[1]]]},
+  {rh:[[[72],4,[1]]],lh:[[[52],1,[3]],[[55],1,[1]],[[53],1,null],[[52],1,null]]},
+  {rh:[[[79],4,null]],lh:[[[50],1,[4]],[[53],1,[2]],[[52],1,null],[[50],1,null]]},
+  {rh:[[[76],2,null],[[74],2,null]],lh:[[[48],1,[5]],[[55],1,[1]],[[53],1,null],[[55],1,null]]},
+  {rh:[[[72],4,null]],lh:[[[52],4,[3]]]}
+];
 // Morceau à partir d'une mélodie de l'app : les notes sous le Do central (sous `split`) passent à la main gauche, comme sur la feuille.
 function melWork(k,bpb,split){const bars=[];let cur={rh:[],lh:[]},acc=0;
   MEL[k].n.forEach(([m,d,f])=>{const lh=split!=null&&m<split;const ev=[[m],d,f?[f]:null,null,null],rest=[null,d,null,null,null];
@@ -1237,7 +1257,7 @@ function exBars(x){const bars=[];let cur=[],acc=0;
   for(const [m,d,f] of x.s){cur.push([Array.isArray(m)?m.slice():[m],d,f==null?null:(Array.isArray(f)?f.slice():[f]),null,null]);acc+=d;if(acc>=x.bpb-1e-9){bars.push({rh:[[null,x.bpb,null,null,null]],lh:cur});cur=[];acc=0;}}
   return bars;}
 const WORK={
-  hymne:{t:'Hymne à la joie',bpb:4,src:'D’après ta feuille (Do majeur, aucune altération à la clé) : mélodie et doigtés imprimés ; main gauche en accords C (5-3-1), G7 (5-2-1) et D (4-2).',
+  hymne:{t:'Hymne à la joie',bpb:4,src:'D’après ta feuille (Do majeur, aucune altération à la clé) : mélodie et doigtés imprimés (mesure 10 : le 1 sur Do5 est entouré au crayon par ton prof) ; main gauche en accords C (5-3-1), G7 (5-2-1) et D (4-2).',
     rh:()=>MEL.hymne.n,lh:[['C',4],['G7',4],['C',4],['G7',4],['C',4],['G7',4],['C',4],['G7',2,'C',2],['G7',2,'C',2],['G7',2,'C',2],['G7',2,'C',2],['D',2,'G7',2],['C',4],['G7',4],['C',4],['G7',2,'C',2]]},
   fontaine:{t:'À la claire fontaine',bpb:4,src:'D’après ta feuille : Sol majeur (Fa♯ à la clé). Main gauche : Sol3 avec le 2 ; Fa♯3 avec le 3 (déduit) aux mesures 8 et 12.',
     rh:()=>MEL.fontaine.n,lh:[['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',4],['Sol',2,'FaD',2],['Sol',4],['Sol',4],['Sol',4],['FaD',2,'Sol',2]]},
@@ -1253,8 +1273,9 @@ const WORK={
   q4fa:{t:'Les 4 accords en Fa (I V vi IV)',bpb:4,flats:true,src:'Exercice de l’app, Fa majeur (Si♭ à la clé) : F – C | Dm – B♭, deux fois. Main droite : Do–Fa–La, Do–Mi–Sol, Ré–Fa–La, Ré–Fa–Si♭.',get bars(){return q4Bars('fa');}},
   sourireFa:{t:'Il y a ton sourire — contrôle du Fa♯',bpb:4,nosig:true,src:'Exercice tiré de ta feuille (Mi mineur, écrite sans armure) : G → D → Em, là où le Fa♯ arrive. Dans l’accord D (La–Ré–Fa♯), le 5 descend de Sol à Fa♯, la touche noire juste à gauche, puis remonte sur Sol pour Em. Le ♯ est écrit devant le Fa à chaque mesure : il vaut jusqu’à la barre. Lent d’abord, puis à noire = 80.',get bars(){return sourFaBars();}},
   sourire:{t:'Il y a ton sourire — accompagnement',bpb:4,nosig:true,src:'Grille de ta feuille (Mi mineur, écrite sans armure), mesures numérotées comme sur la feuille : intro d’une mesure en Em, puis Em – C – G – D dix-sept fois (mesures 2 à 69, fin sur D) ; à partir de la mesure 58 (« en croches »), l’accord en croches. Main droite : l’accord en noires, dans les positions de ta feuille (Si-Mi-Sol, Do-Mi-Sol, Si-Ré-Sol, La-Ré-Fa♯) ; main gauche : la basse au 1er temps (mesure 2 : silence, comme sur la feuille). La mélodie et les paroles sont protégées : lis-les sur ta feuille. Doigtés proposés par l’app.',bars:sourBars()},
-  twinkle:{t:'Ah ! vous dirai-je maman',bpb:4,src:'Air traditionnel (domaine public), version courante en Do majeur, main droite. Sur ta feuille (n° 54), la mélodie passe d’une main à l’autre : elle fait foi.',get bars(){return melWork('twinkle',4);}},
-  wenceslas:{t:'Good King Wenceslas',bpb:4,src:'Chant ancien (domaine public), en Do majeur comme ta feuille (aucune altération à la clé). Sol–La–Si sous le Do central passent à la main gauche (les pointillés de ta feuille), et aussi les Do des mesures 4, 8, 12 et 17, écrits en clé de fa. Mesure 14 : Si3 en blanche à la main gauche avec le Ré. Mesure 16 : la blanche de main gauche reste à vérifier sur ta feuille. Ta feuille fait foi.',get bars(){return wencBars();}},
+  twinkle:{t:'Ah ! vous dirai-je maman',bpb:4,nosig:true,src:'D’après ta feuille (n° 54, Sol majeur, écrite sans armure — aucun Fa dans la mélodie) : 12 mesures, mf non legato à noire = 96, mélodie partagée entre la main gauche (Sol3–La3–Si3) et la main droite (Do4–Ré4–Mi4), quatre noires aux mesures 2, 6 et 10, doigtés imprimés (MG 3 sur Sol3, MD 2 sur Ré4, MG 1 sur Si3). Mesure 11 : les deux Do4 ont la hampe vers le haut (main droite, souligné au crayon par ton prof).',get bars(){return melWork('twinkle',4,60);}},
+  wenceslas:{t:'Good King Wenceslas',bpb:4,src:'D’après ta feuille (Do majeur, aucune altération à la clé) : 17 mesures. Sol–La–Si sous le Do central passent à la main gauche (les pointillés de ta feuille), ainsi que les Do4 des mesures 4, 8, 12 et 17, écrits en clé de fa. Mesure 14 : Si3 en blanche (doigt 2) à la main gauche avec le Ré ; mesure 16 : La3 en blanche à la main gauche avec le Fa. Doigtés imprimés compris (MG 4 m. 2, 3 m. 11, 2 m. 14).',get bars(){return wencBars();}},
+  gurlitt:{t:'Deux études — Gurlitt',bpb:4,src:'D’après ta feuille (p. 17 du recueil, Cornelius Gurlitt, domaine public) : Do majeur, aucune altération à la clé, 4/4, deux études de 8 mesures en position Do aux deux mains (mélodie à droite sur rondes à gauche mesures 1–8, puis mélodie à gauche sur rondes à droite mesures 9–16), doigtés imprimés compris.',bars:GURLITT_BARS},
   bebe:{t:'Bébé s’endort — Chrétien',bpb:4,flats:[3],src:'Hedwige Chrétien (1859–1944), 6 Petits Préludes récréatifs n° 2, Sol majeur, Andantino. Domaine public ; notes relevées pour l’app, doigtés proposés par l’app (à valider avec ton prof). La main gauche tient son Sol grave pendant que l’autre voix bouge.',
     bars:[{"rh":[[null,1,null,null,null],[[71],1,[3],null,[1]],[[74],1,[5],null,[1]],[[71],1,[3],null,[1]]],"lh":[[[55,62],4,[5,1],null,[16,4]]]},{"rh":[[[69],0.5,[2],null,[0.5]],[[71],0.5,[3],null,[0.5]],[[69],0.5,[2],null,[0.5]],[[67],0.5,[1],null,[0.5]],[[69],2,[2],null,[2]]],"lh":[[[55,60],4,[5,2],null,[0,4]]]},{"rh":[[null,0.5,null,null,null],[[67],0.5,[1],null,[0.5]],[[69],0.5,[2],null,[0.5]],[[71],0.5,[3],null,[0.5]],[[74],1,[5],null,[1]],[[74],1,[5],null,[1]]],"lh":[[[55,59],4,[5,3],null,[0,4]]]},{"rh":[[[74],2,[5],null,[2]],[[69],1,[2],null,[1]],[null,1,null,null,null]],"lh":[[[55,60],4,[5,2],null,[0,4]]]},{"rh":[[null,1,null,null,null],[[74],1,[1],null,[1]],[[79],1,[4],null,[1]],[[74],1,[1],null,[1]]],"lh":[[[55,59],4,[5,3],null,[8,4]]]},{"rh":[[[72],0.5,[2],null,[0.5]],[[74],0.5,[3],null,[0.5]],[[72],0.5,[2],null,[0.5]],[[71],0.5,[1],null,[0.5]],[[72],2,[2],null,[2]]],"lh":[[[55,57],4,[5,4],null,[0,4]]]},{"rh":[[null,0.5,null,null,null],[[71],0.5,[5],null,[0.5]],[[69],0.5,[4],null,[0.5]],[[67],0.5,[3],null,[0.5]],[[64],1,[1],null,[1]],[[64],1,[1],null,[1]]],"lh":[[[55,62],4,[5,1],null,[8,4]]]},{"rh":[[[67],2,[3],null,[2]],[[66],1,[2],null,[1]],[null,1,null,null,null]],"lh":[[[55,63],4,[5,1],null,[0,4]]]},{"rh":[[null,1,null,null,null],[[71],1,[3],null,[1]],[[74],1,[5],null,[1]],[[71],1,[3],null,[1]]],"lh":[[[55,62],4,[5,1],null,[32,4]]]},{"rh":[[[69],0.5,[2],null,[0.5]],[[71],0.5,[3],null,[0.5]],[[69],0.5,[2],null,[0.5]],[[67],0.5,[1],null,[0.5]],[[69],2,[2],null,[2]]],"lh":[[[55,60],4,[5,2],null,[0,4]]]},{"rh":[[null,0.5,null,null,null],[[67],0.5,[1],null,[0.5]],[[69],0.5,[2],null,[0.5]],[[71],0.5,[3],null,[0.5]],[[74],1,[5],null,[1]],[[74],1,[5],null,[1]]],"lh":[[[55,59],4,[5,3],null,[0,4]]]},{"rh":[[[74],2,[5],null,[2]],[[73],1,[4],null,[1]],[null,1,null,null,null]],"lh":[[[55,64],4,[5,1],null,[0,4]]]},{"rh":[[null,1,null,null,null],[[72],1,[1],null,[1]],[[79],1,[5],null,[1]],[[72],1,[1],null,[1]]],"lh":[[[55,63],4,[5,1],null,[0,8]]]},{"rh":[[[69],0.5,[2],null,[0.5]],[[71],0.5,[3],null,[0.5]],[[69],0.5,[2],null,[0.5]],[[67],0.5,[1],null,[0.5]],[[69],2,[2],null,[2]]],"lh":[[[55,63],4,[5,1],null,[0,0]]]},{"rh":[[null,1,null,null,null],[[66],1,[1],null,[1]],[[71],1,[4],null,[1]],[[66],1,[1],null,[1]]],"lh":[[[55,62],2,[5,1],null,[0,2]],[[60],2,[2],null,[2]]]},{"rh":[[[69],0.5,[3],null,[0.5]],[[67],0.5,[2],null,[0.5]],[[66],0.5,[1],null,[0.5]],[[69],0.5,[3],null,[0.5]],[[67],2,[2],null,[2]]],"lh":[[[55,59],4,[5,3],null,[0,4]]]},{"rh":[[[60,64],4,[1,3],null,[4,4]]],"lh":[[[55,57],4,[5,4],null,[8,4]]]},{"rh":[[[62,67],4,[1,4],null,[4,4]]],"lh":[[[55,59],4,[5,3],null,[0,4]]]}]},
   candeur:{t:'La candeur — Burgmüller',bpb:4,src:'Friedrich Burgmüller, 25 Études faciles op. 100 n° 1 (1851). Domaine public ; Notes d’après l’édition du Mutopia Project (Bas Wassink, Mutopia-2013/01/12-202), sans les reprises. Une mélodie liée à la main droite sur une main gauche simple. Doigtés à fixer avec ton prof.',
@@ -1375,10 +1396,11 @@ const MG={
   fontaine:{t:'Fontaine : Sol3 et Fa♯3',ok:true,pos:[[3,54],[2,55]],note:'Rondes sur Sol3 avec le 2 (imprimé). Mesure 8 : Sol puis Fa♯ ; mesure 12 : Fa♯ puis Sol. Le Fa♯ est la touche noire juste à gauche du Sol : le 3 y est déduit (un doigt par touche voisine). Le ♯ écrit devant est un dièse de rappel, le Fa étant déjà dièse à la clé.'},
   tabacC:{t:'Tabac : accord C',ok:'notes',pos:[[5,48],[1,55]],note:'Do3 et Sol3 ensemble. Notes lues sur ta feuille ; pas de doigtés imprimés à la main gauche, donc 5 et 1 comme dans l’Hymne.'},
   tabacG:{t:'Tabac : accord G',ok:'notes',pos:[[5,47],[1,55]],note:'Si2 et Sol3 ensemble (noté « G(7) » au crayon). Le pouce reste sur Sol3, le 5 descend d’une touche : le même passage que C → G7 dans l’Hymne.'},
-  poney:{t:'Poney : pouces sur le Do',ok:true,pos:[[4,55],[3,57],[2,59],[1,60]],note:'Schéma imprimé en tête du morceau : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (partagé avec le pouce droit, qui joue Do-Ré-Mi-Fa-Sol avec 1-2-3-4-5). La main gauche joue Sol (4) en blanches, puis La (3) et Si (2) en noires, et le Do (1) à la mesure 6. Le dernier Do de la main gauche est barré au crayon sur ta feuille.'},
+  poney:{t:'Poney : pouces sur le Do',ok:true,pos:[[4,55],[3,57],[2,59],[1,60]],note:'Schéma imprimé en tête du morceau : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (partagé avec le pouce droit, qui joue Do-Ré-Mi-Fa-Sol avec 1-2-3-4-5). La main gauche joue Sol (4) en blanches, puis La (3) et Si (2) en noires, et le Do (1) à la mesure 4 (après la levée de 2 temps). Le dernier Do de la main gauche (mesure 8) est barré au crayon sur ta feuille.'},
   sourire:{t:'Sourire : basses Em C G D',ok:'notes',seq:true,pos:[['Em',40],['C',48],['G',43],['D',50]],note:'Intro de ta feuille : une seule note grave par accord, sur le 1er temps, puis silence. La main gauche se déplace d’un accord à l’autre ; aucun doigt n’est imprimé : prends chaque basse avec le 5 (petit doigt) ou le 3, comme te convient le mieux. Sur la touche, le nom de l’accord remplace le numéro de doigt.'},
   cancanC:{t:'Cancan : C',ok:true,pos:[[4,48],[2,52]],note:'Imprimé sur ta feuille : Do3 avec le 4, Mi3 avec le 2. Au crayon, ton prof ajoute Sol3 (accord complet Do-Mi-Sol).'},
-  cancanG7:{t:'Cancan : G',ok:true,pos:[[5,47],[1,55]],note:'Imprimé sur ta feuille : Si2 avec le 5, Sol3 avec le 1. Au crayon, ton prof ajoute Fa3 (accord G7 : Si-Fa-Sol).'}
+  cancanG7:{t:'Cancan : G',ok:true,pos:[[5,47],[1,55]],note:'Imprimé sur ta feuille : Si2 avec le 5, Sol3 avec le 1. Au crayon, ton prof ajoute Fa3 (accord G7 : Si-Fa-Sol).'},
+  orientale:{t:'Orientale : La2 et Mi3',ok:true,pos:[[5,45],[1,52]],note:'Mesure 1 de ta feuille (rondes, p, Modéré) : La2 avec le 5, Mi3 avec le 1 (doigtés imprimés ; « LA » écrit au crayon dessous).'}
 };
 // Ce que chaque morceau affiche dans le répertoire : position à voir, ou à confirmer en cours.
 const MG_TODO='À confirmer en cours (question dans Journal › À demander en cours).';
@@ -1387,7 +1409,7 @@ const MGP={
   hymne:{mg:'hymneC',t:'C : 5 Do3, 3 Mi3, 1 Sol3. G7 : 5 Si2, 2 Fa3, 1 Sol3.'},
   cancan:{mg:'cancanC',t:'Imprimé : C = Do3 (4) + Mi3 (2) ; G = Si2 (5) + Sol3 (1). Au crayon : Sol3 ajouté à C, Fa3 à G (C et G7 complets).'},
   fontaine:{mg:'fontaine',t:'Rondes sur Sol3 avec le 2 (imprimé) ; Fa♯3 avec le 3 aux mesures 8 et 12.'},
-  tabac:{mg:'tabacC',t:'C = Do3 + Sol3 ; G = Si2 + Sol3. Le pouce reste sur Sol3 (doigts 5 et 1 déduits).'},poney:{mg:'poney',t:'Schéma imprimé : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (les deux pouces sur le Do).'},orientale:{t:MG_TODO},letitbe:{t:MG_TODO},sourire:{mg:'sourire',t:'Une note grave par accord, sur le 1er temps : Em = Mi2, C = Do3, G = Sol2, D = Ré3 (intro de ta feuille).'}
+  tabac:{mg:'tabacC',t:'C = Do3 + Sol3 ; G = Si2 + Sol3. Le pouce reste sur Sol3 (doigts 5 et 1 déduits).'},poney:{mg:'poney',t:'Schéma imprimé : 4 Sol3, 3 La3, 2 Si3, 1 sur le Do du milieu (les deux pouces sur le Do).'},orientale:{mg:'orientale',t:'Imprimé mesure 1 : 5 La2, 1 Mi3 (rondes, p).'},letitbe:{t:MG_TODO},sourire:{mg:'sourire',t:'Une note grave par accord, sur le 1er temps : Em = Mi2, C = Do3, G = Sol2, D = Ré3 (intro de ta feuille).'},gurlitt:{t:'Position Do grave (5 Do3 … 1 Sol3), doigtés imprimés sur la feuille.'}
 };
 let MGKB=null,curMg='methode';
 function mgScroll(){const x=MG[curMg];if(!x||!MGKB)return;const ms=x.pos.map(p=>p[1]);MGKB.scrollTo(Math.round((Math.min(...ms)+Math.max(...ms))/2));}
@@ -1401,23 +1423,23 @@ function playMg(){const a=ac();if(!a)return;const bus=newBus();const t=a.current
 
 /* ---------- Mélodies ---------- */
 const MEL={
-  fontaine:{t:'À la claire fontaine',src:'Transcrite de ta feuille série C (photo du 26/10). Sol majeur, Fa♯ à la clé. Main droite seule.',
+  fontaine:{t:'À la claire fontaine',src:'Transcrite de ta feuille : Sol majeur (Fa♯ à la clé), 12 mesures, doigtés imprimés compris. Main droite seule.',
     n:[[67,2,1],[67,1],[71,1],[71,1],[69,1],[71,1],[69,1],[67,2],[67,1],[71,1],[71,1],[69,1],[71,2],
        [71,2,3],[71,1],[69,1],[67,1],[71,1],[74,1,5],[71,1],[74,2],[74,1],[71,1],[67,1],[71,1],[69,2],
        [67,2,1],[67,1],[71,1],[71,1],[69,.5],[67,.5],[71,1],[69,1],[71,2],[71,1],[67,1],[71,1],[69,1],[67,2]]},
-  hymne:{t:'Hymne à la joie',src:'Transcrite de ta feuille : Do majeur, 16 mesures, doigtés imprimés compris, dans l’octave du Do5 (main droite au-dessus du Do du milieu). Main droite seule.',
+  hymne:{t:'Hymne à la joie',src:'Transcrite de ta feuille : Do majeur, 16 mesures, doigtés imprimés compris (mesure 10 : le 1 sur Do5 est ajouté au crayon), dans l’octave du Do5. Main droite seule.',
     n:[[76,1,3],[76,1],[77,1],[79,1,5],[79,1],[77,1],[76,1],[74,1],[72,1],[72,1],[74,1],[76,1],[76,1.5],[74,.5],[74,2],
        [76,1],[76,1],[77,1],[79,1],[79,1],[77,1],[76,1],[74,1],[72,1],[72,1],[74,1],[76,1],[74,1.5],[72,.5],[72,2],
-       [74,1,2],[74,1],[76,1],[72,1],[74,1],[76,.5],[77,.5],[76,1],[72,1,1],[74,1],[76,.5],[77,.5],[76,1],[74,1],[72,1,1],[74,1,2],[67,2,1],
+       [74,1,2],[74,1],[76,1],[72,1],[74,1],[76,.5],[77,.5],[76,1],[72,1],[74,1],[76,.5],[77,.5],[76,1],[74,1],[72,1,1],[74,1,2],[67,2,1],
        [76,1,3],[76,1],[77,1],[79,1],[79,1],[77,1],[76,1],[74,1],[72,1],[72,1],[74,1],[76,1],[74,1.5],[72,.5],[72,2]]},
-  twinkle:{t:'Ah ! vous dirai-je maman',src:'Air traditionnel (thème varié par Mozart), version courante en Do majeur. Sur ta feuille (n° 54), la mélodie passe d’une main à l’autre : elle fait foi.',
-    n:[[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],
-       [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
-       [60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]]},
-  wenceslas:{t:'Good King Wenceslas',src:'Chant ancien, version courante transposée en Do comme ta feuille. La mélodie passe d’une main à l’autre (pointillés) : Sol–La–Si sous le Do central à la main gauche. Ta feuille fait foi.',
-    n:[[60,1,1],[60,1],[60,1],[62,1],[60,1],[60,1],[55,2],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
+  twinkle:{t:'Ah ! vous dirai-je maman',src:'Transcrite de ta feuille (n° 54) : Sol majeur sans armure, 12 mesures, mf non legato, mélodie partagée entre les deux mains (Sol3–La3–Si3 à gauche, Do4–Ré4–Mi4 à droite), quatre noires aux mesures 2, 6 et 10, doigtés imprimés compris.',
+    n:[[55,1,3],[55,1],[62,1,2],[62,1],[64,1],[64,1],[62,1],[62,1],[60,1],[60,1],[59,1,1],[59,1],[57,1],[57,1],[55,2],
+       [62,1],[62,1],[60,1],[60,1],[59,1],[59,1],[57,1],[57,1],[62,1],[62,1],[60,1],[60,1],[59,1],[59,1],[57,2],
+       [55,1],[55,1],[62,1,2],[62,1],[64,1],[64,1],[62,1],[62,1],[60,1],[60,1],[59,1],[59,1],[57,1],[57,1],[55,2]]},
+  wenceslas:{t:'Good King Wenceslas',src:'Transcrite de ta feuille : Do majeur, 17 mesures, mélodie partagée entre les mains (pointillés) et doigtés imprimés compris.',
+    n:[[60,1,1],[60,1],[60,1],[62,1],[60,1],[60,1],[55,2,4],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
        [60,1],[60,1],[60,1],[62,1],[60,1],[60,1],[55,2],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
-       [67,1,5],[65,1],[64,1],[62,1],[64,1],[62,1],[60,2],[57,1],[55,1],[57,1],[59,1],[60,2],[60,2],
+       [67,1,5],[65,1],[64,1],[62,1],[64,1],[62,1],[60,2],[57,1,3],[55,1],[57,1],[59,1],[60,2],[60,2],
        [55,1],[55,1],[57,1],[59,1],[60,1],[60,1],[62,2],[67,1],[65,1],[64,1],[62,1],[60,2],[65,2],[60,4]]}
 };
 let curMel='fontaine',stepIdx=-1;
@@ -1503,19 +1525,20 @@ function renderWeak(){const arr=Object.entries(S.stats.lecture).filter(([k,s])=>
 const PRESETS=[
   {id:'libre',t:'Réglage libre',b:4,sub:false,start:60},
   {id:'fontaine',t:'À la claire fontaine',b:4,sub:false,start:60,note:'Pas de tempo imposé : la pulsation régulière d’abord.'},
-  {id:'hymne',t:'Hymne à la joie',b:4,sub:false,start:60,note:'Mélodie fluide au-dessus des accords C et G7.'},
+  {id:'hymne',t:'Hymne à la joie',b:4,sub:false,start:60,note:'Moderato imprimé : mélodie fluide au-dessus des accords C et G7.'},
   {id:'cancan',t:'Cancan',b:4,sub:false,start:66,note:'Moderato imprimé. La vitesse n’est pas l’objectif immédiat.'},
-  {id:'orientale',t:'Orientale',b:4,sub:false,start:60,note:'Une phrase en deux couleurs : piano puis forte, même rythme.'},
+  {id:'orientale',t:'Orientale',b:4,sub:false,start:60,note:'Modéré imprimé : une phrase en deux couleurs, piano puis forte, même rythme.'},
   {id:'tambourin',t:'Tambourin',b:4,sub:true,start:72,min:108,max:120,note:'Cible imprimée noire = 108–120, objectif non immédiat.'},
   {id:'chantmodal',t:'Chant modal en sol',b:2,sub:false,start:56,min:66,max:80,note:'Cible imprimée noire = 66–80. Mesure à 2/4 : deux temps identifiables par mesure.'},
   {id:'lapin',t:'Légende du lapin blanc',b:4,sub:true,start:56,min:66,max:80,note:'Cible imprimée noire = 66–80.'},
   {id:'divertissement',t:'Divertissement en croches',b:4,sub:true,start:52,min:60,max:72,note:'Cible imprimée noire = 60–72.'},
   {id:'tabac',t:'J’ai du bon tabac',b:4,sub:false,start:60,note:'Tenir les blanches et notes pointées jusqu’au bout.'},
   {id:'poney',t:'Le Petit Poney',b:4,sub:false,start:66,min:84,max:84,note:'Cible imprimée noire = 84. Les entrées de main gauche à leur temps exact.'},
-  {id:'melodies',t:'Mélodies à 2, 3 et 4 doigts',b:2,sub:false,start:60,note:'Nomme les notes, puis compte : le métronome contrôle la régularité.'},
+  {id:'melodies',t:'Mélodies à 2, 3 et 4 doigts',b:2,sub:false,start:60,note:'Nomme les notes, puis compte : le métronome contrôle la régularité (2/4, 3/4 ou 4/4 selon le n°).'},
   {id:'twinkle',t:'Ah ! vous dirai-je maman',b:4,sub:false,start:72,min:96,max:96,note:'Cible imprimée noire = 96, mf non legato. Pars plus lent et monte par paliers.'},
   {id:'allegretto',t:'Allegretto',b:4,sub:false,start:80,min:116,max:116,note:'Cible imprimée noire = 116. Nuances p, mf, f.'},
   {id:'wenceslas',t:'Good King Wenceslas',b:4,sub:false,start:60,note:'Mélodie partagée entre les mains ; ralentis (rit.) à la fin.'},
+  {id:'gurlitt',t:'Deux études — Gurlitt',b:4,sub:false,start:60,note:'Deux études de 8 mesures (Do majeur, 4/4) : mélodie à droite puis à gauche sur des rondes tenues.'},
   {id:'jig',t:'Three-Note Jig',b:2,sub:false,start:60,note:'Mesure à 2/4 : deux temps égaux.'},
   {id:'playtune',t:'Play Tune',b:4,sub:false,start:60,note:'Pulsation fixe, même si le prof joue la partie de duo.'},
   {id:'letitbe',t:'Let It Be',b:4,sub:false,start:60,min:72,max:72,note:'Tempo de ta feuille : noire = 72.'},
@@ -1567,13 +1590,14 @@ const PIECES=[
   {id:'tabac',t:'J’ai du bon tabac',a:'Traditionnel',focus:'Valeurs longues, C et G7',obj:'Les fins de phrases ont exactement leur durée.',piege:'Raccourcir la dernière note parce qu’on connaît l’air.'},
   {id:'poney',t:'Le Petit Poney',a:'Méthode, ex. 17',focus:'Entrées de main gauche',obj:'Une entrée de main gauche ne fait pas hésiter la mélodie.',piege:'Confondre liaison expressive et liaison de prolongation.'},
   {id:'melodies',t:'Mélodies à 2, 3 et 4 doigts',a:'Méthode, n° 1 à 13',focus:'Les deux pouces sur le Do du milieu ; nommer, puis compter',obj:'Une pièce jouée en nommant les notes, puis en comptant, sans arrêt.',piege:'Accélérer avant que le rythme soit stable au métronome.',tip:'Pour les 5 premiers exercices, le doigté 2-3-4 peut remplacer 1-2-3 pour mieux stabiliser la main.'},
-  {id:'twinkle',t:'Ah ! vous dirai-je maman',a:'Mozart, n° 54',focus:'mf non legato',obj:'Toute la pièce non legato à noire = 96, avec un son égal.',piege:'Confondre non legato et piqué sec : la main se lève légèrement, les doigts rebondissent, coude et avant-bras souples.',mel:'twinkle'},
+  {id:'twinkle',t:'Ah ! vous dirai-je maman',a:'Mozart, n° 54',focus:'mf non legato, deux mains alternées',obj:'Toute la pièce non legato à noire = 96, avec un son égal.',piege:'Confondre non legato et piqué sec : la main se lève légèrement, les doigts rebondissent, coude et avant-bras souples.',mel:'twinkle'},
   {id:'allegretto',t:'Allegretto',a:'Méthode, n° 55',focus:'Fa♯, liaisons, nuances p, mf, f',obj:'Les nuances audibles et le legato sous les liaisons, à noire = 116.',piege:'Oublier le Fa♯ au retour du motif.',tip:'U.C. : pédale una corda enfoncée jusqu’à la fin (voir la question sur les pédales).'},
   {id:'wenceslas',t:'Good King Wenceslas',a:'Chant ancien',focus:'Mélodie partagée entre les deux mains',obj:'Les passages d’une main à l’autre (pointillés) sans trou dans la mélodie.',piege:'Attendre au dernier moment : la main suivante doit être prête avant son entrée.',mel:'wenceslas',tip:'Ralentir (rit.) sur les dernières mesures.'},
+  {id:'gurlitt',t:'Deux études — Gurlitt',a:'Cornelius Gurlitt, p. 17 du recueil',focus:'Indépendance des mains, 5 doigts en Do, rondes tenues',obj:'Tenir les rondes d’une main pendant que l’autre chante lié, puis inverser les rôles (mesures 9–16).',piege:'Lâcher la ronde dès que l’autre main joue sa deuxième noire.'},
   {id:'jig',t:'Three-Note Jig',a:'Méthode en anglais',focus:'Trois notes, 2/4, mains alternées',obj:'Deux temps égaux par mesure, sans arrêt au changement de main.',piege:'Raccourcir les blanches.'},
   {id:'playtune',t:'Play Tune',a:'Méthode en anglais',focus:'4/4, partie de duo optionnelle',obj:'Garder ta pulsation pendant que le prof joue la partie de duo.',piege:'Suivre l’autre partie au lieu de compter.'},
   {id:'letitbe',t:'Let It Be',a:'Beatles, arrangement du cours',focus:'Grille C, F, G, Am, E, Dm, avec F7M et F/C',obj:'La grille de l’intro en accords tenus, sans arrêt aux changements, à noire = 72.',piege:'Regarder les mains à chaque changement : prépare l’accord suivant pendant le précédent.',tip:'Écoute la grille dans Clavier › Enchaînements › Let It Be (intro).'},
-  {id:'imagine',t:'Imagine',a:'Lennon, arrangement du cours',focus:'Grille C, CM7, F, puis Dm7, G, E7',obj:'L’intro au piano : C – CM7 | F en croches régulières à la main droite, la basse tenue, à noire = 72.',piege:'Presser les croches : compte « 1 et 2 et ».',tip:'Écoute la grille dans Clavier › Enchaînements › Imagine (début).'},
+  {id:'imagine',t:'Imagine',a:'Lennon, arrangement du cours',focus:'Grille C, CM7, F, puis F/E, Dm7, F/C, G, C/G, G7, E7',obj:'L’intro au piano : C (3 temps) – CM7 (4e temps) | F en croches régulières à la main droite, la basse tenue, à noire = 72.',piege:'Presser les croches : compte « 1 et 2 et ».',tip:'Écoute la grille dans Clavier › Enchaînements › Imagine (début).'},
   {id:'sourire',t:'Il y a ton sourire',a:'Saez, arrangement du cours',focus:'Grille Em, C, G, D, voix et piano',obj:'La grille en boucle, un accord par mesure, à noire = 80, puis en croches. Séance › Travailler un morceau : les 69 mesures, numérotées comme ta feuille.',piege:'Ralentir au passage C → G ou G → D, et oublier le Fa♯ de l’accord D : pas d’armure, le ♯ est écrit devant la note. Exercice « contrôle du Fa♯ » dans Jouer.',tip:'Écoute la grille dans Clavier › Enchaînements › Il y a ton sourire.'},
   {id:'clair',t:'Au clair de la lune',a:'Chanson traditionnelle',focus:'Position Do, puis déplacement en position Sol pour le pont',obj:'Les 16 mesures sans arrêt, déplacement de main préparé à la mesure 9.',piege:'Oublier de redescendre la main droite au pont (Ré Ré Ré Ré, La La).'},
   {id:'frere',t:'Frère Jacques',a:'Chanson traditionnelle',focus:'Croches de la mesure 5, bourdon à la main gauche',obj:'Les croches égales à noire = 96, bourdon tenu sans bouger.',piege:'Accélérer sur les croches.'},
@@ -1676,7 +1700,7 @@ function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const
 /* ---------- Écoute réaliste (Enchaînements) ---------- */
 // Tempo de référence (noire = …, indicatif, d'après l'indication de la partition), nuances et pédale des éditions Mutopia
 // quand elles existent, pédale automatique (approximation) pour les pièces qui en ont besoin, ordre de jeu avec reprises.
-const REAL={hymne:{tempo:100},fontaine:{tempo:96},tabac:{tempo:104},clair:{tempo:92},frere:{tempo:100},twinkle:{tempo:96},wenceslas:{tempo:100},
+const REAL={hymne:{tempo:100},fontaine:{tempo:96},tabac:{tempo:104},clair:{tempo:92},frere:{tempo:100},twinkle:{tempo:96},wenceslas:{tempo:100},gurlitt:{tempo:80},
   sourire:{tempo:80},bebe:{tempo:72},bach120:{tempo:100},bach846:{tempo:66},schumann1:{tempo:72},alkan311:{tempo:54},
   candeur:{tempo:108,rep:'1-8,1-8,9-16,9-15,17-23',vel:[[[69,69,69,69,69,69,69,69],[90]],[[69,60,50,41,41,41,41,41],[90]],[[41,41,41,41,41,41,41,41],[90]],[[41,41,41,41,41,41,41,41],[0]],[[41,41,41,41,41,41,41,41],[90]],[[41,41,41,41,41,41,41,41],[90]],[[41,50,60,69,69,69,69,69],[90]],[[69,69,69,69,69,0],[90,0]],[[69,69,69,69,69,69,69,69],[90,90,90,90,90,90,90,90]],[[69],[90,90,90,90,90,90,90,90]],[[69,69,69,69,69,69,69,69],[90,90,90,90,90,90,90,90]],[[69],[90,90,90,90,90,90,90,90]],[[69,90,90,90,69,90,90,90],[90,90]],[[127,117,107,98,98,98,98,98],[90]],[[69,69,69,69,69,69,69,69],[90,90]],[[69,0],[90,90,90,90,90,0]],[[69,69,69,69,69,69,69,69],[90,0]],[[69,60,50,41,41,31,22,12],[90,90]],[[12,12,12,12,12,12,12,12],[90]],[[12,12,12,12,12,12,12,12],[90,90]],[[12,0],[90,0,90,90,90,90]],[[69,0],[90,90,90,90,90]],[[62],[90]]]},
   arabesqueb:{tempo:132,rep:'1-10,3-9,11-27,12-26,28-33',vel:[[[0],[69,69]],[[0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[90,90,90,90,90,0],[69,69]],[[0,90,90,90],[69,69]],[[90,0,90],[69,69]],[[0,90,90,90],[69,69]],[[90,0,127],[69,0,69]],[[127,127,0],[69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,0]],[[95,95],[69,69,69,69,69,69]],[[95,95,95,95],[69,69,69,69]],[[95,95],[69,69,69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[0,69,69,69],[69,69]],[[69,69],[69,69]],[[0,69,69,69],[69,69]],[[69],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[69,69,69,69,69,0],[69,69]],[[95,95,95,95,95,0],[69,69,69,69,69,0]],[[127],[69]]]},
@@ -2479,7 +2503,7 @@ function renderTips(){const i=(tipIndex(new Date())+tipShift)%TIPS.length,[c,x]=
 /* ---------- Rangement des morceaux ---------- */
 // Même ordre partout : Séance, Enchaînements, Répertoire, Tempo.
 const GROUPS=[
-  ['Niveau 1 · Débutant',['melodies','poney','jig','playtune','hymne','fontaine','tabac','clair','frere','twinkle','wenceslas','sourire','sourireFa','q4do','q4sol','q4re','q4fa']],
+  ['Niveau 1 · Débutant',['melodies','poney','jig','playtune','hymne','fontaine','tabac','clair','frere','twinkle','wenceslas','gurlitt','sourire','sourireFa','q4do','q4sol','q4re','q4fa']],
   ['Niveau 2 · Facile',['allegretto','divertissement','lapin','tambourin','chantmodal','cancan','orientale','letitbe','imagine','bebe','candeur','bach120']],
   ['Niveau 3 · Intermédiaire',['arabesqueb','schumann1','bach846']],
   ['Niveau 4 · Avancé',['alkan311g','alkan311','alkan8','liszt3','odysseus']],
@@ -2667,11 +2691,9 @@ const QBASE=[
   ['emE','Feuille d’accords : pourquoi « Em (ou E) » ? E sert-il de dominante pour la mineur ?'],
   ['modal','Chant modal en sol avec un bémol : mode de ré sur sol ?'],
   ['orientale','Orientale : relire avec lui les annotations au crayon trop pâles.'],
-  ['doigtes','Doigtés peu lisibles sur Le Petit Poney et Orientale.'],
-  ['fontaineMG','À la claire fontaine : vérifier la main gauche des mesures 8 et 12 (Fa♯ avec rappel ?).'],
   ['alkan','Le Festin d’Ésope (Alkan) : quel travail est envisagé, et quand ?'],
   ['unacorda','Allegretto (n° 55) : la pédale una corda est demandée jusqu’à la fin. Peut-on l’utiliser sur La Vestale avant la vérification des pédales ?'],
-  ['mgPos','Main gauche : position de départ (doigt et note) pour Orientale et Let It Be ? Et pour Il y a ton sourire, quels doigts pour les basses Mi, Do, Sol, Ré ?'],
+  ['mgPos','Main gauche : position de départ (doigt et note) pour Let It Be ? Et pour Il y a ton sourire, quels doigts pour les basses Mi, Do, Sol, Ré ?'],
   ['mgCancan','Cancan, main gauche : la feuille imprime Do + Mi (C) et Si + Sol (G) ; au crayon, Sol et Fa sont ajoutés. Je joue les accords complets (Do-Mi-Sol, Si-Fa-Sol) ?'],
   ['odysseus','Odysseus (Göransson, version Parrino) : quelle version acheter pour mon niveau, ou peux-tu m’en préparer une simplifiée ?']
 ];
