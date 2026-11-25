@@ -143,7 +143,9 @@ test('C6. accord incomplet dans le Coach : note manquante retenue, geste conseil
   await page.locator('#ec-go').click();
   // @ts-ignore
   await page.evaluate(() => clearInterval(EC.iv));
-  await play(page, [48, 55]);
+  // accord lâché : le verdict tombe au relâchement (v67 : un accord qui sonne est jugé jusqu'à ~0,6 s)
+  // @ts-ignore
+  await page.evaluate(() => { window.__play([48, 55]); ecFeed(new Float32Array(4096), 48000); });
   await expect(page.locator('#ec-fb')).toHaveText('Il manque Mi3. Rejoue l’accord. Pose tous les doigts ensemble avant d’appuyer.');
   await play(page, [48, 52, 55]);
   await expect(page.locator('#ec-fb')).toContainText('Mesure 1 : 1 faute');

@@ -136,12 +136,12 @@ test('E9. accord faux : la note manquante est nommée, l’accord n’avance pas
   await page.evaluate(() => clearInterval(EC.iv));
   await expect(page.locator('#ec-msg')).toHaveText('Joue l’accord : Do3 + Mi3 + Sol3');
   // @ts-ignore
-  await page.evaluate(() => window.__play([48, 51, 55]));                         // Do mineur au lieu de Do majeur
+  await page.evaluate(() => { window.__play([48, 51, 55]); ecFeed(new Float32Array(4096), 48000); }); // Do mineur au lieu de Do majeur, puis lâché : verdict au relâchement (v67)
   await expect(page.locator('#ec-fb')).toHaveText('Il manque Mi3. Rejoue l’accord.');
   await expect(page.locator('#kb-wk .key.ko')).toHaveAttribute('aria-label', 'Mi3');
   await expect(page.locator('#wk-pos')).toHaveText('Mesure 1/16');
   // @ts-ignore
-  await page.evaluate(() => window.__play([48, 55]));                             // Do + Sol seuls
+  await page.evaluate(() => { window.__play([48, 55]); ecFeed(new Float32Array(4096), 48000); }); // Do + Sol seuls, puis lâché
   await expect(page.locator('#ec-fb')).toHaveText('Il manque Mi3. Rejoue l’accord.');
   await expect(page.locator('#ec-score')).toHaveText('Justes 0 À revoir 2');
   // @ts-ignore
