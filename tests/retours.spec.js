@@ -66,7 +66,7 @@ test('RT4. Morceaux : niveaux repliés (seul le niveau en cours ouvert), sommair
   await page.setViewportSize({ width: 414, height: 896 });
   await page.goto('./#morceaux');
   const h = await page.evaluate(() => document.documentElement.scrollHeight);
-  expect(h).toBeLessThan(7000);                                                    // 17 600 px avant, ~6 300 après
+  expect(h).toBeLessThan(7800);                                                    // 17 600 px avant, ~6 700 après (13 morceaux en Niveau 1)
   const grp = page.locator('#pieces details.pc-grp');
   await expect(grp).toHaveCount(5);
   await expect(page.locator('#pc-toc button')).toHaveCount(5);

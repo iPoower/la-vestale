@@ -132,7 +132,7 @@ Les notes sont jouées avec des enregistrements d'un piano Steinway & Sons modè
 ## Sources et licences des morceaux
 
 - Exercices de main gauche (onglet « Main gauche ») : écrits pour l’app.
-- Hymne à la joie, À la claire fontaine, J’ai du bon tabac, Au clair de la lune, Frère Jacques : airs du domaine public ; accompagnements de main gauche écrits pour l’app.
+- Hymne à la joie, À la claire fontaine, J’ai du bon tabac, Au clair de la lune, Frère Jacques, Ah ! vous dirai-je maman (n° 54), Good King Wenceslas, Deux études de Cornelius Gurlitt (p. 17) : domaine public, alignés sur les feuilles du cours (accompagnements d’Au clair de la lune et Frère Jacques écrits pour l’app).
 - Hedwige Chrétien (1859–1944), « Bébé s’endort » (6 Petits Préludes récréatifs n° 2) : domaine public ; notes relevées pour l’app, doigtés proposés par l’app.
 - Bach, Menuet en la mineur BWV Anh. 120 : domaine public, notes d’après l’édition du Mutopia Project (Bach-Gesellschaft, 1894).
 - Alkan, Préludes op. 31 n° 8 « La chanson de la folle au bord de la mer » : notes d’après l’édition du Mutopia Project, licence Creative Commons Attribution-ShareAlike 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Les données de cette pièce dans `index.html` (constante `WORK.alkan8`) sont une adaptation partagée sous la même licence.

@@ -20,7 +20,8 @@ test('U2. « Mes partitions » : seuls les accompagnements à 2, 3 ou 4 temps sa
   const accs = await page.$$eval('#my-acc option', o => o.map(x => x.value));
   expect(accs).toContain('sourire');
   expect(accs).toContain('hymne');
-  expect(accs).not.toContain('twinkle');                               // main droite seule : rien à accompagner
+  expect(accs).toContain('twinkle');                                   // feuille n° 54 : main gauche Sol3–La3–Si3
+  expect(accs).toContain('gurlitt');                                   // p. 17 du recueil : deux études de Gurlitt
   expect(accs).not.toContain('bach120');                               // levée d'un temps
   expect(accs).not.toContain('clairlune');                             // 9/8
   await page.locator('#my-title').fill('Essai');
@@ -36,7 +37,7 @@ test('U3. Journal : le choix du morceau est rangé par niveau et contient tout l
   // @ts-ignore
   const r = await page.evaluate(() => { openLog(30); const sel = document.querySelector('#f-piece'); return { groups: [...sel.querySelectorAll('optgroup')].map(g => g.label), n: sel.querySelectorAll('optgroup option').length, all: PIECES.every(p => [...sel.options].some(o => o.value === p.id)), extra: [...sel.options].slice(-2).map(o => o.value) }; });
   expect(r.groups).toEqual(['Niveau 1 · Débutant', 'Niveau 2 · Facile', 'Niveau 3 · Intermédiaire', 'Niveau 4 · Avancé', 'Niveau 5 · Objectif']);
-  expect(r.n).toBe(32);
+  expect(r.n).toBe(33);
   expect(r.all).toBe(true);
   expect(r.extra).toEqual(['accords', 'libre']);
 });

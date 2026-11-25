@@ -7,9 +7,9 @@ test('Q1. « Ah ! vous dirai-je maman » et « Good King Wenceslas » : mesures 
   await page.goto('./#seance');
   // @ts-ignore
   const r = await page.evaluate(() => { const t = workBars('twinkle'), w = workBars('wenceslas'), n = e => e[0] ? e[0][0] : null;
-    return { tn: t.length, t1: t[0].rh.map(n), wn: w.length, w2: [w[1].rh.map(n), w[1].lh.map(n)], w3: [w[2].rh.map(e => [n(e), e[1]]), w[2].lh.map(n)] }; });
+    return { tn: t.length, t1: [t[0].lh.map(n), t[0].rh.map(n)], wn: w.length, w2: [w[1].rh.map(n), w[1].lh.map(n)], w3: [w[2].rh.map(e => [n(e), e[1]]), w[2].lh.map(n)] }; });
   expect(r.tn).toBe(12);
-  expect(r.t1).toEqual([60, 60, 67, 67]);
+  expect(r.t1).toEqual([[55, 55, null], [null, 62, 62]]);               // Sol3 Sol3 à gauche, Ré4 Ré4 à droite (feuille n° 54)
   expect(r.wn).toBe(17);
   expect(r.w2).toEqual([[60, 60, null], [null, 55]]);                 // Do Do à droite, puis Sol3 (blanche) à gauche
   expect(r.w3).toEqual([[[null, 4]], [57, 55, 57, 59]]);               // mesure 3 : toute à la main gauche
