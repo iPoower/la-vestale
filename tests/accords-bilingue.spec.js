@@ -56,7 +56,7 @@ test('AB2. 4 accords : tableau 4 tonalités, notes pivots, Stop et Flash accords
   // Tape les 3 notes de l'accord courant sur le mini-clavier
   // @ts-ignore
   const notes = await page.evaluate(() => QF_DB[QF.cur][2]);
-  for (const m of notes) await page.locator(`#kb-qf .key[data-m="${m}"]`).click();
+  for (const m of notes) await page.locator(`#kb-qf .key[data-m="${m}"]`).dispatchEvent('pointerdown');
   await expect(page.locator('#qf-tag')).toHaveText('1/10');
   await expect(page.locator('#qf-fb')).toContainText('Juste !');
   await page.waitForTimeout(550);
@@ -65,7 +65,7 @@ test('AB2. 4 accords : tableau 4 tonalités, notes pivots, Stop et Flash accords
 });
 
 test('AB3. séance du jour : la rotation 3 jours intègre « Accords & FR⇄EN » (30 min) et suit le Flash accords', async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-17T10:00:00')); // dayN() % 3 === 2 → Accords & FR⇄EN
+  await page.clock.setFixedTime(new Date('2026-11-18T10:00:00')); // dayN() % 3 === 0 → Accords & FR⇄EN
   await page.goto('./#seance');
   const blocs = await page.locator('#blocks li').evaluateAll(ls => ls.map(l => [l.querySelector('b').textContent, +l.querySelector('.m').textContent.replace('′', '')]));
   expect(blocs.map(x => x[0])).toContain('Accords & FR⇄EN');
@@ -77,6 +77,7 @@ test('AB3. séance du jour : la rotation 3 jours intègre « Accords & FR⇄EN �
     await page.locator('#rb-next').click();
   }
   await expect(page.locator('#v-accords4')).toBeVisible();
+  await page.waitForTimeout(100);
   await page.locator('#qf-ok').click();
   await expect(page.locator('#rb-sub')).toContainText('1/10 accords');
 });

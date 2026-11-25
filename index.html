@@ -2456,7 +2456,7 @@ function dayPlan(){const id=coachFocus(),w=WORK[id],n=workBars(id).length,day=da
   const sft=sfWeakType(),sfn=(SF_TYPES.find(x=>x[0]===sft)||[0,'mélange'])[1].toLowerCase(),rot=((day%3)+3)%3;
   const q4Next=(Q4_ORDER.find(([qid])=>q4Prog(qid)[0]<q4Prog(qid)[1])||Q4_ORDER[0])[1];
   const qfKey=q4Next==='do'||q4Next==='sol'?q4Next:'pop';
-  const bonus=rot===0?['Solfège',2,`Chrono 1 min : ${sfn}${sft==='mix'?'':' (ton point faible)'}.`,'#solfege','sf:'+sft,{k:'sf'}]
+  const bonus=rot===2?['Solfège',2,`Chrono 1 min : ${sfn}${sft==='mix'?'':' (ton point faible)'}.`,'#solfege','sf:'+sft,{k:'sf'}]
     :rot===1?['Oreille',2,'Intervalles et accords à l’oreille : une série courte.','#oreille','',{k:'ear'}]
     :['Accords & FR⇄EN',2,`Flash accords (${qfKey==='sol'?'Em C G D':qfKey==='do'?'C F G Am':'6 accords pop'}) : 10 accords bilingues sans hésiter.`,'#accords4','qf:'+qfKey,{k:'q4'}];
   out.push(bonus,pzPlaisir());
@@ -2889,9 +2889,9 @@ const QF_DB={
   D:['D','Ré majeur',[57,62,66],[1,3,5]],G7:['G7','Sol 7 (main gauche)',[47,53,55],[5,2,1]]};
 const QF_SETS={do:['C','F','G','Am'],sol:['Em','C','G','D'],cours:['C','G7','D'],pop:['C','F','G','Am','Dm','Em']};
 const QF={set:'do',lang:'mix',cur:null,prev:null,done:0,goal:10,t0:0,times:[],tapped:new Set(),asFR:false,finished:false};
-let QFKB=null;
+let QFKB=null,QF_TM=0;
 function qfInit(){if(!QFKB&&$('#kb-qf'))QFKB=makeKeyboard($('#kb-qf'),47,72,{small:true,fit:'always',onKey:qfTap});if(!QF.cur)qfReset();}
-function qfNext(){const pool=QF_SETS[QF.set]||QF_SETS.do;let pick=pool[Math.floor(Math.random()*pool.length)];
+function qfNext(){clearTimeout(QF_TM);QF_TM=0;const pool=QF_SETS[QF.set]||QF_SETS.do;let pick=pool[Math.floor(Math.random()*pool.length)];
   if(pool.length>1)for(let k=0;k<8&&pick===QF.cur;k++)pick=pool[Math.floor(Math.random()*pool.length)];
   QF.prev=QF.cur;QF.cur=pick;QF.tapped=new Set();QF.t0=performance.now();
   QF.asFR=QF.lang==='fr'||(QF.lang==='mix'&&Math.random()<.5);
@@ -2907,7 +2907,7 @@ function qfNext(){const pool=QF_SETS[QF.set]||QF_SETS.do;let pick=pool[Math.floo
 function qfUpdateTag(){$('#qf-tag').textContent=`${QF.done}/${QF.goal}`;
   const avg=QF.times.length?(QF.times.reduce((a,x)=>a+x,0)/QF.times.length/1000).toFixed(1).replace('.',','):null;
   $('#qf-stat').textContent=QF.finished?`Série terminée · ${QF.goal}/${QF.goal}${avg?` · temps moyen ${avg} s par accord`:''}. Bravo !`:(avg?`Temps moyen : ${avg} s par accord`:'Objectif : 10 accords propres d’affilée.');}
-function qfReset(){QF.done=0;QF.times=[];QF.prev=null;QF.cur=null;QF.finished=false;$('#qf-ok').disabled=false;qfNext();}
+function qfReset(){clearTimeout(QF_TM);QF_TM=0;QF.done=0;QF.times=[];QF.prev=null;QF.cur=null;QF.finished=false;$('#qf-ok').disabled=false;qfNext();}
 function qfPlay(id){const c=QF_DB[id||QF.cur];if(!c)return;const a=ac();if(!a)return;const bus=newBus(),t=a.currentTime+.04;c[2].forEach(m=>playNote(m,t,1.1,.7,bus));}
 function qfShowHint(){const c=QF_DB[QF.cur];if(!c)return;
   if(QFKB){QFKB.clear();QFKB.el.querySelectorAll('.fg').forEach(e=>e.parentNode.removeChild(e));
@@ -2917,7 +2917,7 @@ function qfMarkOk(){if(!QF.cur||QF.finished)return;const c=QF_DB[QF.cur];
   const dt=Math.min(30000,Math.max(100,performance.now()-QF.t0));QF.times.push(dt);QF.done++;runLog('q4',QF.done);
   $('#qf-fb').textContent=`Juste ! ${c[0]} = ${c[1]} (${c[2].map(nm).join('–')})`;$('#qf-fb').className='fb ok';
   if(QF.done>=QF.goal){QF.finished=true;$('#qf-ok').disabled=true;$('#qf-q').textContent='✓ 10/10';$('#qf-pivot').textContent='';qfUpdateTag();return;}
-  qfUpdateTag();setTimeout(()=>{if(!QF.finished)qfNext();},450);}
+  qfUpdateTag();clearTimeout(QF_TM);QF_TM=setTimeout(()=>{if(!QF.finished)qfNext();},450);}
 function qfTap(m){if(!QF.cur||QF.finished)return;const c=QF_DB[QF.cur],want=new Set(c[2].map(x=>x%12));
   playNote(m,ac().currentTime,.6,.65);
   if(want.has(m%12)){QF.tapped.add(m%12);if(QFKB)QFKB.mark([m],'ok');
@@ -2949,15 +2949,16 @@ const AK_LV=[
   {t:'La chanson de la folle',d:'Écouter, puis la main gauche grave : accords tenus tout en bas du clavier.',id:'alkan8',h:'lh',k:['ecoute','lh'],first:2}];
 function akProg(L){if(L.bars){const c=(S.coach&&S.coach[L.id])||{},b=c.b||{},n=workBars(L.id).length;let ok=0;for(let i=0;i<n;i++)if(b[i]&&b[i][1]>0)ok++;return [ok,n];}
   let st=pzSteps(L.id).filter(x=>L.k.includes(x.k));if(L.first)st=st.filter(x=>x.s==null||x.s<L.first-1);return [st.filter(pzDone).length,st.length];}
-function akStop(){stopBus();$$('#ak-chords li').forEach(l=>l.classList.remove('now'));}
+let AK_ON=false;
+function akStop(){AK_ON=false;stopBus();$$('#ak-chords li').forEach(l=>l.classList.remove('now'));}
 function akHi(i){$$('#ak-chords li').forEach((l,k)=>l.classList.toggle('now',k===i));}
 function akPlayBar(i){const bs=akBars(),b=bs[i];if(!b)return;const a=ac();if(!a)return;const bus=newBus(),spb=60/54;let t=a.currentTime+.05;
-  akHi(i);b.lh.forEach(e=>{if(e[0])e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,.7,bus));t+=e[1]*spb;});
-  at(t-a.currentTime,()=>{if(BUS===bus)akHi(-1);});}
+  AK_ON=true;akHi(i);b.lh.forEach(e=>{if(e[0])e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,.7,bus));t+=e[1]*spb;});
+  at(t-a.currentTime,()=>{if(BUS===bus){AK_ON=false;akHi(-1);}});}
 function akPlayAll(){const bs=akBars(),a=ac();if(!a)return;const bus=newBus(),spb=60/54;let t=a.currentTime+.08;
-  bs.forEach((b,i)=>{const s=t;if(i===0)akHi(0);else at(s-a.currentTime,()=>{if(BUS===bus)akHi(i);});
+  AK_ON=true;bs.forEach((b,i)=>{const s=t;if(i===0)akHi(0);else at(s-a.currentTime,()=>{if(BUS===bus)akHi(i);});
     b.lh.forEach(e=>{if(e[0])e[0].forEach(m=>playNote(m,t,e[1]*spb*.92,.7,bus));t+=e[1]*spb;});});
-  at(t-a.currentTime,()=>{if(BUS===bus)akHi(-1);});}
+  at(t-a.currentTime,()=>{if(BUS===bus){AK_ON=false;akHi(-1);}});}
 function renderAlkan(){const box=$('#ak-levels');if(!box)return;let rec=-1,done=0;
   const P=AK_LV.map(akProg);P.forEach(([a,n],i)=>{if(a>=n)done++;else if(rec<0)rec=i;});
   box.innerHTML=AK_LV.map((L,i)=>{const [a,n]=P[i],ok=a>=n;return `<li class="${ok?'done':''}${i===rec?' rec':''}"><div class="ak-h"><b>${i+1}. ${esc(L.t)}</b><span class="ak-s">${ok?'✓ acquis':i===rec?'recommandé · '+a+'/'+n:a+'/'+n}</span></div>
@@ -2977,7 +2978,7 @@ function navSync(v){const g=NAV[v]||'aujourdhui';if(NAV_SUB[g])NAV_LAST[g]=v;
   const sub=$('#subtabs');if(NAV_SUB[g]){sub.innerHTML=NAV_SUB[g].map(([k,l])=>`<a href="#${k}" data-v="${k}"${k===v?' class="on" aria-current="page"':''}>${esc(l)}</a>`).join('');sub.hidden=false;}else{sub.hidden=true;sub.innerHTML='';}}
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='seance';
   $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));navSync(v);
-  mtChip();if(v!=='seance'&&v!=='coach')ecStop();if(v!=='solfege'&&SF.on)sfStop();if(v!=='alkan')akStop();if(v==='solfege')renderSolf();
+  mtChip();if(v!=='seance'&&v!=='coach')ecStop();if(v!=='solfege'&&SF.on)sfStop();if(v!=='alkan'&&AK_ON)akStop();if(v==='solfege')renderSolf();
   // Une seule carte « Travailler un morceau » : elle passe dans le Coach, puis revient dans Séance.
   if(v==='coach'&&$('#wk-card').parentNode!==$('#co-slot')){$('#co-slot').appendChild($('#wk-card'));renderCoach();setTimeout(wkScroll,30);}
   $('#wk-card h2').textContent=v==='coach'?'2. Jouer':'Travailler un morceau';if(v==='coach'){renderDc();renderPz();}else dcStop();
