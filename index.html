@@ -146,6 +146,10 @@ textarea{min-height:70px;resize:vertical}
 .ec-beat i.on{background:var(--laiton);opacity:1;transform:scale(1.25)}
 .ec-beat i.one{border-width:3px}
 #co-slot #wk-piece,#co-slot #wk-hands,#co-slot #wk-src,#co-slot #wk-pdf{display:none}
+.wk-mask{display:none;margin:6px 0;padding:8px 10px;border:1px dashed var(--laiton);border-radius:10px}
+#co-slot.dc-mask .wk-mask{display:block}
+#co-slot.dc-mask :is(#kb-wk,.wk-steps,#wk-info,#wk-staff-box){filter:blur(16px) grayscale(1);opacity:.15;pointer-events:none;user-select:none;-webkit-user-select:none}
+#co-slot.dc-mask #kb-wk .fg{opacity:0}
 #dc-card select,#dc-card .seg{margin-bottom:10px}
 .dc-bar{margin:12px 0 6px;gap:8px}
 .dc-names{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 10px}
@@ -341,6 +345,7 @@ details summary{cursor:pointer;color:var(--laiton);font-weight:700;font-size:.9r
     <p class="small muted" id="wk-src"></p>
     <p class="small" id="wk-pdf"></p>
     <div class="seg" id="wk-hands"><button data-h="rh">Main droite</button><button data-h="lh">Main gauche</button><button data-h="both" class="on">Deux mains</button></div>
+    <p class="small wk-mask" id="wk-mask">Caché pendant que tu déchiffres la mesure au-dessus : la réponse revient dès que tu as fini.</p>
     <div class="kb-wrap" id="kb-wk"></div>
     <div class="row wk-steps"><button class="btn" id="wk-step-prev" aria-label="Accord précédent">◀</button><span class="small" id="wk-step-lbl"></span><button class="btn" id="wk-step-next" aria-label="Accord suivant">▶</button></div>
     <div class="small" id="wk-info" aria-live="polite"></div>
@@ -1327,7 +1332,10 @@ function wkGo(bar){stopBus();WK.playing=false;WK.step=0;WK.range=null;WK.bar=bar
 function wkBuild(){const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));
   if(!ms.length)ms.push(60,72);let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
   WKKB=makeKeyboard($('#kb-wk'),lo,hi,{fit:'always'});WKKB.labels();}
-function wkSelect(id){if(!WORK[id])return;stopBus();WK.playing=false;WK.step=0;WK.thru=null;WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;wkBuild();renderWork();}
+function wkSelect(id){if(!WORK[id])return;stopBus();WK.playing=false;WK.step=0;WK.thru=null;WK.range=null;PZ.playing=false;WK.id=id;$('#wk-piece').value=id;WK.bar=(S.rep[id]&&S.rep[id].m)||0;WK.okRun=0;
+  // La main choisie n'a aucune note dans ce morceau (ex. exercice main gauche → mélodie main droite) : on prend celle qui joue.
+  if(WK.hands==='rh'||WK.hands==='lh'){const bs=workBars(id),has=h=>bs.some(b=>b[h].some(e=>e[0]));if(!has(WK.hands)){const o=WK.hands==='rh'?'lh':'rh';WK.hands=has(o)?o:'both';}}
+  wkBuild();renderWork();}
 // Mesures jouées : la mesure courante, ou elle et la suivante (« 2 mesures »).
 function wkSeg(){const bars=workBars(WK.id);if(WK.range)return bars.slice(WK.range[0],WK.range[1]+1);if(WK.span===0)return bars.slice(0,WK.bar+1);return bars.slice(WK.bar,WK.bar+(WK.span===2&&WK.bar<bars.length-1?2:1));}
 // « Depuis le début » : les mesures déjà vues, en petit, au-dessus de la mesure en cours.
@@ -1343,15 +1351,18 @@ const wkClear=()=>{if(WKKB)WKKB.el.querySelectorAll('.key.next').forEach(k=>k.cl
 // sur le même canal, à `start + durée` : aucun décalage d'une reprise à l'autre.
 function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;const seg=wkSeg();const clicks=$('#wk-click').checked;
   const segEnd=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
-  const hands=WK.hands==='both'?['rh','lh']:[WK.hands];
+  const hands=WK.hands==='both'?['rh','lh']:[WK.hands];const lit=new Map();   // un seul allumage par instant, les deux mains ensemble
   let tb0=start;seg.forEach((b,bi)=>{const tb=tb0;tb0+=b.rh.reduce((a,e)=>a+e[1],0)*spb;if(clicks){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(tb+k*bt*spb,k===0?'acc':'beat',bus);}
-    hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0)playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);});const ms=e[0];at(t-a.currentTime,()=>{wkClear();ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));});}t+=e[1]*spb;});});});
+    hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){const k=Math.round(t*1e4);e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0){playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);if(!lit.has(k))lit.set(k,{t,ms:[]});lit.get(k).ms.push(m);}});}t+=e[1]*spb;});});});
+  [...lit.values()].sort((x,y)=>x.t-y.t).forEach(({t,ms})=>at(t-a.currentTime,()=>{if(BUS!==bus)return;wkClear();ms.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next'));}));
   const end=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
-  at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{wkClear();awake('wk',false);WK.playing=false;wkMarkStep();});}});}
+  at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{at(end-AC.currentTime,()=>{if(BUS!==bus)return;BUS=null;setTimeout(()=>{try{bus.disconnect();}catch(e){}},1500);wkEnd();});}});}
 function playWork(){ecStop();const a=ac();if(!a)return;const bus=newBus();WK.playing=true;wkMarkStep();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
   if($('#wk-click').checked){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(start+k*bt*spb,k===0?'acc':'beat',bus);start+=bpb*spb;}   // décompte d'une mesure
   awake('wk',$('#wk-loop').checked);wkSchedule(bus,start);}
-function wkStop(){stopBus();wkClear();awake('wk',false);WK.playing=false;wkMarkStep();}
+// Fin de l'écoute (Stop, ou dernière note jouée) : tout revient au repos, y compris le bouton du parcours (« ■ Stop » → « ▶ Écouter »).
+function wkEnd(){wkClear();awake('wk',false);WK.playing=false;WK.range=null;PZ.playing=false;wkMarkStep();if(inCoach())renderPz();}
+function wkStop(){stopBus();wkEnd();}
 
 /* ---------- Main gauche ---------- */
 // Positions de départ. ok:true = doigtés imprimés sur la feuille ; ok:'notes' = notes imprimées, doigts déduits ;
@@ -1808,7 +1819,9 @@ async function ecStart(mode){ecStop();const tok=EC.tok,md=navigator.mediaDevices
   $('#ec-box').classList.add('on');$('#kb-wk').classList.toggle('ecoute',mode==='play');ecFb('','');
   if(mode==='cal'){$('#ec-cal-msg').textContent='J’écoute… Joue le La4 et laisse-le sonner.';$('#ec-cal-go').textContent='Arrêter';return;}
   $('#ec-go').textContent='Arrêter l’écoute';$('#ec-skip').classList.remove('hidden');$('#ec-score').classList.remove('hidden');ecScore();
-  if(WK.hands==='both'){WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}else ecPrep();
+  if(WK.hands==='both'){const bs=workBars(WK.id),R=bs.some(b=>b.rh.some(e=>e[0])),L=bs.some(b=>b.lh.some(e=>e[0]));
+    if(!R&&L){WK.hands='lh';renderWork();ecFb('J’écoute une main à la fois : ce morceau est pour la main gauche seule.','');}
+    else{WK.hands='rh';renderWork();ecFb('J’écoute une main à la fois : main droite. Choisis « Main gauche » pour l’autre.','');}}else ecPrep();
   const far=calFar();if(far)ecFb(far,'ko');}
 function ecStop(msg){setTimeout(()=>{if(WKKB&&!(EC.on&&EC.mode==='play'))wkMarkStep();},0);EC.tok++;RZ.on=false;if(REC.on&&!REC.own)recStop();$('#ec-beat').classList.add('hidden');if(!EC.on){if(EC_ON){EC_ON=false;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}}if(msg)ecFb(msg,'');return;}clearInterval(EC.iv);
   try{EC.stream.getTracks().forEach(tr=>tr.stop());}catch(e){}try{EC.src.disconnect();}catch(e){}
@@ -2217,10 +2230,10 @@ function pzMark(st){const c=pzC(st.id);
   const all=pzSteps(st.id).every(pzDone);if(all&&PIECES.some(x=>x.id===st.id)){S.rep[st.id]=Object.assign({stage:0},S.rep[st.id],{stage:5});saveRep();renderPieces();}
   pzHands();renderPz();if(inCoach()){renderDc();renderCoach();}pzFb(all?'Bravo : tout le morceau est fait !':'Étape validée ✓ Voici la suivante.','ok');}
 async function pzAct(a){const {st}=pzCur();if(!st)return;
-  if(a==='stop'){stopBus();renderPz();pzFb('','');return;}
+  if(a==='stop'){wkStop();renderPz();pzFb('','');return;}
   if(a==='model'){ecStop();dcStop();WK.hands='both';wkGo(st.a);WK.range=[st.a,st.b];playWork();PZ.playing=true;renderPz();pzFb(st.k==='ecoute'?'Lecture en cours… Les touches s’allument sur le clavier de « 2. Jouer ».':'Écoute, puis joue-le comme ça.','');return;}
   if(a==='ko'){PZ.run=0;renderPz();pzFb('Pas grave : reprends plus lentement, ou retravaille seule la mesure qui accroche.','ko');return;}
-  if(a==='ok'){stopBus();PZ.run++;if(PZ.run>=PZ_NEED[st.k]){pzMark(st);return;}renderPz();pzFb(`Encore ${PZ_NEED[st.k]-PZ.run} fois propre d’affilée.`,'ok');return;}
+  if(a==='ok'){wkStop();PZ.run++;if(PZ.run>=PZ_NEED[st.k]){pzMark(st);return;}renderPz();pzFb(`Encore ${PZ_NEED[st.k]-PZ.run} fois propre d’affilée.`,'ok');return;}
   if(a==='self'){if(!(await ask(`Valider « ${pzText(st)[0]} » toi-même, sans vérification ?`)))return;pzMark(st);return;}
   // a === 'go' : ouvrir le bon outil, à la bonne mesure
   const left=pzLeft(st),bar=left.length?left[0]:st.a;PZ.live={id:st.id,i:st.i,k:st.k};pzFb('','');
@@ -2288,7 +2301,7 @@ function renderDcId(){const id=WK.id,w=WORK[id],hs=dcHands(),k=id+'|'+WK.hands+'
   const bars=workBars(id),key=dcKey(id),rp=dcRepeats(bars,hs),traps=dcTraps(id,bars,key,hs),all=[];hs.forEach(h=>bars.forEach(b=>b[h].forEach(e=>e[0]&&all.push(...e[0].map(m=>[h,m])))));
   const rng=hs.map(h=>{const ms=all.filter(x=>x[0]===h).map(x=>x[1]);return ms.length?`${h==='rh'?'main droite':'main gauche'} de ${wkNm(Math.min(...ms))} à ${wkNm(Math.max(...ms))}`:'';}).filter(Boolean).join(' ; ');
   const tempo=REAL[id]&&REAL[id].tempo;let h='<ul>';
-  h+=`<li><b>Tonalité</b> : ${esc(key.name)} · ${key.sig.length?`armure : ${key.sig.length} ${key.flat?'bémol':'dièse'}${key.sig.length>1?'s':''} (${esc(key.sig.join(', '))}) : ${key.sig.length>1?'ces notes sont':'cette note est'} altérée${key.sig.length>1?'s':''} partout`:'aucune altération à la clé'}.</li>`;
+  h+=`<li><b>Tonalité</b> : ${esc(key.name)} · ${key.nosig?`pas d’armure sur ta feuille : ${esc(key.nosig.join(', '))} écrit devant la note`:key.sig.length?`armure : ${key.sig.length} ${key.flat?'bémol':'dièse'}${key.sig.length>1?'s':''} (${esc(key.sig.join(', '))}) : ${key.sig.length>1?'ces notes sont':'cette note est'} altérée${key.sig.length>1?'s':''} partout`:'aucune altération à la clé'}.</li>`;
   h+=`<li><b>Mesure</b> : ${esc(dcMeter(w))}${w.pickup?' Le morceau commence par une levée (anacrouse) : la première mesure est incomplète.':''}</li>`;
   if(tempo)h+=`<li><b>Tempo</b> : noire = ${tempo}. Pour déchiffrer, commence vers ${Math.round(tempo*.6)} au métronome.</li>`;
   if(rng)h+=`<li><b>Étendue</b> : ${esc(rng)}.</li>`;
@@ -2304,7 +2317,9 @@ function dcItems(){const b=workBars(WK.id)[WK.bar],items=[],key=dcKey(WK.id),ACC
     if(!ms.length)return;if(ms.length===1&&ms[0].m===last){items[items.length-1].also.push(`${h}-${ei}-${ms[0].j}`);return;}      // même note répétée : déjà lue
     ms.forEach(x=>items.push({h,ei,j:x.j,m:x.m,f:e[2]&&e[2][x.j],also:[],wa:ACC[h][ei][x.j]}));last=ms.length===1?ms[0].m:null;});});
   return items;}
-function dcStop(){DC.on=false;const l=$('#dc-live');if(l)l.hidden=true;}
+// Pendant qu'une mesure se déchiffre, « 2. Jouer » (juste en dessous) cache la réponse : clavier allumé, noms des notes, portée.
+function dcMask(){const s=$('#co-slot');if(s)s.classList.toggle('dc-mask',DC.on&&DC.k<DC.items.length);}
+function dcStop(){DC.on=false;const l=$('#dc-live');if(l)l.hidden=true;dcMask();}
 function renderDc(){if(!WORK[WK.id])return;const sel=$('#dc-piece');if(sel.innerHTML!==$('#wk-piece').innerHTML)sel.innerHTML=$('#wk-piece').innerHTML;sel.value=WK.id;
   $$('#dc-hands button').forEach(x=>x.classList.toggle('on',x.dataset.h===WK.hands));
   if(DC.on&&(DC.bar!==WK.bar||DC.id!==WK.id||DC.hands!==WK.hands))dcStop();
@@ -2312,7 +2327,7 @@ function renderDc(){if(!WORK[WK.id])return;const sel=$('#dc-piece');if(sel.inner
   $('#dc-prog').textContent=`${read}/${n} lue${read>1?'s':''}`;
   $('#dc-pos').textContent=`Mesure ${WK.bar+1}/${n}`+(d[WK.bar]?' · déjà lue ✓':'');
   $('#dc-go').textContent=(d[WK.bar]?'Relire':'Déchiffrer')+` la mesure ${WK.bar+1}`;}
-function dcStart(){stopBus();const items=dcItems();Object.assign(DC,{on:true,items,k:0,err:0,tries:0,step:'name',bar:WK.bar,id:WK.id,hands:WK.hands});
+function dcStart(){wkStop();const items=dcItems();Object.assign(DC,{on:true,items,k:0,err:0,tries:0,step:'name',bar:WK.bar,id:WK.id,hands:WK.hands});dcMask();
   $('#dc-live').hidden=false;$('#dc-after').hidden=true;$('#dc-fb').textContent='';$('#dc-fb').className='fb';
   const ms=[];workBars(WK.id).forEach(b=>[...b.rh,...b.lh].forEach(e=>e[0]&&ms.push(...e[0])));if(!ms.length)ms.push(60,72);
   let lo=Math.min(...ms)-2,hi=Math.max(...ms)+2;while(isBlack(lo))lo--;while(isBlack(hi))hi++;
@@ -2338,7 +2353,7 @@ function dcSee(sel,soft){const el=$(sel);if(!el||!el.getBoundingClientRect)retur
 function dcFb(msg,cls){const f=$('#dc-fb');f.textContent=msg;f.className='fb'+(cls?' '+cls:'');}
 function dcClefTip(h){const L=h==='rh'?[[2,4,6,1,3],[3,5,0,2]]:[[4,6,1,3,5],[5,0,2,4]],s=a=>a.map(letterName).join(' ');
   return h==='rh'?`Clé de sol : lignes de bas en haut ${s(L[0])} ; interlignes ${s(L[1])}.`:`Clé de fa : lignes de bas en haut ${s(L[0])} ; interlignes ${s(L[1])}.`;}
-function dcName(l){if(!DC.on||DC.step!=='name')return;const x=DC.items[DC.k],sp=spell(x.m);
+function dcName(l){if(!DC.on||DC.step!=='name'||DC.k>=DC.items.length)return;const x=DC.items[DC.k],sp=spell(x.m);
   if(l===sp.l){const k=dcKey(WK.id),side=sp.a==='♯'?'juste à droite':'juste à gauche',L=letterName(sp.l);let acc='.';
     if(sp.a&&x.wa===sp.a)acc=`, avec un ${sp.a} écrit devant : ${wkNm(x.m)}. Le ${sp.a} se joue sur la touche ${side}.`;
     else if(sp.a&&k.acc[sp.l]===sp.a)acc=`. Attention : ${L}${sp.a} est à la clé (${k.name}), donc c’est ${wkNm(x.m)}, touche ${side}.`;
@@ -2350,13 +2365,13 @@ function dcName(l){if(!DC.on||DC.step!=='name')return;const x=DC.items[DC.k],sp=
   if(DC.tries===1&&prev&&prev.h===x.h){const dd=sp.d-spell(prev.m).d,n=Math.abs(dd);tip=dd===0?`Même hauteur que la note d’avant (${letterName(spell(prev.m).l)}).`:`Compte depuis la note d’avant (${letterName(spell(prev.m).l)}) : ${n} note${n>1?'s':''} plus ${dd>0?'haut':'bas'}.`;}
   else tip=dcClefTip(x.h);
   dcFb(`Pas ${letterName(l)}. ${tip}`,'ko');}
-function dcKeyTap(m){if(!DC.on||!DCKB)return;if(DC.step==='name'){dcFb('D’abord, nomme la note avec les boutons.','');return;}
+function dcKeyTap(m){if(!DC.on||!DCKB||DC.k>=DC.items.length)return;if(DC.step==='name'){dcFb('D’abord, nomme la note avec les boutons.','');return;}
   const x=DC.items[DC.k];
   if(m===x.m){DCKB.mark([m],'ok');DC.k++;DC.step='name';DC.tries=0;if(DC.k>=DC.items.length){dcDone();return;}dcFb(`Juste : ${wkNm(m)}.`,'ok');setTimeout(()=>DCKB&&DCKB.clear('ok'),400);dcShow();return;}
   DC.err++;DCKB.mark([m],'ko');setTimeout(()=>DCKB&&DCKB.clear('ko'),500);
   const up=x.m>m?'plus haut':'plus bas';
   dcFb(m%12===x.m%12?`Bonne note, mauvaise octave : ${wkNm(x.m)} est ${up}. Repère-toi avec les Do.`:spell(m).l===spell(x.m).l?`Bonne lettre, mais regarde l’altération : il faut ${wkNm(x.m)}.`:`Tu as touché ${wkNm(m)} : cherche ${wkNm(x.m)}, ${up}.`,'ko');}
-function dcDone(){const clean=!DC.err,bars=workBars(WK.id),last=WK.bar>=bars.length-1;DC.k=DC.items.length;DC.on=false;dcDraw();DC.on=true;
+function dcDone(){const clean=!DC.err,bars=workBars(WK.id),last=WK.bar>=bars.length-1;DC.k=DC.items.length;DC.on=false;dcDraw();DC.on=true;dcMask();
   $('#dc-names').hidden=true;$('#kb-dc').classList.remove('dc-target');$('#dc-after').hidden=false;$('#dc-next').hidden=last;setTimeout(()=>dcSee('#dc-after'),30);
   if(clean){const c=S.coach[WK.id]=S.coach[WK.id]||{b:{},c:{}};c.d=c.d||{};c.d[WK.bar]=1;saveLocal();
     if(DC.from===null||DC.last!==WK.bar-1||DC.id!==WK.id){DC.from=WK.bar;DC.run=0;}DC.run++;DC.last=WK.bar;

@@ -1,5 +1,6 @@
 // La Vestale : fonctionne hors ligne. Changer VERSION à chaque mise à jour.
-const VERSION = 'la-vestale-v60';
+const VERSION = 'la-vestale-v61';
+const NAV_WAIT_MS = 3000;   // au-delà, la page s'ouvre depuis le cache (le réseau finit en arrière-plan)
 const FONTS = ['atkinson-hyperlegible-latin-400', 'atkinson-hyperlegible-latin-700', 'cormorant-garamond-latin-500', 'cormorant-garamond-latin-600',
   'cormorant-garamond-latin-700', 'noto-music-latin-400', 'noto-music-clefs-400'].map(f => './fonts/' + f + '.woff2');
 // Sons de piano (Steinway & Sons modèle B, University of Iowa Electronic Music Studios) : une note sur trois, Do1 à Do8.
@@ -21,11 +22,20 @@ self.addEventListener('fetch', e => {
     // Seule une vraie réponse de l'app (200, adresse de l'app) remplace la copie en cache : jamais une page d'erreur ni un autre fichier.
     const scope = new URL(self.registration.scope);
     const isApp = url.pathname === scope.pathname || url.pathname === scope.pathname + 'index.html';
-    e.respondWith(fetch(req).then(r => {
-      if (r.ok && isApp && !r.redirected) { const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); return r; }
+    const net = fetch(req).then(r => {
+      if (r.ok && isApp && !r.redirected) { const copy = r.clone(); return caches.open(VERSION).then(c => c.put('./index.html', copy)).catch(() => {}).then(() => r); }
       if (r.ok || !isApp) return r;
       return caches.match('./index.html').then(hit => hit || r);
-    }).catch(() => caches.match('./index.html')));
+    });
+    const safe = net.catch(() => caches.match('./index.html'));
+    if (!isApp) { e.respondWith(safe); return; }
+    // Réseau lent (wifi faible au piano) : au-delà de NAV_WAIT_MS, la copie en cache s'ouvre tout de suite ;
+    // la réponse du réseau, si elle arrive, met quand même le cache à jour pour la prochaine ouverture.
+    e.waitUntil(net.catch(() => {}));
+    e.respondWith(caches.match('./index.html').then(hit => {
+      if (!hit) return safe;
+      return Promise.race([safe, new Promise(res => setTimeout(() => res(hit), NAV_WAIT_MS))]).then(r => r || hit);
+    }));
     return;
   }
   if (url.origin === location.origin) {
