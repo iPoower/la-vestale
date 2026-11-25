@@ -17,12 +17,14 @@ test('AU1. interruption audio et changement d’onglet : Coach déverrouillé, p
 
   // Quitter #coach vers #oreille coupe l'audio et remet WK.playing à false
   await page.goto('./#oreille');
+  await expect(page.locator('#v-oreille')).toBeVisible();
   // @ts-ignore
   expect(await page.evaluate(() => ({ bus: !!BUS, wkPlaying: WK.playing, pzPlaying: PZ.playing }))).toEqual({ bus: false, wkPlaying: false, pzPlaying: false });
 
   // Jouer dans Oreille puis revenir dans Coach : le parcours affiche « ▶ Écouter », pas « ■ Stop », et ◀ ▶ sont actifs
   await page.locator('#ear-play').click();
   await page.goto('./#coach');
+  await expect(page.locator('#v-coach')).toBeVisible();
   await expect(page.locator('#pz-act button[data-pa="model"]')).toBeVisible();
   await expect(page.locator('#wk-step-next')).toBeEnabled();
   await expect(page.locator('#kb-wk .key.next')).toHaveCount(0);
@@ -30,12 +32,15 @@ test('AU1. interruption audio et changement d’onglet : Coach déverrouillé, p
 
   // Quitter #clavier pendant Enchaînements coupe l'audio et éteint #kb-full
   await page.goto('./#clavier');
+  await expect(page.locator('#v-clavier')).toBeVisible();
   await page.locator('#prog-play').click();
   await page.waitForTimeout(150);
   await page.goto('./#seance');
+  await expect(page.locator('#v-seance')).toBeVisible();
   // @ts-ignore
   expect(await page.evaluate(() => !!BUS)).toBe(false);
   await page.goto('./#clavier');
+  await expect(page.locator('#v-clavier')).toBeVisible();
   await expect(page.locator('#kb-full .key.hl, #kb-full .key.hl2')).toHaveCount(0);
 });
 
@@ -46,6 +51,7 @@ test('AU2. 4 accords : écouter une grille ne remplace plus le morceau choisi da
   expect(await page.evaluate(() => WK.id)).toBe('sourire');
 
   await page.goto('./#accords4');
+  await expect(page.locator('#v-accords4')).toBeVisible();
   await page.locator('#q4-list button[data-q4l="q4do"]').click();
   // @ts-ignore
   expect(await page.evaluate(() => !!BUS)).toBe(true);
@@ -54,6 +60,7 @@ test('AU2. 4 accords : écouter une grille ne remplace plus le morceau choisi da
   expect(await page.evaluate(() => !!BUS)).toBe(false);
 
   await page.goto('./#coach');
+  await expect(page.locator('#v-coach')).toBeVisible();
   // @ts-ignore
   expect(await page.evaluate(() => WK.id)).toBe('sourire');
   await expect(page.locator('#dc-piece')).toHaveValue('sourire');
@@ -98,6 +105,7 @@ test('AU4. séance guidée : le bilan de fin mentionne les accords travaillés e
   for (let i = 0; i < 4; i++) {
     if ((await page.locator('#rb-next').textContent()) === 'Terminer') break;
     await page.locator('#rb-next').click();
+    await page.waitForTimeout(100);
   }
   await page.locator('#rb-next').click();
   await expect(page.locator('#logform')).toBeVisible();

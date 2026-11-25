@@ -1410,7 +1410,7 @@ function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=W
     rh.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next','next-rh'));}));
   const end=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
   at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{busEnd(bus,end-AC.currentTime,wkEnd);}});}
-function playWork(){ecStop();const a=ac();if(!a)return;const bus=newBus(wkEnd);WK.playing=true;wkMarkStep();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
+function playWork(){ecStop();const a=ac();if(!a)return;const rng=WK.range,bus=newBus(wkEnd);WK.range=rng;WK.playing=true;wkMarkStep();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
   if($('#wk-click').checked){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(start+k*bt*spb,k===0?'acc':'beat',bus);start+=bpb*spb;}   // décompte d'une mesure
   awake('wk',$('#wk-loop').checked);wkSchedule(bus,start);}
 // Fin de l'écoute (Stop, ou dernière note jouée) : tout revient au repos, y compris le bouton du parcours (« ■ Stop » → « ▶ Écouter »).
