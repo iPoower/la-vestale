@@ -48,6 +48,8 @@ test('J1. premier jour : 30 minutes, déchiffrer et jouer le début, chaque bloc
   await expect(page.locator('#fmt button.on')).toHaveText('Du jour · 30 min');
   await page.locator('#fmt button[data-f="court"]').click();
   await page.locator('#today-actions a', { hasText: 'Voir le programme' }).click();   // en haut de Séance
+  await expect(page.locator('#fmt button.on')).toHaveText('15 min');
+  await page.locator('#fmt button[data-f="jour"]').click();
   await expect(page.locator('#fmt button.on')).toHaveText('Du jour · 30 min');
   const b = await blocs(page);
   expect(b.map(x => x[0])).toEqual(['Échauffement main gauche', 'Déchiffrer 2 mesures', 'Jouer ce que tu as lu', 'Oreille', 'Pour le plaisir']);

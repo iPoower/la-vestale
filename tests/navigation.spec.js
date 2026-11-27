@@ -31,6 +31,7 @@ test('N1. 5 onglets ; Apprendre et Plus ont leurs sous-onglets et rouvrent la de
 test('N2. « Commencer ma séance » : la séance démarre, ouvre chaque étape, la barre du haut suit partout jusqu’à « Terminer »', async ({ page }) => {
   await page.goto('./#seance');
   await expect(page.locator('#run-bar')).toBeHidden();
+  await page.locator('#fmt button[data-f="jour"]').click();
   await page.locator('#go-seance').click();
   await expect(page.locator('#v-gauche')).toBeVisible();                           // 1re étape : échauffement main gauche
   await expect(page.locator('#run-bar')).toBeVisible();
