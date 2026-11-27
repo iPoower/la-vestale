@@ -44,6 +44,7 @@ test('CC3. le Cancan travaillé devient le morceau de la séance du jour', async
   // @ts-ignore
   expect(await page.evaluate(() => coachFocus())).toBe('cancan');
   await page.goto('./#seance');
+  await page.locator('#fmt button[data-f="jour"]').click();
   await expect(page.locator('#blocks')).toContainText('Cancan');
 });
 

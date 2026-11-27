@@ -45,7 +45,7 @@ Atkinson Hyperlegible, Cormorant Garamond et Noto Music sont distribuées sous S
 
 ## Navigation : 5 onglets
 
-Aujourd'hui (séance du jour), Jouer (Coach), Apprendre (Solfège, Lecture, Oreille, Alkan), Morceaux, Plus (Clavier, Tempo, Main gauche, Astuces, Journal). Apprendre et Plus ont des sous-onglets et rouvrent la dernière section visitée ; les adresses (#coach, #lecture…) restent les mêmes. « Commencer ma séance » démarre la séance du jour et ouvre chaque étape ; une barre sous les onglets suit la séance partout (Ouvrir, Suivant, pause). Une visite guidée de 5 étapes s'affiche au premier lancement (Plus › Astuces › Revoir la visite).
+Aujourd'hui (séance du jour), Jouer (Coach), Apprendre (Solfège, Lecture, Oreille, Alkan), Morceaux, Plus (Clavier, Tempo, Main gauche, Astuces, Journal). Apprendre et Plus ont des sous-onglets et rouvrent la dernière section visitée ; les adresses (#coach, #lecture…) restent les mêmes. « Commencer ma séance » démarre le programme sélectionné et ouvre chaque étape ; une barre sous les onglets suit la séance partout (Ouvrir, Suivant, pause). Une visite guidée de 5 étapes s'affiche au premier lancement (Plus › Astuces › Revoir la visite).
 
 ## Sauvegarde en un toucher
 
@@ -109,7 +109,9 @@ Les morceaux sont rangés par niveau, chaque niveau replié : seuls les niveaux 
 
 ### Séance du jour et révision espacée
 
-Séance › Séance guidée › « Du jour · 30 min » (par défaut) compose chaque jour une séance à partir du suivi : échauffement main gauche (4 min, un exercice différent chaque jour), révision espacée (5 min), mesures difficiles (6 min), déchiffrer 2 mesures (6 min), jouer ce qu'on a lu (5 min), oreille (2 min), pour le plaisir (2 min). Un bloc sans objet cède son temps à « Jouer ». Chaque bloc ouvre la bonne mesure au Coach.
+Dans Aujourd’hui, « Voir le programme » permet de choisir 15, 30 ou 35 minutes. L’app propose 15 minutes le jour de cours et 30 minutes les autres jours. « Commencer ma séance » et « Démarrer » lancent tous deux le programme sélectionné. Le bouton de l’accueil indique sa durée et ouvre l’exercice en cours.
+
+« Du jour · 30 min » compose la séance à partir du suivi. Elle comprend l’échauffement main gauche (4 min, un exercice différent chaque jour), la révision espacée (5 min), les mesures difficiles (6 min), le déchiffrage de 2 mesures (6 min), le jeu des mesures lues (5 min), l’oreille ou le solfège ou les accords (2 min) et un morceau pour le plaisir (2 min). Un bloc sans objet cède son temps à « Jouer ». Chaque bloc ouvre la bonne mesure au Coach.
 
 Révision espacée : une mesure jouée propre au micro revient le lendemain ; propre du premier coup, elle revient à 3 jours, puis 7, 14 et 30 ; ratée, elle revient le lendemain. Seul le premier passage du jour compte.
 

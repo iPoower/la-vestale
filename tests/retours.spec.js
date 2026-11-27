@@ -6,6 +6,7 @@ const { test, expect } = require('@playwright/test');
 test('RT1. séance de moins d’une minute : 1 min proposée (pas 30) ; la barre disparaît ; « Commencer » repart de zéro', async ({ page }) => {
   await page.clock.install();
   await page.goto('./#seance');
+  await page.locator('#fmt button[data-f="jour"]').click();
   await page.locator('#go-seance').click();
   for (let i = 0; i < 4; i++) { await page.clock.runFor(6000); await page.locator('#rb-next').click(); }
   await page.clock.runFor(6000);
@@ -113,6 +114,7 @@ test('RT5. parcours : « Stop » pendant l’écoute ; « Pour le plaisir » ouv
   // @ts-ignore
   await page.evaluate(() => { S.rep.fontaine = { stage: 4 }; saveLocal(); DAYPLAN = null; });
   await page.goto('./#seance');
+  await page.locator('#fmt button[data-f="jour"]').click();
   const li = page.locator('#blocks li', { hasText: 'Pour le plaisir' });
   await expect(li).toContainText('À la claire fontaine en entier');
   await li.locator('a').click();
