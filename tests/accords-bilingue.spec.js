@@ -32,6 +32,7 @@ test('AB1. Do Ré Mi ⇄ C D E niveau 3 (Accords), mémo 3 ancres et raccourci �
 });
 
 test('AB2. 4 accords : tableau 4 tonalités, notes pivots, Stop et Flash accords bilingue (indice, clavier, série)', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-01-09T10:00:00Z') });
   await page.goto('./#accords4');
   await expect(page.locator('#v-accords4 .q4-t tbody tr')).toHaveCount(4);
   await expect(page.locator('#v-accords4 .q4-t tbody tr').nth(2)).toHaveText(/En Ré\s*D\s*G\s*A\s*Bm/);
@@ -53,13 +54,16 @@ test('AB2. 4 accords : tableau 4 tonalités, notes pivots, Stop et Flash accords
   await page.locator('#qf-hint').click();
   await expect(page.locator('#kb-qf .key.hl')).toHaveCount(3);
   await expect(page.locator('#qf-fb')).toContainText('=');
+  // Fige le temps avant la réponse pour vérifier le retour de 450 ms.
+  await page.clock.pauseAt(new Date('2026-01-09T10:01:00Z'));
   // Tape les 3 notes de l'accord courant sur le mini-clavier
   // @ts-ignore
   const notes = await page.evaluate(() => QF_DB[QF.cur][2]);
   for (const m of notes) await page.locator(`#kb-qf .key[data-m="${m}"]`).dispatchEvent('pointerdown');
   await expect(page.locator('#qf-tag')).toHaveText('1/10');
   await expect(page.locator('#qf-fb')).toContainText('Juste !');
-  await page.waitForTimeout(550);
+  await page.clock.resume();
+  await expect(page.locator('#qf-fb')).toHaveText('Dis le nom français à voix haute puis plaque l’accord.');
   await expect(page.locator('#qf-pivot')).toContainText(/depuis /i);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
