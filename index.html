@@ -870,6 +870,7 @@ const isBlack=m=>[1,3,6,8,10].includes(((m%12)+12)%12);
 /* ---------- Données ---------- */
 const S={seances:[],rep:{},stats:{lecture:{},oreille:{}},questions:{done:{},items:[]},mine:[],coach:{},solf:{},meta:{}};
 const LS='vestale-studio-v1';
+const JOURNAL_LS='vestale-journal-v1';
 /* Nettoyage des données (chargement et import) : seules des valeurs attendues entrent dans l'app. */
 const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);
 const intIn=(x,lo,hi)=>{const n=Math.round(+x);return Number.isFinite(n)&&n>=lo&&n<=hi?n:null;};
@@ -877,7 +878,8 @@ const str=(x,max)=>typeof x==='string'?x.slice(0,max):'';
 function cleanSeance(s){if(!isObj(s))return null;const id=typeof s.id==='number'?String(s.id):str(s.id,40);const ts=+s.ts;
   if(!id||!Number.isFinite(ts)||typeof s.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s.date))return null;
   const min=intIn(s.min,-1e9,1e9);
-  return {id,ts,date:s.date,piece:str(s.piece,40)||'libre',min:min==null?1:Math.max(1,Math.min(240,min)),pass:str(s.pass,200),bpm:intIn(s.bpm,20,240),feel:Math.max(1,Math.min(5,intIn(s.feel,-1e9,1e9)||3)),note:str(s.note,600)};}
+  const pieceTitle=str(s.pieceTitle,60);
+  return {id,ts,date:s.date,piece:str(s.piece,40)||'libre',min:min==null?1:Math.max(1,Math.min(240,min)),pass:str(s.pass,200),bpm:intIn(s.bpm,20,240),feel:Math.max(1,Math.min(5,intIn(s.feel,-1e9,1e9)||3)),note:str(s.note,600),...(pieceTitle?{pieceTitle}:{})};}
 function cleanCounts(o,keyOk){const r={};if(isObj(o))for(const k in o){const v=o[k];if(keyOk(k)&&isObj(v))r[k]={ok:intIn(v.ok,0,1e7)||0,ko:intIn(v.ko,0,1e7)||0};}return r;}
 function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},q=isObj(d.questions)?d.questions:{};const mine=cleanMine(d.mine);
   if(isObj(d.rep))for(const k in d.rep){const v=d.rep[k];if((PIECES.some(p=>p.id===k)||mine.some(x=>x.id===k))&&isObj(v)){const r={stage:intIn(v.stage,0,5)||0};const b=intIn(v.bpm,20,240);if(b)r.bpm=b;const mm=intIn(v.m,0,999);if(mm!=null)r.m=mm;rep[k]=r;}}
@@ -914,14 +916,47 @@ function cleanMine(a){const out=[];(Array.isArray(a)?a:[]).filter(isObj).slice(0
       if((e[0]!==null&&n==null)||!MY_DUR.some(z=>z[0]===d)||sum+d>bpb+1e-9)return null;sum+=d;return [n,d,intIn(e[2],0,5)||0,e[3]?1:0];}).filter(Boolean);});
     const acc=typeof x.acc==='string'&&MY_ACC().includes(x.acc)?x.acc:'';
     out.push({id:x.id,t:str(x.t,60).trim()||'Sans titre',bpb,acc,bars:bars.length?bars:[[]]});});return out;}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta)){for(const k of ['lastBackup','remindAfter','a4','tour','span'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(['seance','semaine','jamais'].includes(j.meta.bk))S.meta.bk=j.meta.bk;if(typeof j.meta.focus==='string'&&((WORK[j.meta.focus]&&!WORK[j.meta.focus].ex)||S.mine.some(x=>x.id===j.meta.focus)))S.meta.focus=j.meta.focus;}if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(isObj(j)){Object.assign(S,cleanData(j));S.meta={};if(isObj(j.meta)){for(const k of ['lastBackup','remindAfter','a4','tour','span'])if(j.meta[k]!=null&&Number.isFinite(+j.meta[k]))S.meta[k]=+j.meta[k];if(typeof j.meta.backupSignature==='string')S.meta.backupSignature=str(j.meta.backupSignature,64);if(['seance','semaine','jamais'].includes(j.meta.bk))S.meta.bk=j.meta.bk;if(typeof j.meta.focus==='string'&&((WORK[j.meta.focus]&&!WORK[j.meta.focus].ex)||S.mine.some(x=>x.id===j.meta.focus)))S.meta.focus=j.meta.focus;}if(S.meta.a4!=null&&!(S.meta.a4>=370&&S.meta.a4<=475))delete S.meta.a4;}}catch(e){}
+  syncJournal();}
+// Le journal a sa propre clé pour qu’une sauvegarde d’exercice ne remplace pas les entrées d’un autre onglet.
+let journalRaw;
+function syncJournal(){
+  try{
+    const raw=localStorage.getItem(JOURNAL_LS);
+    if(raw===journalRaw)return false;
+    const entries=raw===null?JSON.parse(localStorage.getItem(LS)||'{}').seances:JSON.parse(raw);
+    journalRaw=raw;
+    if(!Array.isArray(entries))return false;
+    S.seances=entries.map(cleanSeance).filter(Boolean);
+    return true;
+  }catch(e){return false;}
+}
+async function updateJournal(change){
+  const write=()=>{
+    syncJournal();
+    const next=change(S.seances);
+    const raw=JSON.stringify(next);
+    localStorage.setItem(JOURNAL_LS,raw);
+    journalRaw=raw;
+    S.seances=next;
+    saveLocal();
+  };
+  try{
+    if(navigator.locks)await navigator.locks.request(JOURNAL_LS,write);
+    else write();
+    return true;
+  }catch(e){
+    toast('Journal non enregistré. Vérifie le stockage de ton navigateur.');
+    return false;
+  }
+}
 /* Copies automatiques : 10 au plus, sur ce téléphone, dans une clé séparée. Un échec d'écriture n'empêche jamais l'enregistrement normal. */
 const SNAP='vestale-copies-v1',SNAP_MAX=10;
 const SNAP_WHY={auto:'copie du jour',suppression:'avant suppression',import:'avant import',restauration:'avant restauration'};
 function loadSnaps(){try{const a=JSON.parse(localStorage.getItem(SNAP)||'[]');return Array.isArray(a)?a.filter(s=>isObj(s)&&Number.isFinite(+s.ts)&&isObj(s.data)&&Object.prototype.hasOwnProperty.call(SNAP_WHY,s.why)):[];}catch(e){return [];}}
 function saveSnaps(a){for(let n=a.length;n>0;n=Math.floor(n/2)){try{localStorage.setItem(SNAP,JSON.stringify(a.slice(0,n)));return true;}catch(e){}}return false;}
 function snapData(){return {seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf};}
-function snapshot(why){try{const list=loadSnaps(),data=snapData(),json=JSON.stringify(data);
+function snapshot(why){try{syncJournal();const list=loadSnaps(),data=snapData(),json=JSON.stringify(data);
     if(!S.seances.length&&!Object.keys(S.rep).length&&!Object.keys(S.stats.lecture).length&&!Object.keys(S.stats.oreille).length&&!Object.keys(S.questions.done).length&&!S.questions.items.length&&!S.mine.length)return false;
     if(why==='auto'&&list.some(s=>dkey(new Date(+s.ts))===dkey(new Date())))return false;
     if(list.length&&JSON.stringify(list[0].data)===json)return false;
@@ -931,7 +966,9 @@ function renderSnaps(){const el=$('#snap-sel');if(!el)return;const list=loadSnap
   $('#snap-restore').disabled=!list.length;}
 async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value];if(!s)return;const d=new Date(+s.ts);
   if(!(await ask(`Revenir à la copie du ${fmtDate(dkey(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())} (${s.n} séance(s)) ? L’état actuel est d’abord gardé en copie.`)))return;
-  snapshot('restauration');const c=cleanData(s.data);S.seances=c.seances;S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;if(Object.prototype.hasOwnProperty.call(s.data,'coach'))S.coach=c.coach;if(Object.prototype.hasOwnProperty.call(s.data,'solf'))S.solf=c.solf;saveLocal();mineSync();renderAll();toast('Copie restaurée');}
+  const c=cleanData(s.data);
+  if(!(await updateJournal(()=>{snapshot('restauration');return c.seances;})))return;
+  S.rep=c.rep;S.stats=c.stats;S.questions=c.questions;if(Object.prototype.hasOwnProperty.call(s.data,'mine'))S.mine=c.mine;if(Object.prototype.hasOwnProperty.call(s.data,'coach'))S.coach=c.coach;if(Object.prototype.hasOwnProperty.call(s.data,'solf'))S.solf=c.solf;saveLocal();mineSync();renderAll();updateBackupChip();toast('Copie restaurée');}
 /* Rappel d'export : après une séance notée, si le dernier export date de plus de 7 jours (ou n'a jamais eu lieu). */
 /* Sauvegarde hors du téléphone, selon le réglage du Journal :
    « Après chaque séance » (par défaut) : le bandeau revient après chaque séance notée qui n'est pas encore sauvegardée ;
@@ -940,9 +977,9 @@ async function restoreSnap(){const list=loadSnaps(),s=list[+$('#snap-sel').value
 function bkMode(){const b=S.meta&&S.meta.bk;return ['seance','semaine','jamais'].includes(b)?b:'seance';}
 // Badge du haut : un toucher ouvre « Sauvegarder / Importer ».
 function bkPop(open){const pop=$('#bk-pop'),b=$('#sync');if(open==null)open=pop.hidden;pop.hidden=!open;b.setAttribute('aria-expanded',String(open));
-  if(open){const lb=S.meta&&S.meta.lastBackup,n=bkUnsaved(),d=lb?Math.floor((Date.now()-lb)/864e5):null;
-    const ko=Math.max(1,Math.round(new Blob([JSON.stringify({seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf})]).size/1024));
-    $('#bk-pop-t').innerHTML=`Fichier d’environ ${ko} Ko. Dernière sauvegarde : <b>${d==null?'jamais':d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:''}.`;}}
+  if(open){syncJournal();const lb=S.meta.lastBackup,d=lb?Math.floor((Date.now()-lb)/864e5):null;
+    const ko=Math.max(1,Math.round(new Blob([JSON.stringify(backupContent())]).size/1024));
+    $('#bk-pop-t').innerHTML=`Fichier d’environ ${ko} Ko. Dernière sauvegarde : <b>${d==null?'jamais':d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`}</b>${backupNotice()}.`;}}
 function bkUnsaved(){const lb=(S.meta&&S.meta.lastBackup)||0;return S.seances.filter(s=>s.ts>lb).length;}
 function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.meta&&S.meta.remindAfter,mode=bkMode(),n=bkUnsaved();
   if(!S.seances.length||mode==='jamais'||!n)return false;
@@ -951,11 +988,10 @@ function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.me
     $('#rm-t').textContent=lb?`Ta dernière sauvegarde date de ${days} jours. Un toucher suffit pour la mettre à jour (Fichiers ou iCloud Drive).`:'Tes séances ne sont encore sauvegardées que sur ce téléphone. Un toucher suffit pour en garder une copie (Fichiers ou iCloud Drive).';}
   const el=$('#bk-remind'),nav=$('nav');el.classList.remove('hidden');window.scrollTo(0,el.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);return true;}
 function hideRemind(){$('#bk-remind').classList.add('hidden');}
-function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+function saveLocal(){try{syncJournal();localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
 let DB=null;const writing={},pending={};
 function setSync(t,on){const el=$('#sync');el.textContent=t;el.classList.toggle('on',!!on);}
 async function put(path,data){saveLocal();updateBackupChip();}
-async function del(path){saveLocal();}
 let statsTimer=null;function saveStats(){saveLocal();clearTimeout(statsTimer);statsTimer=setTimeout(()=>put('etat/stats',{lecture:S.stats.lecture,oreille:S.stats.oreille}),2500);}
 const saveRep=()=>put('etat/repertoire',{pieces:S.rep});
 const saveQ=()=>put('etat/questions',S.questions);
@@ -1029,7 +1065,10 @@ function makeKeyboard(el,lo,hi,opts){opts=opts||{};el.innerHTML='';const inner=d
   // Au doigt, le clavier réagit dès l'appui ; on empêche le « clic » que l'iPhone fabrique au lever du doigt :
   // si l'écran a changé entre-temps, il tomberait sur le bouton qui a pris la place de la touche.
   inner.addEventListener('touchend',e=>{if(e.cancelable&&e.target.closest&&e.target.closest('.key'))e.preventDefault();},{passive:false});
-  inner.addEventListener('pointerdown',e=>{const k=e.target.closest('.key');if(!k)return;const m=+k.dataset.m;if(!opts.silent)playNote(m,0,1.1,.8);k.classList.add('down');setTimeout(()=>k.classList.remove('down'),160);if(opts.onKey)opts.onKey(m);});
+  const press=e=>{const k=e.target.closest('.key');if(!k)return;const m=+k.dataset.m;if(!opts.silent)playNote(m,0,1.1,.8);k.classList.add('down');setTimeout(()=>k.classList.remove('down'),160);if(opts.onKey)opts.onKey(m);};
+  inner.addEventListener('pointerdown',press);
+  // Entrée, Espace et l’activation assistée déclenchent un clic sans appui de souris.
+  inner.addEventListener('click',e=>{if(e.detail===0)press(e);});
   const api={el,keys,W,
     labels(){for(const m in keys){const k=keys[m],mm=+m,l=k.querySelector('.kl');k.setAttribute('aria-label',nm(mm));if(l)l.textContent=(mm%12===0)?keyName(mm,true):(opts.small||compact?'':keyName(mm,false));}},
     mark(ms,cls){(ms||[]).forEach(m=>keys[m]&&keys[m].classList.add(cls||'hl'));},
@@ -1647,7 +1686,9 @@ const PIECES=[
   {id:'clairlune',t:'Clair de lune',a:'Claude Debussy, Suite bergamasque',focus:'9/8 en trois grands temps, couleurs',obj:'Objectif à long terme : les 8 premières mesures, lentement, en comptant 3 grands temps.',piege:'Jouer les duolets comme des croches : deux notes égales sur un grand temps.',tip:'Domaine public, notes exactes (Mutopia).'},
   {id:'odysseus',t:'Odysseus',a:'Ludwig Göransson (The Odyssey, 2026), version piano Francesco Parrino',focus:'Do mineur, 3/4, Andante',obj:'Objectif à long terme : une version adaptée à ton niveau, choisie avec ton prof, jouée à 3 temps réguliers.',piege:'Attaquer trop tôt la version complète (10 pages) : commence par l’accord de Do mineur et la pulsation à 3 temps.',tip:'Partitions légales sur Musicnotes (version Parrino et trois autres versions). En attendant : accord Cm dans Clavier, métronome à 3/4.'}
 ];
-const pieceT=id=>(PIECES.find(p=>p.id===id)||{t:id}).t;
+const pieceT=id=>(PIECES.find(p=>p.id===id)||S.mine.find(p=>p.id===id)||{t:id}).t;
+const journalPiece=id=>PIECES.some(p=>p.id===id)||S.mine.some(p=>p.id===id);
+const entryTitle=s=>s.pieceTitle||pieceT(s.piece);
 function lastWorked(id){const s=S.seances.find(x=>x.piece===id);return s?s.date:null;}
 function renderPieces(){const G=grouped(PIECES.map(p=>p.id));$('#pc-toc').innerHTML=G.map(([g,ks],i)=>`<button class="chip" data-pcg="${i}">${esc(g.replace(/^Niveau (\d) · /,'N$1 · '))} · ${ks.length}</button>`).join('');
   if(!PC_OPEN){PC_OPEN=new Set();G.forEach(([g,ks],gi)=>{if(ks.some(k=>{const t=(S.rep[k]||{}).stage||0;return t>0&&t<5;}))PC_OPEN.add(gi);});if(!PC_OPEN.size)PC_OPEN.add(0);}
@@ -2593,7 +2634,7 @@ function mineSync(){Object.keys(WORK).forEach(k=>{if(WORK[k].mine)delete WORK[k]
 function renderMine(){const el=$('#my-list');if(!el)return;
   el.innerHTML=S.mine.length?S.mine.map(x=>`<article class="card" style="margin:0"><h3>${esc(x.t)}</h3><p class="small muted">${x.bars.length} mesure${x.bars.length>1?'s':''} · ${x.bpb}/4${x.acc&&WORK[x.acc]?' · main gauche : '+esc(WORK[x.acc].t):''}</p><div class="row"><button class="btn primary" data-myw="${x.id}">Travailler</button><button class="btn" data-mye="${x.id}">Modifier</button><button class="btn" data-myl="${x.id}">Écouter</button><button class="btn ghost" data-mys="1">■ Stop</button><button class="btn ghost" data-myd="${x.id}">Supprimer</button></div></article>`).join(''):'<p class="small muted">Aucune partition pour l’instant.</p>';
   const acc=$('#my-acc');if(acc&&!acc.options.length)acc.innerHTML='<option value="">Aucune (main droite seule)</option>'+MY_ACC().map(k=>`<option value="${k}">${esc(WORK[k].t)}</option>`).join('');}
-function mySave(){saveLocal();mineSync();}
+function mySave(){saveLocal();mineSync();updateBackupChip();}
 function myNew(){if(S.mine.length>=MY_MAX){toast('30 partitions au plus');return;}
   const x={id:'u'+Date.now().toString(36),t:$('#my-title').value.trim().slice(0,60)||'Sans titre',bpb:+$('#my-bpb').value||4,acc:$('#my-acc').value,bars:[[]]};
   if(x.acc&&WORK[x.acc]&&WORK[x.acc].bpb!==x.bpb)x.bpb=WORK[x.acc].bpb;
@@ -2633,7 +2674,7 @@ function setNoms(n,remember){if(!['fr','en','both'].includes(n))n='fr';NOMS=n;us
   $$('#noms button').forEach(x=>x.classList.toggle('on',x.dataset.n===n));
   const tb=$('#tr-both');if(tb)tb.textContent=n==='both'?'Mode « Do / C » actif ✓':'Afficher « Do / C » partout';
   if(remember)try{localStorage.setItem('vestale-noms',n);}catch(e){}
-  KB.labels();MINI.labels();if(FKB)FKB.labels();MGKB.labels();WKKB.labels();if(QFKB)QFKB.labels();selectMg(curMg);renderWork();renderChordInfo();renderLecAns();if(MYKB){MYKB.labels();myRender();}}
+  KB.labels();MINI.labels();if(FKB)FKB.labels();MGKB.labels();WKKB.labels();if(QFKB)QFKB.labels();selectMg(curMg);renderWork();renderChordInfo();renderLecAns();if(MYKB){MYKB.labels();myRender();}if(remember)updateBackupChip();}
 // Exercice de traduction : une note ou un accord dans un système, la réponse dans l'autre.
 const TR_FR=['Do','Ré','Mi','Fa','Sol','La','Si'],TR_EN=['C','D','E','F','G','A','B'];
 const TR_CHORDS=[['C','Do majeur'],['F','Fa majeur'],['G','Sol majeur'],['D','Ré majeur'],['E','Mi majeur'],['A','La majeur'],['B♭','Si♭ majeur'],
@@ -2756,7 +2797,8 @@ function runGoalDone(b){const m=b&&b[5];if(!m)return '';
   if(m.k==='dc'&&m.bars&&m.bars.length){const d=(S.coach&&S.coach[m.piece]&&S.coach[m.piece].d)||{};const ok=m.bars.filter(i=>d[i]).length;return ok>=m.bars.length?`${ok}/${m.bars.length} mesures déchiffrées ✓`:'';}
   if((m.k==='play'||m.k==='hard'||m.k==='rev')&&m.piece){const n=RUN.log.played.filter(x=>x.id===m.piece).length;return n?`${n} mesure${n>1?'s':''} jouée${n>1?'s':''} propre${n>1?'s':''} ✓`:'';}
   return '';}
-function runSummary(){const pid=(RUN.log.piece&&PIECES.some(p=>p.id===RUN.log.piece))?RUN.log.piece:(sessionFormat()==='jour'&&PIECES.some(p=>p.id===coachFocus())?coachFocus():today().piece);
+function runSummary(){const focus=DAYPLAN?.[0]?.[5]?.piece||coachFocus();
+  const pid=journalPiece(RUN.log.piece)?RUN.log.piece:(sessionFormat()==='jour'&&journalPiece(focus)?focus:today().piece);
   const rd=RUN.log.read.filter(x=>x.id===pid).map(x=>x.b),pl=RUN.log.played.filter(x=>x.id===pid).map(x=>x.b);
   const all=[...new Set([...rd,...pl])].sort((a,b)=>a-b);
   const parts=[];if(rd.length)parts.push(`${rd.length} mesure${rd.length>1?'s':''} déchiffrée${rd.length>1?'s':''}`);
@@ -2802,13 +2844,25 @@ function runEnd(auto){const el=runElapsed(),minutes=RUN.started?Math.max(1,Math.
   if(auto)toast('Séance terminée. Note ce qui a progressé.');renderRunBar();}
 function runReset(){RUN.done=false;RUN.on=false;RUN.started=false;awake('seance',false);RUN.idx=0;RUN.acc=0;RUN.blockAcc=0;RUN.chimed=-1;RUN.lastSave=0;RUN.log=emptyRunLog();clearInterval(RUN.iv);RUN.iv=null;runClear();$('#t-start').textContent='Démarrer';$('#t-clock').textContent='00:00';$('#t-label').textContent='Prêt quand tu l’es';renderBlocks();}
 let FEEL=3;
-function openLog(min,sum){$('#f-piece').innerHTML=grouped(PIECES.map(p=>p.id)).map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(id=>`<option value="${id}">${esc(PIECES.find(x=>x.id===id).t)}</option>`).join('')}</optgroup>`).join('')+'<option value="accords">Accords et grille</option><option value="libre">Jeu libre</option>';
-  const pid=sum&&sum.piece?sum.piece:((S.meta&&S.meta.focus&&PIECES.some(p=>p.id===S.meta.focus))?S.meta.focus:today().piece);
+function openLog(min,sum){const option=id=>`<option value="${esc(id)}">${esc(pieceT(id))}</option>`;
+  const personal=S.mine.length?`<optgroup label="Mes partitions">${S.mine.map(p=>option(p.id)).join('')}</optgroup>`:'';
+  $('#f-piece').innerHTML=grouped(PIECES.map(p=>p.id)).map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(option).join('')}</optgroup>`).join('')+personal+'<option value="accords">Accords et grille</option><option value="libre">Jeu libre</option>';
+  const pid=sum&&journalPiece(sum.piece)?sum.piece:(journalPiece(S.meta.focus)?S.meta.focus:today().piece);
   $('#f-piece').value=pid;$('#f-min').value=min||30;$('#f-pass').value=(sum&&sum.pass)||'';$('#f-bpm').value=(sum&&sum.bpm)?sum.bpm:(MT.preset===pid?MT.bpm:'');$('#f-note').value=(sum&&sum.note)||'';
   $('#logform').classList.remove('hidden');$('#logform').scrollIntoView({behavior:'smooth',block:'start'});}
-async function saveLog(){const d=new Date();const e={id:String(d.getTime()),ts:d.getTime(),date:dkey(d),piece:$('#f-piece').value,min:Math.max(1,Math.min(240,+$('#f-min').value||0)),pass:$('#f-pass').value.trim().slice(0,200),bpm:intIn($('#f-bpm').value,20,240),feel:FEEL,note:$('#f-note').value.trim().slice(0,600)};
-  S.seances.unshift(e);if(e.bpm&&PIECES.find(p=>p.id===e.piece)){S.rep[e.piece]=Object.assign({},S.rep[e.piece],{bpm:e.bpm});saveRep();}
-  $('#logform').classList.add('hidden');runReset();renderAll();toast('Séance enregistrée');await put('seances/'+e.id,e);maybeRemind();}
+async function saveLog(){
+  const button=$('#f-save');
+  if(button.disabled)return;
+  const d=new Date(),piece=$('#f-piece').value;
+  const id=d.getTime().toString(36)+'-'+crypto.getRandomValues(new Uint32Array(2)).join('-');
+  const personal=S.mine.find(p=>p.id===piece);
+  const e={id,ts:d.getTime(),date:dkey(d),piece,min:Math.max(1,Math.min(240,+$('#f-min').value||0)),pass:$('#f-pass').value.trim().slice(0,200),bpm:intIn($('#f-bpm').value,20,240),feel:FEEL,note:$('#f-note').value.trim().slice(0,600),...(personal?{pieceTitle:personal.t}:{})};
+  button.disabled=true;
+  const saved=await updateJournal(entries=>[e,...entries]);
+  button.disabled=false;
+  if(!saved)return;
+  if(e.bpm&&journalPiece(e.piece)){S.rep[e.piece]=Object.assign({stage:0},S.rep[e.piece],{bpm:e.bpm});saveLocal();}
+  $('#logform').classList.add('hidden');runReset();renderAll();toast('Séance enregistrée');updateBackupChip();maybeRemind();}
 
 /* ---------- Journal ---------- */
 function renderChart(){const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d);}
@@ -2824,7 +2878,7 @@ function renderChart(){const days=[];for(let i=6;i>=0;i--){const d=new Date();d.
   const tot=S.seances.reduce((a,s)=>a+(+s.min||0),0);const lec=Object.values(S.stats.lecture).reduce((a,s)=>[a[0]+s.ok,a[1]+s.ko],[0,0]);const ear=Object.values(S.stats.oreille).reduce((a,s)=>[a[0]+s.ok,a[1]+s.ko],[0,0]);
   const pc=x=>x[0]+x[1]?Math.round(100*x[0]/(x[0]+x[1]))+' %':'–';
   $('#j-stats').innerHTML=`<span>Total <b>${Math.round(tot/60*10)/10} h</b></span><span>Lecture <b>${pc(lec)}</b></span><span>Oreille <b>${pc(ear)}</b></span>`;}
-function renderEntries(){const list=S.seances.slice(0,40);$('#entries').innerHTML=list.length?list.map(s=>`<div class="entry"><div class="row between"><b>${esc(pieceT(s.piece))}</b><span class="stars" aria-label="ressenti ${esc(s.feel)}/5">${'●'.repeat(s.feel)}${'○'.repeat(5-s.feel)}</span></div>
+function renderEntries(){const list=S.seances.slice(0,40);$('#entries').innerHTML=list.length?list.map(s=>`<div class="entry"><div class="row between"><b>${esc(entryTitle(s))}</b><span class="stars" aria-label="ressenti ${esc(s.feel)}/5">${'●'.repeat(s.feel)}${'○'.repeat(5-s.feel)}</span></div>
   <div class="meta">${esc(fmtDate(s.date))} · ${esc(s.min)} min${s.bpm?' · noire = '+esc(s.bpm):''}${s.pass?' · '+esc(s.pass):''}</div>${s.note?`<div class="small">${esc(s.note)}</div>`:''}<div><button class="btn ghost small" data-del="${esc(s.id)}" style="min-height:34px;padding:4px 10px">Supprimer</button></div></div>`).join(''):'<p class="small muted">Aucune séance notée. Lance la séance guidée, elle t’ouvre le formulaire à la fin.</p>';}
 const QBASE=[
   ['pedales','Pédales de La Vestale : à faire vérifier par le technicien avant tout exercice de pédale.'],
@@ -2840,10 +2894,10 @@ const QBASE=[
 ];
 function renderQ(){const items=QBASE.map(q=>({id:q[0],t:q[1],base:true,done:!!S.questions.done[q[0]]})).concat(S.questions.items);
   $('#q-list').innerHTML=items.map(q=>`<label class="q${q.done?' done':''}"><input type="checkbox" data-q="${esc(q.id)}"${q.base?' data-base="1"':''}${q.done?' checked':''}><span>${esc(q.t)}</span></label>`).join('');}
-function journalText(){return S.seances.slice(0,60).map(s=>`${s.date} · ${pieceT(s.piece)} · ${s.min} min${s.bpm?' · noire='+s.bpm:''} · ressenti ${s.feel}/5${s.pass?' · '+s.pass:''}${s.note?' · '+s.note:''}`).join('\n')||'Journal vide';}
+function journalText(){return S.seances.slice(0,60).map(s=>`${s.date} · ${entryTitle(s)} · ${s.min} min${s.bpm?' · noire='+s.bpm:''} · ressenti ${s.feel}/5${s.pass?' · '+s.pass:''}${s.note?' · '+s.note:''}`).join('\n')||'Journal vide';}
 function md(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').split('\n').map(l=>/^\s*[-•]\s+/.test(l)?'<li>'+l.replace(/^\s*[-•]\s+/,'')+'</li>':l?'<p>'+l+'</p>':'').join('').replace(/(<li>.*?<\/li>)+/g,m=>'<ul>'+m+'</ul>');}
 function coachText(){const since=Date.now()-14*864e5;
-  const data={aujourdhui:dkey(new Date()),seances_14j:S.seances.filter(s=>s.ts>=since).map(s=>({date:s.date,morceau:pieceT(s.piece),min:s.min,tempo:s.bpm,ressenti:s.feel,passage:s.pass,note:s.note})),
+  const data={aujourdhui:dkey(new Date()),seances_14j:S.seances.filter(s=>s.ts>=since).map(s=>({date:s.date,morceau:entryTitle(s),min:s.min,tempo:s.bpm,ressenti:s.feel,passage:s.pass,note:s.note})),
     repertoire:PIECES.map(p=>({morceau:p.t,etape:STAGES[(S.rep[p.id]||{}).stage||0],tempo:(S.rep[p.id]||{}).bpm||null})),
     oreille:S.stats.oreille,rythme:S.stats.rythme||null,lecture_erreurs:Object.entries(S.stats.lecture).filter(([k,s])=>s.ko).map(([k,s])=>({note:nm(fromDiat(+k.split(':')[1])),cle:k.split(':')[0],ok:s.ok,ko:s.ko})),
     questions_ouvertes:QBASE.filter(q=>!S.questions.done[q[0]]).map(q=>q[1]).concat(S.questions.items.filter(q=>!q.done).map(q=>q.t))};
@@ -2851,19 +2905,40 @@ function coachText(){const since=Date.now()-14*864e5;
 Format attendu, 180 mots maximum : Verdict (une phrase) ; Ce qui progresse (2 puces) ; À corriger (2 puces) ; Mes 3 prochaines séances (morceau, passage, tempo de départ) ; À demander à mon prof vendredi (1 ou 2 questions). N’invente rien d’absent des données.
 Données (JSON) : ${JSON.stringify(data)}`;}
 async function coach(){await copy(coachText(),'Copié : colle-le dans Claude');}
-function updateBackupChip(){renderBackup();const lb=S.meta&&S.meta.lastBackup;const el=$('#sync');const tag=$('#bk-tag');
+function backupContent(){
+  return {...snapData(),settings:{a4:S.meta.a4,noms:NOMS,bk:S.meta.bk}};
+}
+function backupSignature(data){
+  // Compare le contenu après la même normalisation qu’au chargement du journal et des exercices.
+  const normalized={...cleanData(data),settings:data.settings};
+  const json=JSON.stringify(normalized,(_,value)=>isObj(value)
+    ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,value[key]]))
+    : value);
+  let hash=2166136261;
+  for(let i=0;i<json.length;i++)hash=Math.imul(hash^json.charCodeAt(i),16777619);
+  return json.length+':'+(hash>>>0).toString(16);
+}
+function backupNotice(){
+  const n=bkUnsaved();
+  if(n)return ` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`;
+  if(!S.meta.lastBackup)return '';
+  if(!S.meta.backupSignature)return ' · contenu du dernier export à vérifier';
+  if(backupSignature(backupContent())!==S.meta.backupSignature)return ' · modifications depuis le dernier export';
+  return '';
+}
+function updateBackupChip(){const notice=renderBackup();const lb=S.meta.lastBackup;const el=$('#sync');const tag=$('#bk-tag');
   if(!lb){el.textContent='à sauvegarder';el.classList.remove('on');if(tag)tag.textContent='Jamais';return;}
   const days=Math.floor((Date.now()-lb)/864e5);const txt=days===0?'sauvegardé aujourd’hui':days===1?'sauvegardé hier':`sauvegardé il y a ${days} j`;
-  el.textContent=txt;el.classList.toggle('on',days<8);if(tag)tag.textContent=days===0?'Aujourd’hui':days+' j';}
-function renderBackup(){const el=$('#bk-last');if(!el)return;const lb=S.meta&&S.meta.lastBackup,n=bkUnsaved();
+  el.textContent=notice?'à sauvegarder':txt;el.classList.toggle('on',!notice&&days<8);if(tag)tag.textContent=days===0?'Aujourd’hui':days+' j';}
+function renderBackup(){const el=$('#bk-last');if(!el)return '';syncJournal();const lb=S.meta.lastBackup,notice=backupNotice();
   const when=!lb?'jamais':(d=>d===0?'aujourd’hui':d===1?'hier':`il y a ${d} jours`)(Math.floor((Date.now()-lb)/864e5));
-  el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${n?` · ${n} séance${n>1?'s':''} pas encore sauvegardée${n>1?'s':''}`:S.seances.length?' · tout est à l’abri':''}.`;
-  el.classList.toggle('warn',!!n&&(!lb||Date.now()-lb>7*864e5));$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));}
+  el.innerHTML=`Dernière sauvegarde hors du téléphone : <b>${when}</b>${notice||((lb&&S.seances.length)?' · tout est à l’abri':'')}.`;
+  el.classList.toggle('warn',!!notice);$$('#bk-mode button').forEach(b=>b.classList.toggle('on',b.dataset.b===bkMode()));return notice;}
 // Toujours le même nom : dans Fichiers, l'iPhone propose « Remplacer », et il ne reste qu'une sauvegarde, la plus récente
 // (la date est à l'intérieur du fichier, et s'affiche à l'import).
 const BK_NAME='la-vestale-sauvegarde.json';
-async function exportData(){const d=new Date();const name=BK_NAME;
-  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data:{seances:S.seances,rep:S.rep,stats:S.stats,questions:S.questions,mine:S.mine,coach:S.coach,solf:S.solf,settings:{a4:S.meta.a4,noms:NOMS,bk:S.meta.bk}}});
+async function exportData(){syncJournal();const d=new Date(),name=BK_NAME,data=backupContent(),signature=backupSignature(data);
+  const body=JSON.stringify({app:'la-vestale',version:1,exported:d.toISOString(),data});
   const file=new File([body],name,{type:'application/json'});
   const dl=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);};
   // Partage seulement sur téléphone (iPhone : « Enregistrer dans Fichiers »). Sur ordinateur, Chrome et Edge savent aussi partager
@@ -2871,16 +2946,20 @@ async function exportData(){const d=new Date();const name=BK_NAME;
   const mobile=IOS||/Android/i.test(navigator.userAgent);
   try{if(mobile&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});}catch(e){if(e&&e.name==='AbortError')throw e;dl();}}
     else dl();
-    S.meta=Object.assign({},S.meta,{lastBackup:Date.now()});delete S.meta.remindAfter;saveLocal();updateBackupChip();hideRemind();toast('Sauvegarde exportée');return true;}
+    S.meta=Object.assign({},S.meta,{lastBackup:+d,backupSignature:signature});delete S.meta.remindAfter;saveLocal();updateBackupChip();hideRemind();toast('Sauvegarde exportée');return true;}
   catch(e){if(e&&e.name==='AbortError')return false;toast('Export impossible');return false;}}
 async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}
   const skipped=j.data.seances.length-d.seances.length;
   if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Tout est fusionné avec ce téléphone : pour chaque exercice, on garde le meilleur des deux, rien n’est perdu (copie de sécurité avant).`)))return;
-  snapshot('import');const before=JSON.stringify(S);
-  try{const all={};[...S.seances,...d.seances].forEach(s=>{all[s.id]=s;});S.seances=Object.values(all).sort((a,b)=>b.ts-a.ts);
-    mergeInto(d,Object.keys(j.data));importSettings(j.data.settings);
-    mineSync();renderAll();}catch(e){Object.assign(S,JSON.parse(before));renderAll();toast('Fichier non reconnu');return;}
-  saveLocal();toast(importSummary());}
+  let before,mergeFailed=false;
+  const saved=await updateJournal(entries=>{
+    snapshot('import');before=JSON.stringify(S);
+    try{mergeInto(d,Object.keys(j.data));}catch(e){mergeFailed=true;throw e;}
+    const all=new Map([...entries,...d.seances].map(s=>[s.id,s]));
+    return [...all.values()].sort((a,b)=>b.ts-a.ts);
+  });
+  if(!saved){if(before)Object.assign(S,JSON.parse(before));if(mergeFailed)toast('Fichier non reconnu');return;}
+  importSettings(j.data.settings);saveLocal();mineSync();renderAll();updateBackupChip();toast(importSummary());}
 // Fusion d'une sauvegarde : compteurs au maximum, listes réunies, niveaux et records au meilleur ; ce qui est sur le téléphone n'est jamais perdu.
 const mx=(a,b)=>Math.max(+a||0,+b||0);
 function mergeCounts(a,b){const o=Object.assign({},a);for(const k in b){const x=o[k]||{ok:0,ko:0},y=b[k];o[k]={ok:mx(x.ok,y.ok),ko:mx(x.ko,y.ko)};}return o;}
@@ -3038,6 +3117,7 @@ function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='sea
   if(v==='seance'&&$('#wk-card').previousElementSibling!==$('#wk-home'))$('#wk-home').after($('#wk-card'));
   if(v==='clavier')setTimeout(()=>{KB.scrollTo(60);mgScroll();},30);
   if(v==='seance'){setTimeout(wkScroll,30);if(!runActive()){renderToday();renderBlocks();}}   // séance du jour à jour (Coach, Solfège, date)
+  if(v==='journal'){syncJournal();renderEntries();renderChart();updateBackupChip();}
   if(v==='lecture'&&!lecCur)lecNew();
   if(v==='alkan')renderAlkan();
   if(v==='accords4'){renderQ4();qfInit();}
@@ -3208,7 +3288,12 @@ function init(){
     if(act==='wk'){location.hash='#seance';handleExtra('wk:'+id);}
     if(act==='mine'){const pc=PIECES.find(x=>x.id===id);$('#my-title').value=pc?pc.t:'';$('#my-card').scrollIntoView({block:'start'});$('#my-title').focus();}});
 
-  $('#fmt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RUN.on||b.dataset.f===sessionFormat())return;chooseFormat(b.dataset.f);runReset();});
+  $('#fmt').addEventListener('click',async e=>{
+    const b=e.target.closest('button');
+    if(!b||RUN.on||b.dataset.f===sessionFormat())return;
+    if(runActive()&&!(await ask('Changer de durée et abandonner la séance en pause ?')))return;
+    chooseFormat(b.dataset.f);runReset();
+  });
   $('#t-start').onclick=runToggle;$('#t-skip').onclick=runSkip;$('#t-end').onclick=()=>runEnd(false);
   $('#quicklog').onclick=()=>openLog(30);
   $('#f-feel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;FEEL=+b.dataset.v;$$('#f-feel button').forEach(x=>x.classList.toggle('on',x===b));});
@@ -3223,7 +3308,11 @@ function init(){
   $('#today-actions').addEventListener('click',e=>{const a=e.target.closest('a');if(a)setTimeout(()=>handleExtra(a.dataset.extra),50);});
   $('#blocks').addEventListener('click',e=>{const a=e.target.closest('a[data-extra]');if(a&&a.dataset.extra)setTimeout(()=>handleExtra(a.dataset.extra),50);});
 
-  $('#entries').addEventListener('click',async e=>{const b=e.target.closest('button[data-del]');if(!b)return;if(!(await ask('Supprimer cette séance du journal ?')))return;snapshot('suppression');const id=b.dataset.del;S.seances=S.seances.filter(s=>s.id!==id);renderAll();await del('seances/'+id);});
+  $('#entries').addEventListener('click',async e=>{
+    const b=e.target.closest('button[data-del]');if(!b)return;
+    if(!(await ask('Supprimer cette séance du journal ?')))return;
+    if(await updateJournal(entries=>{snapshot('suppression');return entries.filter(s=>s.id!==b.dataset.del);})){renderAll();updateBackupChip();}
+  });
   $('#q-list').addEventListener('change',e=>{const c=e.target.closest('input[data-q]');if(!c)return;const id=c.dataset.q;if(c.dataset.base)S.questions.done[id]=c.checked;else{const it=S.questions.items.find(x=>x.id===id);if(it)it.done=c.checked;}renderQ();saveQ();});
   const addQ=()=>{const t=$('#q-new').value.trim();if(!t)return;S.questions.items.push({id:'u'+Date.now(),t:t.slice(0,240),done:false});$('#q-new').value='';renderQ();saveQ();};
   $('#q-add').onclick=addQ;$('#q-new').addEventListener('keydown',e=>{if(e.key==='Enter')addQ();});
@@ -3244,6 +3333,9 @@ function init(){
     wkBuild();renderWork();};
   let refitT=null;window.addEventListener('resize',()=>{clearTimeout(refitT);refitT=setTimeout(refit,150);});
   window.addEventListener('hashchange',route);route();
+  window.addEventListener('storage',e=>{
+    if(e.key===JOURNAL_LS&&syncJournal()){renderEntries();renderChart();updateBackupChip();}
+  });
   document.addEventListener('visibilitychange',()=>{if(document.hidden){if(runActive())runSave();}else if(tick&&RUN.iv)tick();});
   // Au retour d'arrière-plan, l'iPhone peut rendre le contexte muet tout en le disant actif : on en recrée un au prochain toucher.
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&AC&&!MT.on&&IOS)AC_STALE=true;});

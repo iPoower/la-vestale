@@ -43,6 +43,7 @@ test('B2. Importer depuis le badge : choix du fichier, confirmation, progression
   await chooser.setFiles({ name: 'la-vestale.json', mimeType: 'application/json', buffer: file });
   await expect(page.locator('#dlg')).toBeVisible();
   await page.locator('#dlg-ok').click();
+  await expect(page.locator('.toast', { hasText: 'Import réussi' })).toBeVisible();
   // @ts-ignore
   await expect.poll(() => page.evaluate(() => [S.solf.les, S.solf.lv, S.coach.hymne.d])).toEqual([{ sol: 10 }, { sol: 2 }, { 0: 1 }]);
   await expect(page.locator('#sf-lessons details[data-id="sol"] summary')).toContainText('✓ 10/10');
