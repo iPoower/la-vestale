@@ -879,11 +879,13 @@ function cleanSeance(s){if(!isObj(s))return null;const id=typeof s.id==='number'
   const min=intIn(s.min,-1e9,1e9);
   return {id,ts,date:s.date,piece:str(s.piece,40)||'libre',min:min==null?1:Math.max(1,Math.min(240,min)),pass:str(s.pass,200),bpm:intIn(s.bpm,20,240),feel:Math.max(1,Math.min(5,intIn(s.feel,-1e9,1e9)||3)),note:str(s.note,600)};}
 function cleanCounts(o,keyOk){const r={};if(isObj(o))for(const k in o){const v=o[k];if(keyOk(k)&&isObj(v))r[k]={ok:intIn(v.ok,0,1e7)||0,ko:intIn(v.ko,0,1e7)||0};}return r;}
+const IMPORT_MAX=5e6,SEANCES_MAX=5000,ITEMS_MAX=200;   // import : 5 Mo au plus ; séances et questions bornées
 function cleanData(d){d=isObj(d)?d:{};const rep={},st=isObj(d.stats)?d.stats:{},q=isObj(d.questions)?d.questions:{};const mine=cleanMine(d.mine);
   if(isObj(d.rep))for(const k in d.rep){const v=d.rep[k];if((PIECES.some(p=>p.id===k)||mine.some(x=>x.id===k))&&isObj(v)){const r={stage:intIn(v.stage,0,5)||0};const b=intIn(v.bpm,20,240);if(b)r.bpm=b;const mm=intIn(v.m,0,999);if(mm!=null)r.m=mm;rep[k]=r;}}
   const done={};if(isObj(q.done))for(const k in q.done)if(QBASE.some(x=>x[0]===k))done[k]=!!q.done[k];
-  const items=(Array.isArray(q.items)?q.items:[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
-  return {seances:(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean),rep,
+  const items=(Array.isArray(q.items)?q.items.slice(0,ITEMS_MAX):[]).filter(isObj).map(x=>({id:str(x.id,40),t:str(x.t,240),done:!!x.done})).filter(x=>x.id&&x.t);
+  const ss=(Array.isArray(d.seances)?d.seances:[]).map(cleanSeance).filter(Boolean);if(ss.length>SEANCES_MAX){ss.sort((a,b)=>b.ts-a.ts);ss.length=SEANCES_MAX;}
+  return {seances:ss,rep,
     stats:{lecture:cleanCounts(st.lecture,k=>/^(sol|fa):\d{1,2}$/.test(k)),oreille:cleanCounts(st.oreille,k=>Object.prototype.hasOwnProperty.call(EAR,k)),...(isObj(st.rythme)?{rythme:{lvl:intIn(st.rythme.lvl,1,4)||1,ok:intIn(st.rythme.ok,0,1e7)||0,ko:intIn(st.rythme.ko,0,1e7)||0}}:{}),
       ...(isObj(st.noms)?{noms:{ok:intIn(st.noms.ok,0,1e7)||0,ko:intIn(st.noms.ko,0,1e7)||0,best:intIn(st.noms.best,0,1e6)||0}}:{}),
       ...(isObj(st.sprint)?{sprint:{n:intIn(st.sprint.n,0,1e6)||0,best:intIn(st.sprint.best,0,20)||0,sec:intIn(st.sprint.sec,0,36000)||0}}:{})},questions:{done,items},mine,coach:cleanCoach(d.coach),solf:cleanSolf(d.solf)};}
@@ -895,7 +897,7 @@ function cleanSolf(o){const out={les:{},best:{},hist:[],w:{},lv:{}};if(!isObj(o)
   if(isObj(o.best))Object.keys(o.best).slice(0,80).forEach(k=>{const v=intIn(o.best[k],0,9999);if(/^[a-z]{2,12}:[125](:[123])?$/.test(k)&&v!=null)out.best[k]=v;});
   if(Array.isArray(o.hist))o.hist.slice(-400).forEach(h=>{if(!Array.isArray(h))return;const ts=intIn(h[0],0,9e12),sec=intIn(h[2],0,36000),ok=intIn(h[3],0,9999),ko=intIn(h[4],0,9999);
     if(ts&&typeof h[1]==='string'&&/^[a-z]{2,12}$/.test(h[1])&&sec!=null&&ok!=null&&ko!=null)out.hist.push([ts,h[1],sec,ok,ko]);});
-  if(isObj(o.w))Object.keys(o.w).slice(0,300).forEach(k=>{const v=intIn(o.w[k],1,40);if(/^[a-z]{2,12}:[A-Za-z0-9♯♭.+-]{1,12}$/.test(k)&&v)out.w[k]=v;});return out;}
+  if(isObj(o.w))Object.keys(o.w).slice(0,300).forEach(k=>{const v=intIn(o.w[k],1,40);if(/^[a-z]{2,12}:[A-Za-zÀ-ÿ0-9♯♭.+-]{1,12}$/.test(k)&&v)out.w[k]=v;});return out;}
 // Coach : par morceau, b = {mesure: [fautes, passages propres, passages, hésitations]}, c = {« attendue>jouée »: nombre} (x = note absente d'un accord).
 function cleanCoach(o){const out={};if(!isObj(o))return out;Object.keys(o).slice(0,80).forEach(id=>{const c=o[id];if(!/^[a-z0-9]{1,24}$/.test(id)||!isObj(c))return;const b={},cc={};
   if(isObj(c.b))Object.keys(c.b).slice(0,400).forEach(k=>{const i=intIn(k,0,999),r=c.b[k];if(i==null||!Array.isArray(r))return;b[i]=[0,1,2,3].map(j=>intIn(r[j],0,1e6)||0);});
@@ -951,7 +953,13 @@ function maybeRemind(){const now=Date.now(),lb=S.meta&&S.meta.lastBackup,ra=S.me
     $('#rm-t').textContent=lb?`Ta dernière sauvegarde date de ${days} jours. Un toucher suffit pour la mettre à jour (Fichiers ou iCloud Drive).`:'Tes séances ne sont encore sauvegardées que sur ce téléphone. Un toucher suffit pour en garder une copie (Fichiers ou iCloud Drive).';}
   const el=$('#bk-remind'),nav=$('nav');el.classList.remove('hidden');window.scrollTo(0,el.getBoundingClientRect().top+window.scrollY-(nav?nav.offsetHeight:0)-8);return true;}
 function hideRemind(){$('#bk-remind').classList.add('hidden');}
-function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+let SAVE_WARNED=false;
+function saveLocal(){let j;try{j=JSON.stringify(S);localStorage.setItem(LS,j);SAVE_WARNED=false;return true;}catch(e){if(j==null)return false;}
+  // Stockage plein : les copies de sécurité cèdent la place, de moitié en moitié, à l'état du jour.
+  try{let a=loadSnaps();for(;;){a=a.slice(0,Math.floor(a.length/2));if(a.length)localStorage.setItem(SNAP,JSON.stringify(a));else localStorage.removeItem(SNAP);
+    try{localStorage.setItem(LS,j);SAVE_WARNED=false;return true;}catch(e){}if(!a.length)break;}}catch(e){}
+  if(!SAVE_WARNED){SAVE_WARNED=true;toast('Stockage plein : tes derniers progrès ne sont pas enregistrés. Exporte une sauvegarde (Plus › Sauvegarde), puis libère de la place sur le téléphone.');}
+  return false;}
 let DB=null;const writing={},pending={};
 function setSync(t,on){const el=$('#sync');el.textContent=t;el.classList.toggle('on',!!on);}
 async function put(path,data){saveLocal();updateBackupChip();}
@@ -979,12 +987,18 @@ function ac(){try{
     // Déverrouillage iOS : un son vide joué pendant le toucher.
     const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource();s.buffer=b;s.connect(AC.destination);s.start(0);
   }catch(e){}return AC;}
-const hz=m=>440*Math.pow(2,(m-69)/12);
+const hz=m=>a4()*Math.pow(2,(m-69)/12);   // diapason réglé (Plus › Diapason), 440 par défaut
 /* Son de piano : Steinway & Sons modèle B, enregistré note par note par l'University of Iowa Electronic Music Studios
    (enregistrements libres d'utilisation). Une note sur trois est enregistrée (Do1 à Do8) ; les voisines sont obtenues
    en variant un peu la vitesse de lecture. Tant que les sons ne sont pas chargés, ou s'ils manquent, le son de synthèse joue. */
 const SMP_NOTES=[24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72,75,78,81,84,87,90,93,96,99,102,105,108];
 const SMP={state:0,buf:{},fail:0};          // state : 0 à charger, 1 en cours, 2 prêt
+// Justesse mesurée de chaque enregistrement (cents par rapport au tempérament égal à 440 Hz) : fondamentale médiane sur la
+// première seconde et demie (Do3 et au-dessus), ajustement des partiels avec inharmonicité dans le grave. La lecture la retire,
+// pour que chaque note sonne juste au diapason choisi (La7 et Do8 étaient enregistrés plus d'un quart de ton trop bas).
+const SMP_CENTS={24:-18.3,27:-7.7,30:-6.1,33:-6.8,36:-5.1,39:-2.2,42:-4.8,45:-6.8,48:3.1,51:3.1,54:5.3,57:3.0,60:2.5,63:2.1,66:3.7,69:4.2,72:4.1,75:2.0,78:4.4,81:8.8,84:8.5,87:11.3,90:9.4,93:15.7,96:14.4,99:17.1,102:23.4,105:-68.7,108:-62.2};
+function smpNear(m){let n=SMP_NOTES[0];for(const c of SMP_NOTES)if(Math.abs(c-m)<Math.abs(n-m))n=c;return n;}
+function smpRate(m){const n=smpNear(m);return Math.pow(2,(m-n)/12-(SMP_CENTS[n]||0)/1200)*a4()/440;}
 // Retire le blanc que le format MP3 ajoute au début, pour que la note parte au toucher.
 function smpTrim(a,b){const x=b.getChannelData(0);let pk=0;for(let i=0;i<x.length;i++){const v=Math.abs(x[i]);if(v>pk)pk=v;}
   let on=0;while(on<x.length&&Math.abs(x[on])<pk*.02)on++;const st=Math.max(0,on-Math.round(b.sampleRate*.002));if(st<8)return b;
@@ -995,8 +1009,8 @@ function smpLoad(a){if(SMP.state||SMP.fail>=3)return;if(!a){const C=window.Offli
     .then(ab=>new Promise((res,rej)=>a.decodeAudioData(ab,res,rej))).then(b=>{SMP.buf[n]=smpTrim(a,b);})))
     .then(()=>{SMP.state=2;}).catch(()=>{SMP.state=0;SMP.fail++;});}
 // Joue l'enregistrement le plus proche de la note ; à la fin de la durée, le son s'éteint comme sous l'étouffoir.
-function smpPlay(a,m,t,dur,vel,dest){try{let n=SMP_NOTES[0];for(const c of SMP_NOTES)if(Math.abs(c-m)<Math.abs(n-m))n=c;const b=SMP.buf[n];if(!b)return false;
-    const s=a.createBufferSource(),g=a.createGain();s.buffer=b;s.playbackRate.value=Math.pow(2,(m-n)/12);
+function smpPlay(a,m,t,dur,vel,dest){try{const n=smpNear(m),b=SMP.buf[n];if(!b)return false;
+    const s=a.createBufferSource(),g=a.createGain();s.buffer=b;s.playbackRate.value=smpRate(m);
     g.gain.setValueAtTime(.55*vel,t);g.gain.setTargetAtTime(.0001,t+dur,.14);s.connect(g);g.connect(dest||MASTER);s.start(t);s.stop(t+dur+1.2);return true;}catch(e){return false;}}
 function playNote(m,when,dur,vel,dest){const a=ac();if(!a)return;dur=dur||1.2;vel=vel==null?.8:vel;
   const t=Math.max(when||0,a.currentTime+.005),f=hz(m);
@@ -1388,6 +1402,8 @@ function wkSelect(id){if(!WORK[id])return;stopBus();WK.playing=false;WK.step=0;W
   if(WK.hands==='rh'||WK.hands==='lh'){const bs=workBars(id),has=h=>bs.some(b=>b[h].some(e=>e[0]));if(!has(WK.hands)){const o=WK.hands==='rh'?'lh':'rh';WK.hands=has(o)?o:'both';}}
   wkBuild();renderWork();}
 // Mesures jouées : la mesure courante, ou elle et la suivante (« 2 mesures »).
+// Durée de la levée si l'écoute commence par la 1re mesure d'un morceau à anacrouse, sinon 0.
+function wkPickup(){const w=WORK[WK.id],i0=WK.range?WK.range[0]:WK.span===0?0:WK.bar;return w&&w.pickup&&i0===0?w.pickup:0;}
 function wkSeg(){const bars=workBars(WK.id);if(WK.range)return bars.slice(WK.range[0],WK.range[1]+1);if(WK.span===0)return bars.slice(0,WK.bar+1);return bars.slice(WK.bar,WK.bar+(WK.span===2&&WK.bar<bars.length-1?2:1));}
 // « Depuis le début » : les mesures déjà vues, en petit, au-dessus de la mesure en cours.
 function wkHist(){const box=$('#wk-hist');if(!box)return;const w=WORK[WK.id],bars=workBars(WK.id),on=WK.span===0&&WK.bar>0;box.hidden=!on;
@@ -1403,7 +1419,8 @@ const wkClear=()=>{if(WKKB)WKKB.el.querySelectorAll('.key.next,.key.next-rh,.key
 function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;const seg=wkSeg();const clicks=$('#wk-click').checked;
   const segEnd=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
   const hands=WK.hands==='both'?['rh','lh']:[WK.hands];const lit=new Map();   // un seul allumage par instant, les deux mains ensemble
-  let tb0=start;seg.forEach((b,bi)=>{const tb=tb0;tb0+=b.rh.reduce((a,e)=>a+e[1],0)*spb;if(clicks){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(tb+k*bt*spb,k===0?'acc':'beat',bus);}
+  const pick=wkPickup();   // levée : la 1re mesure du morceau ne dure que w.pickup temps, alignés sur la fin de la mesure
+  let tb0=start;seg.forEach((b,bi)=>{const tb=tb0;tb0+=b.rh.reduce((a,e)=>a+e[1],0)*spb;if(clicks){const bt=WORK[WK.id].beat||1,off=bi===0&&pick?bpb-pick:0;for(let k=Math.ceil(off/bt-1e-9);k*bt<bpb-1e-9;k++)click(tb+(k*bt-off)*spb,k===0?'acc':'beat',bus);}
     hands.forEach(hd=>{let t=tb;b[hd].forEach(e=>{if(e[0]){const k=Math.round(t*1e4);e[0].forEach((m,j)=>{let L=e[4]?e[4][j]:e[1];if(!(L>0)&&bi===0&&t===tb)L=e[1];L=Math.min(L,(segEnd-t)/spb);if(L>0){playNote(m,t,L*spb*.92,hd==='lh'?.6:.75,bus);if(!lit.has(k))lit.set(k,{t,rh:[],lh:[]});lit.get(k)[hd].push(m);}});}t+=e[1]*spb;});});});
   [...lit.values()].sort((x,y)=>x.t-y.t).forEach(({t,rh,lh})=>at(t-a.currentTime,()=>{if(BUS!==bus)return;wkClear();
     lh.forEach(m=>WKKB.keys[m]&&WKKB.keys[m].classList.add('next','next-lh'));
@@ -1411,7 +1428,7 @@ function wkSchedule(bus,start){const a=AC;const spb=60/+$('#wk-bpm').value,bpb=W
   const end=start+seg.reduce((s,b)=>s+b.rh.reduce((a,e)=>a+e[1],0),0)*spb;
   at(end-.3-a.currentTime,()=>{if(BUS!==bus)return;if($('#wk-loop').checked)wkSchedule(bus,end);else{busEnd(bus,end-AC.currentTime,wkEnd);}});}
 function playWork(){ecStop();const a=ac();if(!a)return;const rng=WK.range,bus=newBus(wkEnd);WK.range=rng;WK.playing=true;wkMarkStep();const spb=60/+$('#wk-bpm').value,bpb=WORK[WK.id].bpb;let start=a.currentTime+.1;
-  if($('#wk-click').checked){const bt=WORK[WK.id].beat||1;for(let k=0;k*bt<bpb-1e-9;k++)click(start+k*bt*spb,k===0?'acc':'beat',bus);start+=bpb*spb;}   // décompte d'une mesure
+  if($('#wk-click').checked){const bt=WORK[WK.id].beat||1,pre=bpb-wkPickup();for(let k=0;k*bt<pre-1e-9;k++)click(start+k*bt*spb,k===0?'acc':'beat',bus);start+=pre*spb;}   // décompte : une mesure, moins la levée
   awake('wk',$('#wk-loop').checked);wkSchedule(bus,start);}
 // Fin de l'écoute (Stop, ou dernière note jouée) : tout revient au repos, y compris le bouton du parcours (« ■ Stop » → « ▶ Écouter »).
 function wkEnd(){wkClear();awake('wk',false);WK.playing=false;WK.range=null;PZ.playing=false;wkMarkStep();if(inCoach())renderPz();}
@@ -1596,6 +1613,7 @@ const MT={on:false,bpm:60,beats:4,sub:false,next:0,i:0,timer:null,queue:[],raf:0
 function mtSet(b){MT.bpm=Math.max(30,Math.min(180,Math.round(b)));$('#mt-bpm').textContent=MT.bpm;$('#mt-range').value=MT.bpm;}
 function mtDots(){let h='';for(let b=0;b<MT.beats;b++){h+=`<i data-k="b${b}" class="${b===0?'acc':''}"></i>`;if(MT.sub)h+=`<i data-k="s${b}" class="sub"></i>`;}$('#mt-dots').innerHTML=h;}
 function mtSchedule(){const a=AC;const step=60/MT.bpm/(MT.sub?2:1);const per=MT.beats*(MT.sub?2:1);
+  if(MT.next<a.currentTime-.02){const n=Math.ceil((a.currentTime-MT.next)/step);MT.next+=n*step;MT.i+=n;}   // onglet en veille : on saute les temps passés
   while(MT.next<a.currentTime+.12){const i=MT.i%per;const isBeat=!MT.sub||i%2===0;const beat=MT.sub?Math.floor(i/2):i;
     click(MT.next,isBeat?(beat===0?'acc':'beat'):'sub');MT.queue.push({t:MT.next,beat,isBeat});MT.next+=step;MT.i++;}}
 function mtDraw(){const a=AC;while(MT.queue.length&&MT.queue[0].t<=a.currentTime){const q=MT.queue.shift();$$('#mt-dots i').forEach(x=>x.classList.remove('lit'));
@@ -1683,7 +1701,13 @@ function playEx(id){runLog('ex',id);const a=ac();if(!a)return;const bus=newBus()
 // Position diatonique (Do0 = 0) et altération d'une note, en dièses ou en bémols selon le morceau.
 const SPS=[[0,''],[0,'♯'],[1,''],[1,'♯'],[2,''],[3,''],[3,'♯'],[4,''],[4,'♯'],[5,''],[5,'♯'],[6,'']];
 const SPB={1:[1,'♭'],3:[2,'♭'],6:[4,'♭'],8:[5,'♭'],10:[6,'♭']};
-function spell(m){const fl=WORK[WK.id]&&WORK[WK.id].flats,pc=m%12,useB=(fl===true||(Array.isArray(fl)&&fl.includes(pc)))&&SPB[pc];const [l,a]=useB?SPB[pc]:SPS[pc];return {d:(Math.floor(m/12)-1)*7+l,a,l};}
+// Notes de l'armure : orthographe de la tonalité (Mi♭ mineur → Do♭, Fa♯ majeur → Mi♯), avant tout autre choix.
+const SPK={},NAT_PC=[0,2,4,5,7,9,11];
+function keySpell(id){const w=WORK[id];if(!w)return null;const c=SPK[id];if(c&&c.w===w&&c.src===w.src&&c.fl===w.flats)return c.map;let map={};
+  try{const K=dcKey(id);(K.spL||[]).forEach(l=>{map[(NAT_PC[l]+(K.spFlat?11:1))%12]=[l,K.spFlat?'♭':'♯'];});}catch(e){map={};}
+  SPK[id]={w,src:w.src,fl:w.flats,map};return map;}
+function spell(m){const pc0=m%12,km=keySpell(WK.id);if(km&&km[pc0]){const [l,a]=km[pc0],o=Math.floor(m/12)-1+(l===0&&pc0===11?1:l===6&&pc0===0?-1:0);return {d:o*7+l,a,l};}
+  const fl=WORK[WK.id]&&WORK[WK.id].flats,pc=m%12,useB=(fl===true||(Array.isArray(fl)&&fl.includes(pc)))&&SPB[pc];const [l,a]=useB?SPB[pc]:SPS[pc];return {d:(Math.floor(m/12)-1)*7+l,a,l};}
 // Nom court sans octave, selon le réglage Do Ré Mi / C D E / les deux.
 function shortName(m){const s=spell(m),F=['Do','Ré','Mi','Fa','Sol','La','Si'],E=['C','D','E','F','G','A','B'];return NOMS==='en'?E[s.l]+s.a:NOMS==='both'?F[s.l]+s.a+'/'+E[s.l]+s.a:F[s.l]+s.a;}
 function wkStaff(b,offset,svg,quiz){svg=svg||$('#wk-staff');if(!svg)return;const key=dcKey(WK.id),nk=key.L.length,ink='#2a221b',X0=Math.max(58,46+7*nk),X1=348,bpb=WORK[WK.id].bpb;let h='';
@@ -1793,7 +1817,8 @@ function chordCheck(buf,sr,notes){const sp=fftMag(buf);
     return cmp(m-1)&&cmp(m+1);});}
 const EC={on:false,tok:0,mode:'',stream:null,src:null,an:null,buf:null,big:null,votes:null,cv:0,iv:0,seq:[],i:0,sm:null,n:0,loud:0,armed:true,low:0,last:null,ok:0,ko:0,cal:[]};
 // Nom d'une note dans le morceau en cours (bémols si le morceau en demande).
-function wkNm(m){const fl=WORK[WK.id].flats;return (fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m);}
+function wkNm(m){const km=keySpell(WK.id);if(km&&km[m%12]){const s=spell(m),o=Math.floor(s.d/7),f=LETTERS_FR[s.l]+s.a+o,e=LETTERS_EN[s.l]+s.a+o;return NOMS==='both'?f+' ('+e+')':useEN?e:f;}
+  const fl=WORK[WK.id].flats;return (fl===true||(Array.isArray(fl)&&fl.includes(m%12)))?nmb(m):nm(m);}
 function ecFb(text,cls){const el=$('#ec-fb');el.textContent=text||'';el.className='fb'+(cls?' '+cls:'');}
 function ecScore(){$('#ec-score').innerHTML=`Justes <b>${EC.ok}</b> À revoir <b>${EC.ko}</b>`;}
 function ecCalMsg(){const f=a4(),c=Math.round(1200*Math.log2(f/440));const hz=$('#ec-cal-hz');if(hz&&document.activeElement!==hz)hz.value=f===440?'':String(f);$('#ec-cal-msg').textContent=f===440?'Réglage actuel : La = 440 Hz (piano accordé).':`Réglage actuel : La = ${String(f).replace('.',',')} Hz, soit ${Math.abs(c)} cent${Math.abs(c)>1?'s':''} ${c<0?'plus bas':'plus haut'} que 440.${Math.abs(c)>50?' C’est beaucoup : vérifie que tu as bien joué le La (au-dessus du Do central), ou saisis l’accord à la main.':''}`;}
@@ -2192,7 +2217,7 @@ function sfAnswer(i){const q=SF.cur;if(!SF.on||!q||q.done)return;q.done=true;con
   const w=S.solf.w,k=q.t+':'+q.k;if(ok){SF.ok++;if(w[k]){w[k]--;if(!w[k])delete w[k];}}else{SF.ko++;w[k]=Math.min(40,(w[k]||0)+2);SF.errs.push(q);}
   $$('#sf-ans button').forEach(b=>{b.disabled=true;if(+b.dataset.i===q.ans)b.classList.add('ok');else if(+b.dataset.i===i)b.classList.add('ko');});
   if(q.draw)sfDraw(q.draw,ok?'ok':'ko');$('#sf-fb').textContent=(ok?'Juste. ':'Non. ')+(q.txt&&!ok?'Réponse : ':'')+q.ex;$('#sf-fb').className='fb '+(ok?'ok':'ko');
-  if(q.play)try{const a=ac();if(a){let tt=0;q.play.forEach(x=>{[].concat(x).forEach(m=>playNote(m,tt,.9,.6));tt+=.45;});}}catch(e){}
+  if(q.play)try{const a=ac();if(a){let tt=a.currentTime+.05;q.play.forEach(x=>{[].concat(x).forEach(m=>playNote(m,tt,.9,.6));tt+=.45;});}}catch(e){}
   sfTick();saveLocal();
   if(SF.mode==='les'&&SF.n>=SF.N){SF.next=setTimeout(sfEnd,ok?700:2200);return;}
   SF.next=setTimeout(sfAsk,ok?650:2200);}
@@ -2336,6 +2361,7 @@ function dcKey(id){const w=WORK[id],src=w.src||'',PC={Do:0,'Ré':2,Mi:4,Fa:5,Sol
   const L=(flat?SIG_FL:SIG_SH).slice(0,flat&&maj===6?6:n),acc={};L.forEach(l=>{acc[l]=flat?'♭':'♯';});
   const K={name:pcName(tonic,flat)+(minor?' mineur':' majeur'),sig,flat,L,acc,scale:new Set([0,2,4,5,7,9,11].map(i=>(maj+i)%12))};
   // Feuille écrite sans armure (w.nosig) : la tonalité reste nommée, ses ♯ ou ♭ sont écrits devant les notes.
+  K.spL=L;K.spFlat=flat;   // lettres altérées par la tonalité, même quand la feuille les écrit devant la note
   if(w.nosig&&sig.length)Object.assign(K,{nosig:sig,sig:[],L:[],acc:{}});
   return K;}
 const keyLine=k=>`Tonalité : ${k.name} · ${k.nosig?`pas d’armure sur ta feuille : ${k.nosig.join(', ')} écrit devant la note`:k.sig.length?k.sig.join(', ')+' à la clé':'aucune altération à la clé'}`;
@@ -2847,8 +2873,8 @@ function coachText(){const since=Date.now()-14*864e5;
     repertoire:PIECES.map(p=>({morceau:p.t,etape:STAGES[(S.rep[p.id]||{}).stage||0],tempo:(S.rep[p.id]||{}).bpm||null})),
     oreille:S.stats.oreille,rythme:S.stats.rythme||null,lecture_erreurs:Object.entries(S.stats.lecture).filter(([k,s])=>s.ko).map(([k,s])=>({note:nm(fromDiat(+k.split(':')[1])),cle:k.split(':')[0],ok:s.ok,ko:s.ko})),
     questions_ouvertes:QBASE.filter(q=>!S.questions.done[q[0]]).map(q=>q[1]).concat(S.questions.items.filter(q=>!q.done).map(q=>q.t))};
-  return `Bilan piano. Sois mon coach : adulte débutant, cours le vendredi, piano droit ancien au toucher résistant. Règles : les consignes et doigtés de mon prof priment ; jamais de travail en force ; trois réussites calmes avant d’avancer ; une erreur répétée = isoler deux mesures et ralentir ; séances de 25 à 40 min, 5 à 6 jours par semaine ; horizon Alkan sans brûler les étapes.
-Format attendu, 180 mots maximum : Verdict (une phrase) ; Ce qui progresse (2 puces) ; À corriger (2 puces) ; Mes 3 prochaines séances (morceau, passage, tempo de départ) ; À demander à mon prof vendredi (1 ou 2 questions). N’invente rien d’absent des données.
+  return `Bilan piano. Sois mon coach : adulte débutant, un cours par semaine, piano droit ancien au toucher résistant. Règles : les consignes et doigtés de mon prof priment ; jamais de travail en force ; trois réussites calmes avant d’avancer ; une erreur répétée = isoler deux mesures et ralentir ; séances de 25 à 40 min, 5 à 6 jours par semaine ; horizon Alkan sans brûler les étapes.
+Format attendu, 180 mots maximum : Verdict (une phrase) ; Ce qui progresse (2 puces) ; À corriger (2 puces) ; Mes 3 prochaines séances (morceau, passage, tempo de départ) ; À demander à mon prof au prochain cours (1 ou 2 questions). N’invente rien d’absent des données.
 Données (JSON) : ${JSON.stringify(data)}`;}
 async function coach(){await copy(coachText(),'Copié : colle-le dans Claude');}
 function updateBackupChip(){renderBackup();const lb=S.meta&&S.meta.lastBackup;const el=$('#sync');const tag=$('#bk-tag');
@@ -2873,7 +2899,7 @@ async function exportData(){const d=new Date();const name=BK_NAME;
     else dl();
     S.meta=Object.assign({},S.meta,{lastBackup:Date.now()});delete S.meta.remindAfter;saveLocal();updateBackupChip();hideRemind();toast('Sauvegarde exportée');return true;}
   catch(e){if(e&&e.name==='AbortError')return false;toast('Export impossible');return false;}}
-async function importData(f){let d,j;try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}
+async function importData(f){let d,j;if(f&&f.size>IMPORT_MAX){toast('Fichier trop gros (plus de 5 Mo) : import refusé.');return;}try{j=JSON.parse(await f.text());if(!j||j.app!=='la-vestale'||!isObj(j.data)||!Array.isArray(j.data.seances))throw 0;d=cleanData(j.data);}catch(e){toast('Fichier non reconnu');return;}
   const skipped=j.data.seances.length-d.seances.length;
   if(!(await ask(`Importer ${d.seances.length} séances du ${String(j.exported||'').slice(0,10)} ?${skipped?` ${skipped} séance(s) illisible(s) seront ignorées.`:''} Tout est fusionné avec ce téléphone : pour chaque exercice, on garde le meilleur des deux, rien n’est perdu (copie de sécurité avant).`)))return;
   snapshot('import');const before=JSON.stringify(S);
