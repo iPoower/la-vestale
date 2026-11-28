@@ -44,7 +44,10 @@ test('ST2. une fois chargé, chaque note joue l’enregistrement le plus proche,
   // @ts-ignore
   const r = await page.evaluate(() => { const out = {}; for (const m of [60, 61, 62, 23, 108]) { window.__src = []; playNote(m, 0, 1, .8); const s = window.__src.find(x => x.buffer && x.buffer.duration > 1);
     out[m] = [SMP_NOTES.find(n => SMP.buf[n] === s.buffer), +s.playbackRate.value.toFixed(4)]; } return { out, osc: window.__osc }; });
-  expect(r.out).toEqual({ 60: [60, 1], 61: [60, 1.0595], 62: [63, 0.9439], 23: [24, 0.9439], 108: [108, 1] });
+  // Enregistrement le plus proche, lu à la vitesse « demi-tons d'écart − justesse mesurée de l'enregistrement » (diapason 440).
+  const C = { 60: 2.5, 63: 2.1, 24: -18.3, 108: -62.2 }, rate = (m, n) => +Math.pow(2, (m - n) / 12 - C[n] / 1200).toFixed(4);
+  expect(r.out).toEqual({ 60: [60, rate(60, 60)], 61: [60, rate(61, 60)], 62: [63, rate(62, 63)], 23: [24, rate(23, 24)], 108: [108, rate(108, 108)] });
+  expect(r.out[108][1]).toBeGreaterThan(1.03);                                // Do8 était enregistré 62 cents trop bas
   expect(r.osc).toBe(0);                                                       // plus de son de synthèse
   await page.locator('#kb-main .key[data-m="64"]').click();
   await page.waitForTimeout(120);
