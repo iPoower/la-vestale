@@ -148,6 +148,7 @@ test('Z4. jusqu’au bout : morceau terminé ; données nettoyées, exportées e
   await page.evaluate(() => { S.coach = { hymne: { b: {}, c: {}, h: { lh: { 9: 1 } }, e: { 3: 1 } } }; saveLocal(); });
   await page.locator('#bk-file').setInputFiles({ name: 'la-vestale-sauvegarde.json', mimeType: 'application/json', buffer: buf });
   await page.locator('#dlg-ok').click();
+  await expect(page.locator('.toast', { hasText: 'Import réussi' })).toBeVisible();
   // @ts-ignore
   await expect.poll(() => page.evaluate(() => [S.coach.hymne.h.lh[9], S.coach.hymne.h.rh[0], Object.keys(S.coach.hymne.e).length, S.coach.hymne.f.final])).toEqual([1, 1, 4, 1]);
   await page.goto('./#seance');

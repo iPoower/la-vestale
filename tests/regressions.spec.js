@@ -182,6 +182,7 @@ test('R7. formulaire : un tempo hors de 20 à 240 n’est pas enregistré', asyn
     await page.locator('#f-piece').selectOption('cancan');
     await page.locator('#f-bpm').fill(String(typed));
     await page.locator('#f-save').click();
+    await expect(page.locator('#logform')).toBeHidden();
     const s = await page.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), LS);
     expect(s.seances[0].bpm, `tempo saisi ${typed}`).toBe(expected);
   }

@@ -13,7 +13,7 @@ const state = page => page.evaluate(k => JSON.parse(localStorage.getItem(k) || '
 /** Écrit des données sur l'appareil puis relance l'app. */
 async function seed(page, data, snapList) {
   await page.goto('./');
-  await page.evaluate(([k, v, sk, sv]) => { localStorage.setItem(k, JSON.stringify(v)); if (sv) localStorage.setItem(sk, JSON.stringify(sv)); else localStorage.removeItem(sk); }, [LS, data, SNAP, snapList]);
+  await page.evaluate(([k, v, sk, sv]) => { localStorage.removeItem('vestale-journal-v1'); localStorage.setItem(k, JSON.stringify(v)); if (sv) localStorage.setItem(sk, JSON.stringify(sv)); else localStorage.removeItem(sk); }, [LS, data, SNAP, snapList]);
   await page.reload();
   await expect(page.locator('#v-seance')).toBeVisible();
 }
@@ -28,10 +28,12 @@ async function noteSeance(page, note) {
 
 async function restore(page, index, confirm = true) {
   await aller(page, 'journal');
+  const done = page.locator('.toast', { hasText: 'Copie restaurée' });
   await page.locator('#snap-sel').selectOption(String(index));
   await page.locator('#snap-restore').click();
   await expect(page.locator('#dlg')).toBeVisible();
   await page.locator(confirm ? '#dlg-ok' : '#dlg-no').click();
+  if (confirm) await expect(done.last()).toBeVisible();
 }
 
 test('S1. une copie par jour au lancement, aucune copie vide ni en double', async ({ page }) => {

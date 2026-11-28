@@ -56,6 +56,7 @@ test('M3. réglages déjà présents sur ce téléphone : gardés ; données ab�
   const buf = Buffer.from(JSON.stringify({ app: 'la-vestale', version: 1, exported: '2026-11-16T10:00:00Z',
     data: { seances: [], stats: { lecture: {}, oreille: {}, noms: { ok: 'x', ko: -3, best: 2 }, sprint: { n: 1, best: 99, sec: 30 } }, settings: { a4: 438, noms: 'fr' } } }));
   await importer(page, buf);
+  await expect(page.locator('.toast', { hasText: 'Import réussi' })).toBeVisible();
   // @ts-ignore
   expect(await page.evaluate(() => [S.meta.a4, NOMS, S.stats.noms, S.stats.sprint])).toEqual([441, 'en', { ok: 0, ko: 0, best: 2 }, { n: 1, best: 0, sec: 30 }]);
 });

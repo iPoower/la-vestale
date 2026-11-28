@@ -155,6 +155,7 @@ test('7. cycle complet : noter une séance, Exporter, vider, Importer, séance r
   await page.locator('#f-feel button[data-v="4"]').click();
   await page.locator('#f-note').fill(NOTE);
   await page.locator('#f-save').click();
+  await expect(page.locator('#logform')).toBeHidden();
 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('vestale-studio-v1') || 'null'));
   expect(saved.seances).toHaveLength(1);
